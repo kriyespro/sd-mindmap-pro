@@ -25,6 +25,7 @@ jobs:
         run: python manage.py check --deploy
         env:
           DEBUG: 'False'
+          USE_HTTPS: 'False'
           SECRET_KEY: ci-deploy-check-only-012345678901234567890123456789012345678901234567890
           ALLOWED_HOSTS: localhost,127.0.0.1,testserver
 

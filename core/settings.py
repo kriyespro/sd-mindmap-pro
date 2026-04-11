@@ -88,8 +88,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ── Database ──────────────────────────────────────────────────────────────────
-_db_url = os.environ.get('DATABASE_URL', '')
-if _db_url.startswith('postgres'):
+# Prefer POSTGRES_HOST (Docker / explicit config) — avoids URL-encoding issues in DATABASE_URL.
+_postgres_host = os.environ.get('POSTGRES_HOST', '').strip()
+_db_url = os.environ.get('DATABASE_URL', '').strip()
+
+if _postgres_host:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'ntarque'),
+            'USER': os.environ.get('POSTGRES_USER', 'ntarque'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+            'HOST': _postgres_host,
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'CONN_MAX_AGE': 600,
+        }
+    }
+elif _db_url.startswith('postgres'):
     try:
         import dj_database_url  # noqa: PLC0415
         DATABASES = {'default': dj_database_url.config(default=_db_url, conn_max_age=600)}
@@ -135,13 +150,22 @@ LOGOUT_REDIRECT_URL = 'users:login'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 2 weeks
 
 # ── Production security (only when DEBUG=False) ───────────────────────────────
+# USE_HTTPS=true when users hit the site over HTTPS (or TLS terminates at a proxy
+# and you set X-Forwarded-Proto). For HTTP-only (e.g. raw droplet IP), keep False.
+USE_HTTPS = os.environ.get('USE_HTTPS', 'False') == 'True'
+
 if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = USE_HTTPS
+    CSRF_COOKIE_SECURE = USE_HTTPS
+    if USE_HTTPS:
+        SECURE_HSTS_SECONDS = 31536000
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+        SECURE_HSTS_PRELOAD = True
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    else:
+        SECURE_HSTS_SECONDS = 0
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+        SECURE_HSTS_PRELOAD = False

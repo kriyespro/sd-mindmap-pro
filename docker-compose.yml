@@ -9,7 +9,9 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-ntarque}:${POSTGRES_PASSWORD:-ntarque}@db:5432/${POSTGRES_DB:-ntarque}
+      # POSTGRES_* (user, password, db name) come from env_file only — avoids compose mangling special chars in passwords.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: '5432'
     depends_on:
       db:
         condition: service_healthy
@@ -23,22 +25,22 @@ services:
           '-c',
           "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')",
         ]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 120s
+      retries: 8
+      # First boot: migrate + collectstatic + Gunicorn can be slow on 1 GB RAM droplets
+      start_period: 300s
 
   db:
     image: postgres:16-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ntarque}
-      POSTGRES_USER: ${POSTGRES_USER:-ntarque}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ntarque}
+    env_file:
+      - .env
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-ntarque} -d ${POSTGRES_DB:-ntarque}']
+      # $$ → $ in container; uses same POSTGRES_* as the running Postgres instance
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 5s
       timeout: 5s
       retries: 10
