@@ -1,0 +1,43 @@
+# nTarque
+
+Django 5 app (Jinja2, HTMX) for planning and task workflows.
+
+## Local development
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+## Docker deployment
+
+1. Copy environment template and edit secrets:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Set at least `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (your domain or server IP), and for HTTPS behind a reverse proxy or load balancer, `CSRF_TRUSTED_ORIGINS` (e.g. `https://yourdomain.com`).
+
+2. Build and run:
+
+   ```bash
+   docker compose build
+   docker compose up -d
+   ```
+
+3. Open **http://localhost** (Nginx on port 80). Override the HTTP port with `HTTP_PORT` in `.env` if needed.
+
+The `web` service runs Gunicorn on port 8000 inside the network only; **Nginx** is the public entrypoint. PostgreSQL data is stored in the `pgdata` volume; collected static files use the `staticfiles` volume.
+
+### Health checks
+
+- Application: `GET /health/` returns plain `ok` for Docker and load balancer probes.
+
+## GitHub Actions
+
+CI runs Django checks (including deploy checks), the test suite, and a Docker image build on pushes and pull requests to `main` / `master`.
+# sd-mindmap-pro
