@@ -1,17 +1,8 @@
 #!/bin/sh
+# Runs as root so we can chown the mounted staticfiles volume (often root-owned).
 set -e
 
-echo "==> Running migrations..."
-python manage.py migrate --noinput
+mkdir -p /app/staticfiles
+chown -R app:app /app/staticfiles
 
-echo "==> Collecting static files..."
-python manage.py collectstatic --noinput
-
-echo "==> Starting gunicorn..."
-# Default 1 worker — small VPS / DO droplets often OOM with 3 Django workers
-exec gunicorn core.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers "${GUNICORN_WORKERS:-1}" \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+exec gosu app /app/docker-app.sh

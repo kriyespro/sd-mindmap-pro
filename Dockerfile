@@ -7,25 +7,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Runtime lib for psycopg2-binary wheels (client library only — smaller than -dev)
+# libpq: psycopg2-binary runtime; gosu: drop root after fixing volume permissions
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh docker-app.sh
 
 RUN addgroup --system app && adduser --system --ingroup app --home /app app \
     && chown -R app:app /app
 
-USER app
+# Entrypoint starts as root, chowns staticfiles volume, then gosu app → docker-app.sh
+# (Do not USER app here — see entrypoint.sh.)
 
 EXPOSE 8000
 
-# After Gunicorn is up, migrations + collectstatic run in entrypoint first
 HEALTHCHECK --interval=30s --timeout=8s --start-period=300s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')"
 
