@@ -1,0 +1,31 @@
+{% from 'partials/task_tree.jinja' import node_card with context %}
+{# Mind map uses same task cards as tree view; dot-grid background comes from parent #task-tree #}
+<div class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto p-2">
+{% if mindmap.nodes %}
+    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Use <span class="font-bold text-slate-800">− / +</span> on cards to hide or show branches · Sidebar: edge control for more canvas.</p>
+    <div class="relative" style="width:{{ mindmap.width }}px;height:{{ mindmap.height }}px;min-width:min(100%,{{ mindmap.width }}px);">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="{{ mindmap.width }}"
+             height="{{ mindmap.height }}"
+             class="absolute left-0 top-0 overflow-visible text-[0]">
+            {% for p in mindmap.paths %}
+            <path d="{{ p.d }}" fill="none" stroke="{{ p.stroke }}" stroke-width="2.25" stroke-linecap="round" opacity="0.88"/>
+            {% endfor %}
+        </svg>
+        {% for n in mindmap.nodes %}
+        {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
+        <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ mindmap.card_w }}px;">
+            {{ node_card(n.task, n.depth, 'mindmap', mindmap_collapsed_ids, _hc) }}
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="flex w-full flex-col items-center py-24 text-center">
+        <div class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 shadow-sm">
+            <svg class="h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg>
+        </div>
+        <p class="text-sm font-semibold text-slate-600">No tasks to map</p>
+        <p class="mt-1 max-w-xs text-[11px] text-slate-400">Create a root task to see the mind map.</p>
+    </div>
+{% endif %}
+</div>

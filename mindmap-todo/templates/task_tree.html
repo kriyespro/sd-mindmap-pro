@@ -1,0 +1,262 @@
+{% macro node_card(task, depth=0) %}
+
+{# ── depth colour tokens ─────────────────────────────── #}
+{% if depth == 0 %}
+  {% set bar     = '#5b6af2' %}
+  {% set tag_bg  = '#eef0fe' %}
+  {% set tag_txt = '#4454e8' %}
+  {% set tag_bdr = '#c7cdf9' %}
+  {% set lbl     = 'CO' %}
+  {% set conn    = '#c7cdf9' %}
+{% elif depth == 1 %}
+  {% set bar     = '#a855f7' %}
+  {% set tag_bg  = '#faf5ff' %}
+  {% set tag_txt = '#7e22ce' %}
+  {% set tag_bdr = '#e9d5ff' %}
+  {% set lbl     = 'DO' %}
+  {% set conn    = '#e9d5ff' %}
+{% elif depth == 2 %}
+  {% set bar     = '#0ea5e9' %}
+  {% set tag_bg  = '#f0f9ff' %}
+  {% set tag_txt = '#0369a1' %}
+  {% set tag_bdr = '#bae6fd' %}
+  {% set lbl     = 'IO' %}
+  {% set conn    = '#bae6fd' %}
+{% else %}
+  {% set bar     = '#10b981' %}
+  {% set tag_bg  = '#f0fdf4' %}
+  {% set tag_txt = '#065f46' %}
+  {% set tag_bdr = '#a7f3d0' %}
+  {% set lbl     = 'ST' %}
+  {% set conn    = '#a7f3d0' %}
+{% endif %}
+
+<div class="relative bg-white border border-[#e2e5ea] rounded-lg overflow-hidden
+            min-w-[230px] max-w-[290px] card-shadow
+            hover:-translate-y-0.5 transition-all duration-150 group"
+     x-data="{ editingTitle:false, editingDue:false, editingAssignee:false,
+                titleDraft:'', dueDraft:'', assigneeDraft:'' }">
+
+    <!-- Top accent bar -->
+    <div class="h-[3px]" style="background:{{ bar }}"></div>
+
+    <div class="px-2.5 py-1.5 space-y-1">
+
+        <!-- ── ROW 1: badge | title (flex-1) | checkbox | delete ── -->
+        <div class="flex items-center gap-1.5 min-w-0">
+
+            <!-- OKR Depth badge -->
+            <span class="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold
+                         tracking-wide border leading-none select-none"
+                  style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
+
+            <!-- Title (takes all remaining space) -->
+            <div class="flex-1 min-w-0">
+                <button x-show="!editingTitle"
+                        @click='editingTitle=true; titleDraft={{ task.title|tojson }};
+                                $nextTick(()=>$refs.titleInput.focus())'
+                        class="w-full text-left text-[11px] font-semibold leading-[1.2] break-words whitespace-normal block
+                               transition-colors
+                               {% if task.is_completed %}line-through text-[#9ba5b8]
+                               {% else %}text-[#1a1f2e] hover:text-[#5b6af2]{% endif %}"
+                        title="Click to rename">{{ task.title }}</button>
+                <form x-show="editingTitle" x-cloak
+                      hx-post="/tasks/{{ task.id }}/title" hx-target="#task-tree" hx-swap="innerHTML"
+                      @click.outside="editingTitle=false"
+                      @keydown.escape.prevent="editingTitle=false">
+                    <input x-ref="titleInput" x-model="titleDraft" name="title" required
+                           class="f-input" style="font-size:10px;padding:2px 5px"
+                           @change="$el.form.requestSubmit()">
+                </form>
+            </div>
+
+            <!-- Checkbox -->
+            <button hx-post="/tasks/{{ task.id }}/status" hx-target="#task-tree" hx-swap="innerHTML"
+                    class="flex-shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center
+                           transition-all duration-150 active:scale-90
+                           {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white
+                           {% else %}border-[#d0d5dd] hover:border-[#5b6af2] text-transparent{% endif %}">
+                <svg class="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+            </button>
+
+            <!-- Delete (hover reveal) -->
+            <button type="button" 
+                    hx-delete="/tasks/{{ task.id }}" 
+                    hx-target="#task-tree" 
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete this task and all subtasks?"
+                    class="relative z-[50] flex-shrink-0 w-5 h-5 flex items-center justify-center rounded
+                           text-[#d0d5dd] hover:bg-rose-50 hover:text-rose-600 transition-colors 
+                           opacity-0 group-hover:opacity-100 duration-150 cursor-pointer"
+                    title="Delete">
+                <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- ── ROW 2: date | assignee | progress+% | +child | collapse ── -->
+        <div class="flex items-center gap-1 min-w-0">
+
+            <!-- Due date -->
+            <div class="flex-shrink-0">
+                <button x-show="!editingDue"
+                        @click='editingDue=true;
+                                dueDraft={{ (task.due_date or "")|tojson }};
+                                assigneeDraft={{ (task.assignee or "")|tojson }};
+                                $nextTick(()=>$refs.dueInput.focus())'
+                        class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium
+                               border whitespace-nowrap transition-colors
+                               {% if task.due_state == 'overdue'  %}bg-rose-50 border-rose-200 text-rose-600
+                               {% elif task.due_state == 'today'  %}bg-amber-50 border-amber-200 text-amber-600
+                               {% elif task.due_state == 'upcoming' %}bg-[#eef0fe] border-[#c7cdf9] text-[#5b6af2]
+                               {% else %}bg-[#f7f8fa] border-[#e2e5ea] text-[#9ba5b8]{% endif %}">
+                    <svg class="w-2 h-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    {{ task.due_date or 'Date' }}
+                </button>
+                <form x-show="editingDue" x-cloak
+                      hx-post="/tasks/{{ task.id }}/meta" hx-target="#task-tree" hx-swap="innerHTML"
+                      @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
+                    <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
+                           class="f-input" style="font-size:9px;padding:2px 4px;width:100px"
+                           @change="$el.form.requestSubmit()">
+                    <input type="hidden" name="assignee" :value="assigneeDraft">
+                </form>
+            </div>
+
+            <!-- Assignee -->
+            <div class="flex-shrink-0 min-w-0">
+                <button x-show="!editingAssignee"
+                        @click='editingAssignee=true;
+                                assigneeDraft={{ (task.assignee or "")|tojson }};
+                                dueDraft={{ (task.due_date or "")|tojson }};
+                                $nextTick(()=>$refs.assigneeInput.focus())'
+                        class="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-medium
+                               border max-w-[60px] truncate transition-colors
+                               {% if task.assignee %}bg-[#f7f8fa] border-[#e2e5ea] text-[#5e6a82]
+                               {% else %}bg-[#f7f8fa] border-[#e2e5ea] text-[#9ba5b8]{% endif %}">
+                    <svg class="w-2 h-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    {{ task.assignee or 'Assign' }}
+                </button>
+                <form x-show="editingAssignee" x-cloak
+                      hx-post="/tasks/{{ task.id }}/meta" hx-target="#task-tree" hx-swap="innerHTML"
+                      @click.outside="editingAssignee=false" @keydown.escape.prevent="editingAssignee=false">
+                    <input x-ref="assigneeInput" x-model="assigneeDraft" name="assignee"
+                           maxlength="80" placeholder="Name"
+                           class="f-input" style="font-size:9px;padding:2px 4px;width:72px"
+                           @change="$el.form.requestSubmit()">
+                    <input type="hidden" name="due_date" :value="dueDraft">
+                </form>
+            </div>
+
+            <!-- Progress bar + % (flex-1) -->
+            <div class="flex-1 flex items-center gap-1 min-w-0">
+                <div class="flex-1 h-[3px] rounded-full bg-[#e8eaf0] overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500"
+                         style="width:{{ task.percent }}%;background:{% if task.percent==100 %}#10b981{% else %}{{ bar }}{% endif %}"></div>
+                </div>
+                <span class="flex-shrink-0 text-[9px] font-bold leading-none
+                             {% if task.percent == 100 %}text-emerald-600{% else %}text-[#5b6af2]{% endif %}">
+                    {{ task.percent }}%
+                </span>
+            </div>
+
+            <!-- + Child -->
+            <button @click="addModalOpen=true; parentIdForModal='{{ task.id }}'"
+                    class="flex-shrink-0 text-[9px] font-semibold transition-colors
+                           text-[#9ba5b8] hover:text-[#5b6af2] whitespace-nowrap">
+                + Child
+            </button>
+
+            <!-- Collapse (only if has children) -->
+            {% if task.children %}
+            <button @click="collapsed = !collapsed"
+                    class="flex-shrink-0 text-[9px] px-1 py-0.5 rounded border border-[#e2e5ea]
+                           font-semibold transition-all text-[#9ba5b8] hover:text-[#5e6a82]">
+                <span x-text="collapsed ? '▸' : '▾'"></span>
+            </button>
+            {% endif %}
+
+        </div>
+
+    </div>
+</div>
+{% endmacro %}
+
+
+{% macro render_task(task, depth=0) %}
+<div class="relative" id="task-node-{{ task.id }}" x-data="{ collapsed: false }">
+    {{ node_card(task, depth) }}
+    {% if task.children %}
+    <div x-show="!collapsed" x-transition.duration.150ms class="relative ml-7 mt-1.5 pl-3.5 space-y-1.5">
+        <!-- Vertical connector -->
+        <div class="absolute left-0 top-1.5 bottom-1.5 w-px bg-[#e2e5ea]"></div>
+        {% for child in task.children %}
+        <div class="relative">
+            <!-- Horizontal connector -->
+            <div class="absolute -left-3.5 top-5 w-3.5 h-px bg-[#e2e5ea]"></div>
+            {{ render_task(child, depth + 1) }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+
+<!-- ── Canvas content ──────────────────────── -->
+<div class="flex flex-wrap items-start gap-4 py-1.5">
+
+{% if task_tree %}
+    <!-- Legend bar -->
+    <div class="w-full flex flex-wrap items-center gap-2 px-2.5 py-1.5 rounded-lg
+                bg-white border border-[#e2e5ea] text-[10px] shadow-sm">
+        <span class="text-[#9ba5b8] font-medium">Hierarchy:</span>
+        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold border" style="background:#eef0fe;color:#4454e8;border-color:#c7cdf9">CO</span>
+        <span class="text-[#d0d5dd]">→</span>
+        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold border" style="background:#faf5ff;color:#7e22ce;border-color:#e9d5ff">DO</span>
+        <span class="text-[#d0d5dd]">→</span>
+        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold border" style="background:#f0f9ff;color:#0369a1;border-color:#bae6fd">IO</span>
+        <span class="text-[#d0d5dd]">→</span>
+        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold border" style="background:#f0fdf4;color:#065f46;border-color:#a7f3d0">ST</span>
+        <span class="text-[#d0d5dd] mx-0.5">·</span>
+        <span class="text-[#9ba5b8]">Click title / date / assignee to edit inline</span>
+    </div>
+
+    {% for task in task_tree %}
+    <div class="relative flex-shrink-0">
+        <div class="absolute -left-1.5 top-5 w-2 h-2 rounded-full shadow-sm"
+             style="background:#5b6af2;box-shadow:0 0 6px rgba(91,106,242,.45)"></div>
+        {{ render_task(task) }}
+    </div>
+    {% endfor %}
+
+{% else %}
+    <!-- Empty state -->
+    <div class="w-full text-center py-20">
+        <div class="mx-auto w-12 h-12 rounded-xl bg-white border border-[#e2e5ea] shadow-sm
+                    flex items-center justify-center mb-3">
+            <svg class="w-6 h-6 text-[#d0d5dd]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            </svg>
+        </div>
+        <p class="text-sm font-semibold text-[#5e6a82]">No tasks yet</p>
+        <p class="text-[11px] text-[#9ba5b8] mt-1">
+            Click <span class="font-semibold text-[#5b6af2]">+ New Task</span> or press
+            <kbd class="bg-white border border-[#e2e5ea] rounded px-1.5 py-0.5 text-[10px] text-[#5e6a82] shadow-sm">⌘K</kbd>
+            to begin
+        </p>
+    </div>
+{% endif %}
+
+</div>

@@ -1,0 +1,16 @@
+{% set pct = ((done_main / total_main) * 100) | round | int if total_main > 0 else 0 %}
+<div class="flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 shadow-sm">
+        <svg class="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg>
+        <span class="text-[10px] font-medium text-slate-500">Roots</span>
+        <span class="text-xs font-bold text-slate-900">{{ total_main }}</span>
+    </div>
+    <div class="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2.5 py-1.5 shadow-sm">
+        <svg class="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        <span class="text-[10px] font-medium text-emerald-700">Done</span>
+        <span class="text-xs font-bold text-emerald-800">{{ done_main }}</span>
+    </div>
+    <div class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 shadow-sm {% if pct == 100 %}border-emerald-200 bg-emerald-50{% else %}border-indigo-200 bg-indigo-50/80{% endif %}">
+        <span class="text-[10px] font-bold {% if pct == 100 %}text-emerald-700{% else %}text-indigo-700{% endif %}">{{ pct }}%</span>
+    </div>
+</div>

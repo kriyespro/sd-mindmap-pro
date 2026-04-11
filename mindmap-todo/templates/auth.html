@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMap Tasks - {% if is_signup %}Sign Up{% else %}Log In{% endif %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --surface-color: #ffffff;
+            --border-color: #e2e5ea;
+            --text-main: #1a1f2e;
+            --text-muted: #5e6a82;
+            --accent: #5b6af2;
+            --accent-hover: #4a56c9;
+            --accent-subtle: #eef0fe;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .auth-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+
+        .f-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #f7f8fa;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .f-input:focus {
+            border-color: var(--accent);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px var(--accent-subtle);
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 0.625rem 1rem;
+            background-color: var(--accent);
+            color: white;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)] mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">MindMap Tasks</h1>
+            <p class="text-[var(--text-muted)] text-sm mt-1">
+                {% if is_signup %}Create your account{% else %}Sign in to your account{% endif %}
+            </p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-md text-sm text-rose-600 font-medium">
+                    {% for message in messages %}
+                        {{ message }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('signup' if is_signup else 'login') }}" class="space-y-4">
+            <div>
+                <label for="username" class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Username</label>
+                <input type="text" id="username" name="username" required class="f-input" placeholder="alice">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Password</label>
+                <input type="password" id="password" name="password" required class="f-input" placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn-primary mt-6">
+                {% if is_signup %}Sign Up{% else %}Log In{% endif %}
+            </button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-[var(--text-muted)]">
+            {% if is_signup %}
+                Already have an account? <a href="{{ url_for('login') }}" class="font-semibold text-[var(--accent)] hover:underline">Log in</a>
+            {% else %}
+                Don't have an account? <a href="{{ url_for('signup') }}" class="font-semibold text-[var(--accent)] hover:underline">Sign up</a>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+<svg width="1200" height="740" viewBox="0 0 1200 740" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="740" rx="24" fill="#F8FAFC"/>
+  <rect x="26" y="26" width="1148" height="688" rx="18" fill="white" stroke="#E2E8F0"/>
+
+  <!-- Browser top -->
+  <rect x="26" y="26" width="1148" height="56" rx="18" fill="#F8FAFC"/>
+  <circle cx="58" cy="54" r="7" fill="#FB7185"/>
+  <circle cx="82" cy="54" r="7" fill="#FBBF24"/>
+  <circle cx="106" cy="54" r="7" fill="#34D399"/>
+  <rect x="146" y="40" width="430" height="28" rx="8" fill="#E2E8F0"/>
+  <text x="162" y="59" font-family="Inter, Arial, sans-serif" font-size="12" fill="#64748B">MindMap Tree Planning Board</text>
+
+  <!-- Sidebar -->
+  <rect x="44" y="102" width="220" height="592" rx="14" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="62" y="132" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#94A3B8">WORKSPACE</text>
+  <rect x="58" y="145" width="192" height="42" rx="10" fill="#EEF2FF"/>
+  <text x="74" y="171" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#4F46E5">Personal</text>
+  <rect x="58" y="196" width="192" height="42" rx="10" fill="white" stroke="#E2E8F0"/>
+  <text x="74" y="222" font-family="Inter, Arial, sans-serif" font-size="13" fill="#475569">Marketing Team</text>
+  <rect x="58" y="247" width="192" height="42" rx="10" fill="white" stroke="#E2E8F0"/>
+  <text x="74" y="273" font-family="Inter, Arial, sans-serif" font-size="13" fill="#475569">Product Team</text>
+
+  <!-- Main header -->
+  <text x="296" y="128" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="800" fill="#0F172A">MindMap Tree Planning</text>
+  <text x="296" y="150" font-family="Inter, Arial, sans-serif" font-size="12" fill="#64748B">Create goals, break into subtasks, assign owners, track progress.</text>
+
+  <!-- Connectors -->
+  <path d="M470 245 C560 245 560 205 650 205" stroke="#F97316" stroke-width="3" stroke-linecap="round"/>
+  <path d="M470 245 C560 245 560 290 650 290" stroke="#06B6D4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M830 205 C900 205 900 170 980 170" stroke="#DB2777" stroke-width="3" stroke-linecap="round"/>
+  <path d="M830 205 C900 205 900 240 980 240" stroke="#65A30D" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- CO card -->
+  <rect x="300" y="205" width="170" height="82" rx="12" fill="white" stroke="#FDBA74"/>
+  <rect x="300" y="205" width="170" height="4" rx="2" fill="#EA580C"/>
+  <rect x="312" y="219" width="30" height="16" rx="6" fill="#FFEDD5" stroke="#FDBA74"/>
+  <text x="320" y="231" font-family="Inter, Arial, sans-serif" font-size="9" font-weight="800" fill="#9A3412">CO</text>
+  <text x="312" y="252" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Increase Leads</text>
+  <text x="312" y="271" font-family="Inter, Arial, sans-serif" font-size="10" fill="#64748B">Root objective</text>
+
+  <!-- DO cards -->
+  <rect x="650" y="165" width="180" height="82" rx="12" fill="white" stroke="#67E8F9"/>
+  <rect x="650" y="165" width="180" height="4" rx="2" fill="#0891B2"/>
+  <rect x="662" y="179" width="30" height="16" rx="6" fill="#ECFEFF" stroke="#67E8F9"/>
+  <text x="670" y="191" font-family="Inter, Arial, sans-serif" font-size="9" font-weight="800" fill="#155E75">DO</text>
+  <text x="662" y="212" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Launch Content Hub</text>
+  <text x="662" y="231" font-family="Inter, Arial, sans-serif" font-size="10" fill="#64748B">Owner: sonu</text>
+
+  <rect x="650" y="250" width="180" height="82" rx="12" fill="white" stroke="#67E8F9"/>
+  <rect x="650" y="250" width="180" height="4" rx="2" fill="#0891B2"/>
+  <rect x="662" y="264" width="30" height="16" rx="6" fill="#ECFEFF" stroke="#67E8F9"/>
+  <text x="670" y="276" font-family="Inter, Arial, sans-serif" font-size="9" font-weight="800" fill="#155E75">DO</text>
+  <text x="662" y="297" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" fill="#0F172A">Enable Sales Team</text>
+  <text x="662" y="316" font-family="Inter, Arial, sans-serif" font-size="10" fill="#64748B">Owner: demo</text>
+
+  <!-- IO/ST cards -->
+  <rect x="980" y="130" width="170" height="72" rx="12" fill="white" stroke="#F9A8D4"/>
+  <rect x="980" y="130" width="170" height="4" rx="2" fill="#DB2777"/>
+  <rect x="992" y="143" width="28" height="14" rx="6" fill="#FCE7F3" stroke="#F9A8D4"/>
+  <text x="999" y="154" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#9D174D">IO</text>
+  <text x="992" y="173" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#0F172A">Publish 12 pages</text>
+  <text x="992" y="190" font-family="Inter, Arial, sans-serif" font-size="10" fill="#64748B">In progress</text>
+
+  <rect x="980" y="215" width="170" height="72" rx="12" fill="#EEF2FF" stroke="#C7D2FE"/>
+  <rect x="980" y="215" width="170" height="4" rx="2" fill="#65A30D"/>
+  <rect x="992" y="228" width="28" height="14" rx="6" fill="#ECFCCB" stroke="#BEF264"/>
+  <text x="999" y="239" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#3F6212">ST</text>
+  <text x="992" y="258" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#312E81">Ship template v1</text>
+  <text x="992" y="275" font-family="Inter, Arial, sans-serif" font-size="10" fill="#4338CA">Focused card</text>
+
+  <!-- Stats cards -->
+  <rect x="300" y="355" width="140" height="86" rx="12" fill="white" stroke="#E2E8F0"/>
+  <text x="316" y="382" font-family="Inter, Arial, sans-serif" font-size="11" fill="#64748B">Roots</text>
+  <text x="316" y="414" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="#0F172A">12</text>
+
+  <rect x="452" y="355" width="140" height="86" rx="12" fill="white" stroke="#E2E8F0"/>
+  <text x="468" y="382" font-family="Inter, Arial, sans-serif" font-size="11" fill="#64748B">Done</text>
+  <text x="468" y="414" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="#059669">6</text>
+
+  <rect x="604" y="355" width="140" height="86" rx="12" fill="white" stroke="#E2E8F0"/>
+  <text x="620" y="382" font-family="Inter, Arial, sans-serif" font-size="11" fill="#64748B">Progress</text>
+  <text x="620" y="414" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" fill="#4F46E5">50%</text>
+
+  <!-- Legend -->
+  <text x="300" y="486" font-family="Inter, Arial, sans-serif" font-size="11" fill="#64748B">Depth legend:</text>
+  <rect x="386" y="474" width="34" height="16" rx="6" fill="#FFEDD5" stroke="#FDBA74"/>
+  <text x="398" y="485" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#9A3412">CO</text>
+  <rect x="428" y="474" width="34" height="16" rx="6" fill="#ECFEFF" stroke="#67E8F9"/>
+  <text x="440" y="485" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#155E75">DO</text>
+  <rect x="470" y="474" width="34" height="16" rx="6" fill="#FCE7F3" stroke="#F9A8D4"/>
+  <text x="482" y="485" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#9D174D">IO</text>
+  <rect x="512" y="474" width="34" height="16" rx="6" fill="#ECFCCB" stroke="#BEF264"/>
+  <text x="524" y="485" font-family="Inter, Arial, sans-serif" font-size="8" font-weight="800" fill="#3F6212">ST</text>
+
+  <text x="300" y="518" font-family="Inter, Arial, sans-serif" font-size="11" fill="#475569">Clear visual planning from goal to execution task.</text>
+</svg>

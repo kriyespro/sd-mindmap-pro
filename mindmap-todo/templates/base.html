@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMap Tasks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        *, *::before, *::after { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
+        :root {
+            --bg:        #e6e8ec;
+            --surface:   #edf0f5;
+            --card:      #ffffff;
+            --border:    #d0d5dd;
+            --border2:   #c0c6d4;
+            --ink:       #1a1f2e;
+            --ink-muted: #5e6a82;
+            --ink-faint: #9ba5b8;
+            --accent:    #5b6af2;
+            --accent-s:  #eef0fe;
+            --accent-h:  #4454e8;
+        }
+
+        body { background: var(--bg); color: var(--ink); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        /* Dot grid canvas */
+        .canvas-bg {
+            background-color: var(--surface);
+            background-image: radial-gradient(circle at 1.5px 1.5px, #c8ccd8 1.5px, transparent 0);
+            background-size: 22px 22px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: #c8ccd8; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aeb4c6; }
+
+        [x-cloak] { display: none !important; }
+        .htmx-settling, .htmx-swapping { opacity: 0; transition: opacity .1s ease; }
+
+        /* Shared input */
+        .f-input {
+            background: #fff;
+            border: 1px solid var(--border2);
+            color: var(--ink);
+            border-radius: 6px;
+            outline: none;
+            width: 100%;
+            transition: border-color .15s, box-shadow .15s;
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+        .f-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91,106,242,.12);
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .5; }
+
+        /* Card shadow level */
+        .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); }
+        .card-shadow:hover { box-shadow: 0 4px 12px rgba(0,0,0,.09), 0 1px 3px rgba(0,0,0,.05); }
+    </style>
+</head>
+<body x-data="{ addModalOpen: false, parentIdForModal: '' }"
+      @keydown.window.ctrl.k.prevent="addModalOpen = true; parentIdForModal = ''"
+      @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
+
+    <div class="max-w-[1500px] mx-auto px-3 sm:px-5 py-3">
+
+        <!-- ── Header ──────────────────── -->
+        <header class="sticky top-2 z-20 flex flex-wrap gap-2 items-center justify-between mb-3
+                       bg-white/90 border border-[#e2e5ea] rounded-xl shadow-sm px-3.5 py-2 backdrop-blur">
+
+            <!-- Brand -->
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center shadow-sm"
+                     style="background: linear-gradient(135deg,#5b6af2,#818cf8)">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-sm font-semibold leading-none tracking-tight" style="color:var(--ink)">MindMap Tasks</h1>
+                    <p class="text-[10px] mt-0.5" style="color:var(--ink-faint)">OKR · Hierarchical planner</p>
+                </div>
+            </div>
+
+            <!-- Stats + Add -->
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div id="stats-container"
+                     hx-get="/stats"
+                     hx-trigger="updateStats from:body"
+                     hx-swap="innerHTML"
+                     class="flex items-center gap-1.5">
+                    {% include 'stats.html' %}
+                </div>
+
+                <div class="hidden sm:block w-px h-5 bg-[#e2e5ea]"></div>
+
+                <!-- Notifications -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" 
+                            class="relative p-1.5 text-[#9ba5b8] hover:text-[#5b6af2] transition-colors rounded-md hover:bg-[#f7f8fa]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        {% if notifications and notifications|length > 0 %}
+                        <span class="absolute top-1 right-1 flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                        </span>
+                        {% endif %}
+                    </button>
+
+                    <!-- Notification Dropdown -->
+                    <div x-show="open" @click.outside="open = false" x-cloak
+                         class="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#e2e5ea] overflow-hidden z-50">
+                        <div class="px-3 py-2 bg-[#f7f8fa] border-b border-[#e2e5ea]">
+                            <h3 class="text-xs font-semibold text-[#1a1f2e]">Notifications</h3>
+                        </div>
+                        <div class="max-h-64 overflow-y-auto">
+                            {% if notifications %}
+                                {% for notif in notifications %}
+                                <div class="px-3 py-2.5 hover:bg-[#f7f8fa] border-b border-[#e2e5ea] last:border-0" id="notif-{{ notif.id }}">
+                                    <p class="text-[11px] text-[#1a1f2e] leading-relaxed">{{ notif.message }}</p>
+                                    <div class="mt-1 flex items-center justify-between">
+                                        <span class="text-[9px] text-[#9ba5b8]">{{ notif.created_at[:10] }}</span>
+                                        <button hx-post="/notifications/read/{{ notif.id }}" 
+                                                hx-target="#notif-{{ notif.id }}" hx-swap="outerHTML"
+                                                class="text-[9px] font-medium text-[#5b6af2] hover:underline">
+                                            Mark read
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="px-3 py-4 text-center text-[11px] text-[#9ba5b8]">
+                                    No new notifications
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Profile -->
+                <div class="relative" x-data="{ profileOpen: false }">
+                    <button @click="profileOpen = !profileOpen" class="flex items-center gap-1.5 text-[11px] font-medium text-[#5e6a82] hover:text-[#1a1f2e]">
+                        <div class="w-6 h-6 rounded-md bg-[#eef0fe] text-[#5b6af2] flex items-center justify-center font-bold uppercase">
+                            {{ user.username[0] if user else '?' }}
+                        </div>
+                        <span class="hidden sm:block truncate max-w-[80px]">{{ user.username if user else 'Guest' }}</span>
+                    </button>
+                    <!-- Dropdown -->
+                    <div x-show="profileOpen" @click.outside="profileOpen = false" x-cloak
+                         class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg border border-[#e2e5ea] overflow-hidden z-50">
+                        <form action="/logout" method="POST">
+                            <button type="submit" class="w-full text-left px-3 py-2 text-[11px] text-rose-600 hover:bg-rose-50 font-medium">
+                                Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="hidden sm:block w-px h-5 bg-[#e2e5ea]"></div>
+
+                <button @click="addModalOpen = true; parentIdForModal = ''"
+                        class="inline-flex items-center gap-1.5 text-white text-xs px-3 py-1.5 rounded-lg
+                               font-semibold shadow-sm active:scale-[0.97] transition-all duration-150"
+                        style="background:var(--accent);"
+                        onmouseover="this.style.background='var(--accent-h)'"
+                        onmouseout="this.style.background='var(--accent)'">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    New Task
+                    <span class="hidden md:inline text-[9px] border border-white/50 rounded px-1 py-0.5 leading-none opacity-80">⌘K</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── Canvas ──────────────────── -->
+        <div id="task-tree"
+             class="canvas-bg border border-[#e2e5ea] rounded-xl shadow-sm p-4 min-h-[76vh] overflow-auto">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+
+    <!-- ── Add Task Modal ──────────────── -->
+    <div x-cloak x-show="addModalOpen" x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+         style="background:rgba(30,35,55,0.25)">
+
+        <div @click.away="addModalOpen = false"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             class="bg-white border border-[#e2e5ea] rounded-xl shadow-xl p-4 w-full max-w-sm mx-4">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h2 class="text-sm font-semibold" style="color:var(--ink)"
+                        x-text="parentIdForModal ? 'Add Subtask' : 'New Root Task'"></h2>
+                    <p class="text-[11px] mt-0.5" style="color:var(--ink-faint)"
+                       x-text="parentIdForModal ? 'Nested under parent' : 'Top-level OKR task'"></p>
+                </div>
+                <button @click="addModalOpen = false"
+                        class="p-1 rounded-md transition hover:bg-[#f0f2f5]"
+                        style="color:var(--ink-faint)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form hx-post="/tasks"
+                  hx-target="#task-tree"
+                  hx-swap="innerHTML"
+                  @submit="$el.querySelector('button[type=submit]').setAttribute('disabled','true')"
+                  @htmx:after-request="addModalOpen=false;$el.reset();$el.querySelector('button[type=submit]').removeAttribute('disabled')">
+
+                <input type="hidden" name="parent_id" x-model="parentIdForModal">
+
+                <div class="space-y-2.5">
+                    <div>
+                        <label class="block text-[11px] font-medium mb-1" style="color:var(--ink-muted)">
+                            Task Title <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="title" required autofocus
+                               placeholder="What needs to be done?"
+                               class="f-input" style="font-size:13px">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-medium mb-1" style="color:var(--ink-muted)">Due Date</label>
+                            <input type="date" name="due_date" class="f-input">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium mb-1" style="color:var(--ink-muted)">Assignee</label>
+                            <input type="text" name="assignee" placeholder="e.g. Alice" class="f-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-3.5">
+                    <button type="button" @click="addModalOpen = false"
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg transition hover:bg-[#f0f2f5]"
+                            style="color:var(--ink-muted)">Cancel</button>
+                    <button type="submit"
+                            class="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm
+                                   disabled:opacity-50 transition active:scale-[0.97]"
+                            style="background:var(--accent)">Create →</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

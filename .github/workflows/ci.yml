@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system check
+        run: python manage.py check --deploy
+        env:
+          DEBUG: 'False'
+          SECRET_KEY: ci-deploy-check-only-012345678901234567890123456789012345678901234567890
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+
+      - name: Run tests
+        run: python manage.py test
+        env:
+          DEBUG: 'True'
+          SECRET_KEY: ci-test-key-01234567890123456789012345678901
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ntarque:test .

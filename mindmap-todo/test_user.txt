@@ -1,0 +1,15 @@
+Test Accounts for MindMap Tasks
+
+These accounts can be used to test assigning tasks and receiving notifications.
+
+User 1:
+Username: alice
+Password: password123
+
+User 2:
+Username: bob
+Password: password123
+
+User 3:
+Username: charlie
+Password: password123

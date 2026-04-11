@@ -1,0 +1,5 @@
+Phase 1 (done): Django 5 + Jinja2 + HTMX planner; personal vs team workspaces; sidebar; create team; Tree vs Mind map; seed_demo command; readable bold type + distinct depth colors (orange / cyan / pink / lime).
+Phase 2 (done): Invite members by username (owners only); in-app notification for invitee.
+Phase 2 (remaining / optional): Activity feed; Postgres for production.
+Phase 3 (partial): Billing app; trial users via User admin on /sd/; default mind map + collapsed branches. Operations UI at /admin/; stock Django admin at /sd/.
+Phase 3 (optional): Stripe; finer roles than owner/member.

@@ -1,0 +1,249 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}{% if current_team %}{{ current_team.name }} · MindMap{% else %}Personal · MindMap{% endif %}{% endblock %}
+
+{% block main %}
+<header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-md">
+    <div class="flex min-w-0 items-center gap-2.5">
+        <h1 class="truncate text-sm font-semibold text-slate-900">
+            {% if current_team %}{{ current_team.name }}{% else %}Personal workspace{% endif %}
+        </h1>
+        {% if current_team and team_roster|length > 0 %}
+        <div class="hidden items-center gap-1.5 xl:flex">
+            <span class="text-[10px] font-medium text-slate-500">Members:</span>
+            {% for rm in team_roster %}
+            <span class="inline-flex items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">{{ rm.user.username }}{% if rm.is_owner %}<span class="text-[9px] text-slate-400">·owner</span>{% endif %}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+        <div id="stats-container"
+             hx-get="{{ u.stats }}"
+             hx-trigger="updateStats from:body"
+             hx-swap="innerHTML">
+            {% include 'partials/stats.jinja' %}
+        </div>
+
+        <div class="hidden h-5 w-px bg-slate-200 lg:block"></div>
+
+        <div class="flex rounded-lg border border-slate-200 bg-slate-100/90 p-0.5 text-[10px] font-semibold shadow-sm">
+            <a href="{{ request.path }}?layout=tree"
+               class="rounded-md px-2 py-1 transition {% if task_layout == 'tree' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Tree</a>
+            <a href="{{ request.path }}?layout=mindmap"
+               class="rounded-md px-2 py-1 transition {% if task_layout == 'mindmap' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Mind map</a>
+        </div>
+
+        <div class="relative" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="relative rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                {% if notifications|length > 0 %}
+                <span class="absolute right-1 top-1 flex h-2 w-2">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-rose-500"></span>
+                </span>
+                {% endif %}
+            </button>
+            <div x-show="open" x-cloak @click.outside="open = false"
+                 class="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div class="border-b border-slate-100 bg-slate-50 px-3 py-2">
+                    <h3 class="text-xs font-semibold text-slate-800">Notifications</h3>
+                </div>
+                <div class="max-h-72 overflow-y-auto">
+                    {% if notifications %}
+                    {% for notif in notifications %}
+                    <div class="border-b border-slate-100 px-3 py-2.5 last:border-0 hover:bg-slate-50" id="notif-{{ notif.id }}">
+                        <p class="text-[11px] leading-relaxed text-slate-800">{{ notif.message }}</p>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="text-[9px] text-slate-400">{{ notif.created_at.strftime('%Y-%m-%d') }}</span>
+                            <button type="button" class="text-[9px] font-medium text-indigo-600 hover:underline"
+                                    hx-post="{{ url('planner:notification_read', n_id=notif.id) }}"
+                                    hx-target="#notif-{{ notif.id }}" hx-swap="outerHTML">
+                                Mark read
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="px-4 py-6 text-center text-[11px] text-slate-400">No new notifications</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if current_team and team_is_owner %}
+        <button type="button" @click="inviteModalOpen = true"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-800">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            Invite
+        </button>
+        {% endif %}
+
+        <button type="button" @click="addModalOpen = true; parentIdForModal = ''"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            New task
+            <kbd class="hidden rounded border border-white/30 px-1 py-0.5 text-[9px] font-normal opacity-80 xl:inline">⌘K</kbd>
+        </button>
+        <button type="button" @click="importModalOpen = true"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">
+            Import
+        </button>
+    </div>
+</header>
+
+{% if messages %}
+<div class="border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-900">
+    {% for message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<main class="flex-1 overflow-auto p-4 sm:p-5">
+    <div id="task-tree" class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-50 p-4 shadow-inner"
+         style="background-color:#f1f5f9;background-image:radial-gradient(circle at 1.5px 1.5px,#cbd5e1 1.5px,transparent 0);background-size:22px 22px;">
+        {% if task_layout == 'mindmap' %}
+            {% include 'partials/task_mindmap.jinja' %}
+        {% else %}
+            {% include 'partials/task_tree.jinja' %}
+        {% endif %}
+    </div>
+</main>
+{% endblock %}
+
+{% block modals %}
+<!-- Import tasks -->
+<div x-cloak x-show="importModalOpen" x-transition.opacity
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div @click.outside="importModalOpen = false"
+         class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div class="mb-4 flex items-start justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Import tasks</h2>
+                <p class="mt-0.5 text-[11px] text-slate-500">Upload CSV or TXT. Supports tasks and subtasks.</p>
+            </div>
+            <button type="button" @click="importModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form hx-post="{{ u.task_import }}" hx-target="#task-tree" hx-swap="innerHTML"
+              enctype="multipart/form-data"
+              @htmx:after-request="if(event.detail.successful){ importModalOpen=false; $el.reset(); document.getElementById('import-err').textContent=''; } else { var x=event.detail.xhr; document.getElementById('import-err').textContent = (x && x.responseText) ? x.responseText.trim() : 'Import failed'; }">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            {{ task_import_form.file }}
+            <p id="import-err" class="mt-2 min-h-[1rem] text-[11px] text-rose-600"></p>
+            <p class="mt-2 text-[10px] text-slate-400">
+                CSV: use columns <code>title,parent,due_date,assignee_username</code> or <code>task,subtask</code>. TXT: indentation creates subtasks.
+                4-level samples:
+                <a class="text-indigo-600 hover:underline" href="/static/samples/task_import_4_levels.csv" download>CSV</a>
+                ·
+                <a class="text-indigo-600 hover:underline" href="/static/samples/task_import_4_levels.txt" download>TXT</a>
+            </p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="importModalOpen = false" class="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- New task -->
+<div x-cloak x-show="addModalOpen" x-transition.opacity
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div @click.outside="addModalOpen = false"
+         class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div class="mb-4 flex items-start justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900" x-text="parentIdForModal ? 'Add subtask' : 'New root task'"></h2>
+                <p class="mt-0.5 text-[11px] text-slate-500" x-text="parentIdForModal ? 'Nested under parent card' : 'Top-level OKR'"></p>
+            </div>
+            <button type="button" @click="addModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form hx-post="{{ u.tasks }}" hx-target="#task-tree" hx-swap="innerHTML"
+              @htmx:after-request="if(event.detail.successful){ addModalOpen=false; $el.reset(); }">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="parent_id" x-model="parentIdForModal">
+            <div class="space-y-3">
+                <div>
+                    <label class="mb-1 block text-[11px] font-medium text-slate-600">Title <span class="text-rose-500">*</span></label>
+                    {{ task_create_form.title }}
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="mb-1 block text-[11px] font-medium text-slate-600">Due</label>
+                        {{ task_create_form.due_date }}
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-[11px] font-medium text-slate-600">Assignee</label>
+                        {{ task_create_form.assignee_username }}
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="addModalOpen = false" class="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- New team -->
+<div x-cloak x-show="teamModalOpen" x-transition.opacity
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div @click.outside="teamModalOpen = false"
+         class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div class="mb-4 flex items-start justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Create team</h2>
+                <p class="mt-0.5 text-[11px] text-slate-500">Shared board for your group — you’ll be the owner.</p>
+            </div>
+            <button type="button" @click="teamModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form hx-post="{{ url('teams:create') }}"
+              @htmx:after-request="if(event.detail.successful){ teamModalOpen=false; $el.reset(); }">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <label class="mb-1 block text-[11px] font-medium text-slate-600">Team name</label>
+            {{ team_create_form.name }}
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="teamModalOpen = false" class="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button type="submit" class="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700">Create team</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Invite to team (owners only) -->
+{% if current_team and team_is_owner %}
+<div x-cloak x-show="inviteModalOpen" x-transition.opacity
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div @click.outside="inviteModalOpen = false"
+         class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div class="mb-4 flex items-start justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Invite teammate</h2>
+                <p class="mt-0.5 text-[11px] text-slate-500">They must already have an account. Username only (same as login).</p>
+            </div>
+            <button type="button" @click="inviteModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form hx-post="{{ url('teams:invite', team_slug=current_team.slug) }}"
+              @htmx:after-request="if(event.detail.successful){ inviteModalOpen=false; $el.reset(); document.getElementById('invite-err').textContent=''; } else { var x=event.detail.xhr; document.getElementById('invite-err').textContent = (x && x.responseText) ? x.responseText.trim() : 'Request failed'; }">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <label class="mb-1 block text-[11px] font-medium text-slate-600">Username</label>
+            {{ team_invite_form.username }}
+            <p id="invite-err" class="mt-1 min-h-[1rem] text-[11px] text-rose-600"></p>
+            <p class="mt-2 text-[10px] text-slate-400">Invitee gets a notification and sees this team in their sidebar.</p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" @click="inviteModalOpen = false" class="rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                <button type="submit" class="rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-violet-700">Send invite</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

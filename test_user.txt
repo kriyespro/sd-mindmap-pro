@@ -1,0 +1,15 @@
+Demo login (after seed):
+
+  python manage.py seed_demo
+
+username: demo
+password: demo1234
+
+(Re-run with --reset to replace demo tasks only.)
+
+Run: python manage.py runserver 8002
+Open: http://127.0.0.1:8002/
+
+Staff dashboard: http://127.0.0.1:8002/admin/ (metrics & links; requires is_staff)
+Django admin (default UI): http://127.0.0.1:8002/sd/ — create superuser: python manage.py createsuperuser
+Billing (in app): /billing/ — staff log payments under /sd/ → Billing → Payments.

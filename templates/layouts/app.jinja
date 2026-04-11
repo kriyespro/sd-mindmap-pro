@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}MindMap Tasks{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        ink: { DEFAULT: '#0f172a', muted: '#475569', faint: '#94a3b8' },
+                    },
+                },
+            },
+        };
+    </script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        [x-cloak] { display: none !important; }
+        .htmx-settling, .htmx-swapping { opacity: 0; transition: opacity .12s ease; }
+        body { font-family: Inter, system-ui, sans-serif; }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.body.addEventListener('htmx:configRequest', function (e) {
+                var meta = document.querySelector('meta[name=csrf-token]');
+                if (meta && meta.content) e.detail.headers['X-CSRFToken'] = meta.content;
+            });
+
+            document.body.addEventListener('htmx:beforeRequest', function (e) {
+                var source = e && e.detail ? e.detail.elt : null;
+                if (!source || !source.closest) return;
+                var card = source.closest('[data-task-id]');
+                if (!card) return;
+                document.body.dataset.currentTaskId = card.getAttribute('data-task-id') || '';
+            });
+
+            document.body.addEventListener('htmx:afterSwap', function (e) {
+                var target = e && e.detail ? e.detail.target : null;
+                if (!target || target.id !== 'task-tree') return;
+                var taskId = document.body.dataset.currentTaskId;
+                if (!taskId) return;
+                var card = document.querySelector('[data-task-id="' + taskId + '"]');
+                if (!card) return;
+                card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                if (typeof card.focus === 'function') {
+                    card.focus({ preventScroll: true });
+                }
+                card.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                window.setTimeout(function () {
+                    card.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                }, 900);
+            });
+
+            document.body.addEventListener('taskCreated', function (e) {
+                var taskId = e && e.detail ? String(e.detail.taskId || '') : '';
+                if (!taskId) return;
+                document.body.dataset.currentTaskId = taskId;
+                var card = document.querySelector('[data-task-id="' + taskId + '"]');
+                if (!card) return;
+                card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                if (typeof card.focus === 'function') {
+                    card.focus({ preventScroll: true });
+                }
+                card.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                window.setTimeout(function () {
+                    card.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                }, 1100);
+            });
+        });
+    </script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 antialiased"
+      x-data="{
+        addModalOpen: false,
+        importModalOpen: false,
+        teamModalOpen: false,
+        inviteModalOpen: false,
+        parentIdForModal: '',
+        sidebarOpen: true,
+        isMindmap: {{ (task_layout|default('mindmap') == 'mindmap')|tojson }}
+      }"
+      @keydown.window.ctrl.k.prevent="addModalOpen = true; parentIdForModal = ''"
+      @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="relative flex flex-col border-r border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out"
+           :class="isMindmap && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
+        <button type="button" x-show="isMindmap && sidebarOpen" x-cloak @click="sidebarOpen = false"
+                class="absolute -right-3 top-1/2 z-30 flex h-9 w-3 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-slate-200 bg-white text-xs font-bold text-slate-400 shadow-sm hover:text-indigo-600"
+                title="Hide sidebar">‹</button>
+        <div class="p-4 border-b border-slate-100">
+            <a href="{{ url('planner:board_personal') }}" class="flex items-center gap-2.5">
+                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold tracking-tight text-slate-900">MindMap Tasks</p>
+                    <p class="text-[10px] text-slate-400">Teams & OKRs</p>
+                </div>
+            </a>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+            <p class="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Workspace</p>
+            <a href="{{ url('planner:board_personal') }}"
+               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition
+                      {% if not current_team %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-500 text-xs">Me</span>
+                Personal
+            </a>
+
+            <div class="pt-4 flex items-center justify-between px-2">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Teams</p>
+                <button type="button" @click="teamModalOpen = true"
+                        class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800">+ New</button>
+            </div>
+
+            {% for m in team_memberships %}
+            <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
+               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition
+                      {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100 text-violet-600 text-[10px] font-bold">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
+                <span class="truncate">{{ m.team.name }}</span>
+                {% if m.is_owner %}<span class="ml-auto text-[9px] text-slate-400 shrink-0">Owner</span>{% endif %}
+            </a>
+            {% else %}
+            <p class="px-2 text-xs text-slate-400">No teams yet — create one below.</p>
+            {% endfor %}
+
+            <p class="px-2 pt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Account</p>
+            <a href="{{ url('billing:overview') }}"
+               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">$</span>
+                Billing
+                {% if account_profile and account_profile.trial_active %}
+                <span class="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800">Trial</span>
+                {% endif %}
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-slate-100 space-y-2">
+            <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold uppercase">{{ user.username[0] }}</div>
+                <div class="min-w-0 flex-1">
+                    <p class="truncate text-xs font-medium text-slate-800">{{ user.username }}</p>
+                    <form action="{{ url('users:logout') }}" method="post" class="inline">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <button type="submit" class="text-[10px] text-rose-600 hover:underline">Log out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <button type="button" x-show="isMindmap && !sidebarOpen" x-cloak @click="sidebarOpen = true"
+            class="fixed left-0 top-28 z-40 flex items-center rounded-r-lg border border-l-0 border-slate-200 bg-white py-3 pl-1 pr-1.5 text-sm font-bold text-slate-400 shadow-md hover:text-indigo-600"
+            title="Show sidebar">›</button>
+
+    <!-- Main -->
+    <div class="flex min-w-0 flex-1 flex-col">
+        {% block main %}{% endblock %}
+    </div>
+</div>
+
+{% block modals %}{% endblock %}
+</body>
+</html>

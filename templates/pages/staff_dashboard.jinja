@@ -1,0 +1,85 @@
+{% extends 'layouts/staff_shell.jinja' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block main %}
+<div class="border-b border-slate-800 bg-slate-900/50 px-8 py-6">
+    <h1 class="text-xl font-bold text-white">Dashboard</h1>
+    <p class="mt-1 text-sm text-slate-400">Live metrics and shortcuts. Data changes are made in the classic Django admin.</p>
+</div>
+
+<div class="space-y-8 p-8">
+    <section>
+        <h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Overview</h2>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 ring-1 ring-white/5">
+                <p class="text-xs font-medium text-slate-500">Billing collected</p>
+                <p class="mt-2 text-2xl font-bold tabular-nums text-emerald-400">${{ payment_total_display }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ payment_count }} payment record(s)</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 ring-1 ring-white/5">
+                <p class="text-xs font-medium text-slate-500">Active users</p>
+                <p class="mt-2 text-2xl font-bold tabular-nums text-white">{{ user_count }}</p>
+                <p class="mt-1 text-xs text-slate-500">is_active=True</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 ring-1 ring-white/5">
+                <p class="text-xs font-medium text-slate-500">Trial accounts</p>
+                <p class="mt-2 text-2xl font-bold tabular-nums text-amber-400">{{ trial_count }}</p>
+                <p class="mt-1 text-xs text-slate-500">Profile.is_trial</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5 ring-1 ring-white/5">
+                <p class="text-xs font-medium text-slate-500">Tasks · Teams</p>
+                <p class="mt-2 text-2xl font-bold tabular-nums text-indigo-400">{{ task_count }} <span class="text-lg text-slate-500">/</span> {{ team_count }}</p>
+                <p class="mt-1 text-xs text-slate-500">tasks · teams</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Quick links</h2>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url('admin:index') }}"
+               class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition hover:bg-indigo-500">Open classic admin</a>
+            <a href="{{ url('admin:billing_payment_add') }}"
+               class="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800">+ Add payment</a>
+            <a href="{{ url('admin:auth_user_changelist') }}"
+               class="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800">Users</a>
+            <a href="{{ url('admin:planner_task_changelist') }}"
+               class="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800">Tasks</a>
+            <a href="{{ url('admin:teams_team_changelist') }}"
+               class="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800">Teams</a>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Recent payments</h2>
+        <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+            <table class="w-full text-left text-sm">
+                <thead class="border-b border-slate-800 bg-slate-900/80 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">When</th>
+                        <th class="px-4 py-3">Amount</th>
+                        <th class="px-4 py-3">User</th>
+                        <th class="px-4 py-3">Note</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    {% for p in recent_payments %}
+                    <tr class="text-slate-300">
+                        <td class="px-4 py-3 font-mono text-xs text-slate-400">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td class="px-4 py-3 font-semibold tabular-nums text-emerald-400/90">{{ p.currency }} {{ p.amount }}</td>
+                        <td class="px-4 py-3">{% if p.user %}{{ p.user.username }}{% else %}—{% endif %}</td>
+                        <td class="max-w-xs truncate px-4 py-3 text-slate-500">{{ p.description or '—' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-slate-500">No payments yet. Add one in classic admin.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
