@@ -33,11 +33,19 @@
 
     <form method="post" class="space-y-4">
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        {% if request.GET.get('next') %}
+        <input type="hidden" name="next" value="{{ request.GET.get('next') }}">
+        {% endif %}
         {% if is_signup %}
         <div>
             <label class="mb-1 block text-xs font-medium text-slate-600">Username</label>
             {{ form.username }}
             {% if form.username.errors %}<p class="mt-1 text-xs text-rose-600">{{ form.username.errors[0] }}</p>{% endif %}
+        </div>
+        <div>
+            <label class="mb-1 block text-xs font-medium text-slate-600">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}<p class="mt-1 text-xs text-rose-600">{{ form.email.errors[0] }}</p>{% endif %}
         </div>
         <div>
             <label class="mb-1 block text-xs font-medium text-slate-600">Password</label>
@@ -67,9 +75,11 @@
 
     <p class="mt-6 text-center text-xs text-slate-500">
         {% if is_signup %}
-        Already have an account? <a href="{{ url('users:login') }}" class="font-medium text-indigo-600 hover:underline">Log in</a>
+        Already have an account?
+        <a href="{% if request.GET.get('next') %}{{ url('users:login') }}?next={{ request.GET.get('next') }}{% else %}{{ url('users:login') }}{% endif %}" class="font-medium text-indigo-600 hover:underline">Log in</a>
         {% else %}
-        New here? <a href="{{ url('users:signup') }}" class="font-medium text-indigo-600 hover:underline">Create account</a>
+        New here?
+        <a href="{% if request.GET.get('next') %}{{ url('users:signup') }}?next={{ request.GET.get('next') }}{% else %}{{ url('users:signup') }}{% endif %}" class="font-medium text-indigo-600 hover:underline">Create account</a>
         {% endif %}
     </p>
 </div>

@@ -32,7 +32,7 @@ class TeamInviteViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertIn('Only team owners can invite', response.content.decode())
+        self.assertIn('Only owner/admin can invite', response.content.decode())
 
     def test_solo_plan_owner_cannot_invite(self):
         owner_profile = self.owner.profile

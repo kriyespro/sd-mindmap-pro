@@ -1,0 +1,138 @@
+GIT + LIVE SERVER UPDATE STEPS (SAFE CHECKLIST)
+
+Assumptions:
+- Local repo path: /Users/kumarsunilverma/Desktop/nTarque
+- Branch to deploy: main (change if you use another branch)
+- Live server already has project, venv, and service configured
+
+==================================================
+1) LOCAL MACHINE: REVIEW + COMMIT + PUSH
+==================================================
+
+1. Check current branch
+   git branch --show-current
+
+2. See changed files
+   git status
+
+3. Review diff before commit
+   git diff
+
+4. Stage required files
+   git add .
+   (or stage specific files only)
+
+5. Commit with message
+   git commit -m "Update billing team controls, exports, and member deactivation flow"
+
+6. Push to remote
+   git push origin main
+
+7. Confirm push success
+   git log --oneline -n 3
+
+
+==================================================
+2) LIVE SERVER: BACKUP + PULL LATEST
+==================================================
+
+1. SSH into server
+   ssh <server-user>@<server-ip>
+
+2. Go to project folder
+   cd /path/to/nTarque
+
+3. Check branch + local changes
+   git branch --show-current
+   git status
+
+4. (Optional but recommended) backup DB before update
+   cp db.sqlite3 "db.sqlite3.backup.$(date +%Y%m%d_%H%M%S)"
+
+5. Get latest code
+   git fetch origin
+   git pull origin main
+
+
+==================================================
+3) LIVE SERVER: INSTALL + MIGRATE + STATIC
+==================================================
+
+1. Activate venv
+   source venv/bin/activate
+   (or your actual virtualenv path)
+
+2. Install/update dependencies
+   pip install -r requirements.txt
+
+3. Run migrations
+   python3 manage.py migrate --noinput
+
+4. Collect static (if using whitenoise/nginx static flow)
+   python3 manage.py collectstatic --noinput
+
+5. Quick Django health check
+   python3 manage.py check
+
+
+==================================================
+4) RESTART APP SERVICE
+==================================================
+
+If using systemd + gunicorn:
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+
+Check status:
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
+
+If using supervisor:
+   sudo supervisorctl reread
+   sudo supervisorctl update
+   sudo supervisorctl restart all
+
+If using docker compose:
+   docker compose pull
+   docker compose up -d --build
+   docker compose logs -f --tail=100
+
+
+==================================================
+5) POST-DEPLOY VERIFICATION (MANDATORY)
+==================================================
+
+1. Open app in browser:
+   - Login works
+   - Billing page loads
+   - Team member activate/deactivate works
+   - Mindmap export (CSV/PDF) works
+
+2. Validate encryption migration behavior:
+   - Old tasks still readable in app
+   - /sd/ admin task content remains masked
+
+3. Watch server logs for errors:
+   journalctl -u gunicorn -n 100 --no-pager
+   (or docker/supervisor logs)
+
+
+==================================================
+6) QUICK ROLLBACK (IF SOMETHING BREAKS)
+==================================================
+
+1. Identify previous good commit
+   git log --oneline -n 10
+
+2. Checkout previous commit (temporary)
+   git checkout <good-commit-sha>
+
+3. Restart service and verify
+   sudo systemctl restart gunicorn
+
+4. For sqlite rollback (if needed)
+   cp db.sqlite3.backup.<timestamp> db.sqlite3
+   python3 manage.py migrate
+
+Note: For production best practice, use tagged releases + tested backup/restore flow.
+

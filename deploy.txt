@@ -1,0 +1,236 @@
+================================================================================
+DEPLOY: GitHub → Ubuntu VPS (Docker) — IP only, no domain
+Replace REPO_URL and paths if your clone URL / folder name differs.
+Droplet IP used below: 161.97.146.14
+================================================================================
+
+--------------------------------------------------------------------------------
+PART A — ON YOUR LAPTOP (push to GitHub)
+--------------------------------------------------------------------------------
+
+cd /path/to/your/project
+
+git status
+git add -A
+git commit -m "Deploy: describe your change"
+git push origin main
+
+# If branch is not main:
+#   git branch
+#   git push origin YOUR_BRANCH_NAME
+
+# First-time remote (only if needed):
+#   git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+#   git push -u origin main
+
+--------------------------------------------------------------------------------
+PART B — ON UBUNTU VPS (first-time: Docker + repo)
+--------------------------------------------------------------------------------
+
+# 1) SSH into the server
+ssh root@161.97.146.14
+# (or: ssh youruser@161.97.146.14)
+
+# 2) Install Docker Engine + Compose plugin (Ubuntu — run once)
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
+# Log out and SSH back in so "docker" works without sudo, OR use "sudo docker" below.
+
+# 3) Clone the repo (set REPO_URL to your GitHub HTTPS clone URL)
+cd ~
+git clone https://github.com/kriyespro/sd-mindmap-pro.git
+cd sd-mindmap-pro
+
+# Later updates on the VPS:
+#   cd ~/sd-mindmap-pro && git pull
+
+--------------------------------------------------------------------------------
+PART C — ON VPS: CREATE .env (copy entire block below into nano, then fill secrets)
+--------------------------------------------------------------------------------
+
+nano ~/sd-mindmap-pro/.env
+
+# --- COPY BELOW THIS LINE INTO .env (edit SECRET_KEY and POSTGRES_PASSWORD) ---
+
+SECRET_KEY=PASTE_OUTPUT_OF_PYTHON_COMMAND_BELOW
+
+DEBUG=False
+USE_HTTPS=False
+
+ALLOWED_HOSTS=127.0.0.1,localhost,161.97.146.14,nginx,web
+CSRF_TRUSTED_ORIGINS=http://161.97.146.14
+
+POSTGRES_DB=ntarque
+POSTGRES_USER=ntarque
+POSTGRES_PASSWORD=PASTE_A_STRONG_PASSWORD_NO_AT_OR_HASH
+
+TIME_ZONE=UTC
+
+# --- STOP COPYING ---
+
+# Generate SECRET_KEY on the VPS (paste result into .env as SECRET_KEY=...):
+#   python3 -c "import secrets; print(secrets.token_urlsafe(60))"
+
+# Save nano: Ctrl+O, Enter, Ctrl+X
+
+# Rules for POSTGRES_PASSWORD:
+#   - Avoid @ # : / $ % in the password (Compose / URLs break easily), OR use only letters and numbers.
+
+--------------------------------------------------------------------------------
+PART D — ON VPS: FIREWALL (DigitalOcean / UFW)
+--------------------------------------------------------------------------------
+
+# Allow HTTP and SSH (adjust if you use non-standard SSH port)
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw enable
+sudo ufw status
+
+# In DigitalOcean: Cloud Firewall should allow TCP 22 and 80 to the droplet.
+
+--------------------------------------------------------------------------------
+PART E — ON VPS: BUILD AND RUN DOCKER
+--------------------------------------------------------------------------------
+
+cd ~/sd-mindmap-pro
+
+docker compose build
+docker compose up -d
+
+docker compose ps
+
+# Logs if something fails:
+docker compose logs web --tail=100
+docker compose logs nginx --tail=50
+docker compose logs db --tail=30
+
+--------------------------------------------------------------------------------
+PART F — VERIFY (on VPS or your laptop)
+--------------------------------------------------------------------------------
+
+# On VPS:
+curl -s http://127.0.0.1/health/
+
+# In browser (your laptop):
+http://161.97.146.14/
+
+--------------------------------------------------------------------------------
+PART G — DJANGO SUPERUSER (must run INSIDE the web container)
+--------------------------------------------------------------------------------
+
+cd ~/sd-mindmap-pro
+docker compose exec -it web python manage.py createsuperuser
+
+# Admin URL (Django admin at /sd/ per this project):
+#   http://161.97.146.14/sd/
+
+--------------------------------------------------------------------------------
+PART H — AFTER YOU CHANGE CODE (laptop → GitHub → VPS)
+--------------------------------------------------------------------------------
+
+# Laptop:
+cd /path/to/your/project
+git status
+git add -A
+git commit -m "Your message"
+git push origin main
+
+# If using another branch:
+# git push origin YOUR_BRANCH
+
+# Optional quick verify:
+# git log -1 --oneline
+
+# VPS:
+cd ~/sd-mindmap-pro
+
+# Always save local server edits before pull (if any)
+git status
+
+# Pull latest code from GitHub
+git pull origin main
+
+# Rebuild only app image + restart app/nginx (keeps db data volume)
+docker compose build web
+docker compose up -d web nginx
+
+# Run latest migrations on production
+docker compose exec web python manage.py migrate
+
+# Collect static (safe repeat)
+docker compose exec web python manage.py collectstatic --noinput
+
+# Health checks
+docker compose ps
+docker compose logs web --tail=80
+curl -s http://127.0.0.1/health/
+
+--------------------------------------------------------------------------------
+PART I — PRODUCTION DATA SAFETY (IMPORTANT)
+--------------------------------------------------------------------------------
+
+cd ~/sd-mindmap-pro
+
+# Create DB backup before risky changes (recommended)
+docker compose exec -T db pg_dump -U ntarque -d ntarque > backup_$(date +%F_%H%M).sql
+
+# SAFE restart commands (do NOT delete volume)
+docker compose restart
+# OR
+docker compose up -d --remove-orphans
+
+# NEVER run these in production if you want to keep data:
+# docker compose down -v
+# docker volume rm sd-mindmap-pro_pgdata
+
+# Restore backup if needed:
+# cat backup_YYYY-MM-DD_HHMM.sql | docker compose exec -T db psql -U ntarque -d ntarque
+
+--------------------------------------------------------------------------------
+PART J — ZERO-DOWNTIME-ISH DEPLOY ORDER (RECOMMENDED)
+--------------------------------------------------------------------------------
+
+# Goal: keep app interruption very short and keep DB data safe.
+# Note: true zero-downtime usually needs load balancer + multiple web replicas.
+
+cd ~/sd-mindmap-pro
+
+# 0) Backup DB first
+docker compose exec -T db pg_dump -U ntarque -d ntarque > predeploy_$(date +%F_%H%M).sql
+
+# 1) Pull latest code
+git pull origin main
+
+# 2) Build new app image before restarting running services
+docker compose build web
+
+# 3) Run database migrations with new image
+docker compose run --rm web python manage.py migrate
+
+# 4) Collect static with new image
+docker compose run --rm web python manage.py collectstatic --noinput
+
+# 5) Restart only app edge services (db untouched)
+docker compose up -d web nginx
+
+# 6) Fast verification
+docker compose ps
+curl -s http://127.0.0.1/health/
+docker compose logs web --tail=50
+
+# Rollback quick path (if deploy fails after pull):
+# git log --oneline -n 5
+# git checkout <previous_commit_sha>
+# docker compose build web
+# docker compose up -d web nginx
+
+================================================================================
+END
+================================================================================

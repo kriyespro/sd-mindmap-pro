@@ -4,3 +4,5 @@ whitenoise>=6.7
 gunicorn>=22.0
 dj-database-url>=2.2
 psycopg2-binary>=2.9
+cryptography>=42.0
+cairosvg>=2.7

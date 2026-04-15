@@ -13,6 +13,9 @@ SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-dev-only-replace-in-production-with-long-random-string-xyz',
 )
+# Optional Fernet key for task title encryption-at-rest.
+# Must be a urlsafe base64-encoded 32-byte key when provided.
+TASK_ENCRYPTION_KEY = os.environ.get('TASK_ENCRYPTION_KEY', '').strip()
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 

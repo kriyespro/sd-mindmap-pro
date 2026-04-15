@@ -8,6 +8,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
 
+from planner.crypto import decrypt_task_title
 from planner.models import Notification, Task
 from teams.models import Team, TeamMembership
 
@@ -206,7 +207,7 @@ def personal_visible_task_ids(user: User) -> set[int]:
 
 def tasks_for_workspace(user: User, team: Team | None) -> QuerySet[Task]:
     if team is not None:
-        if not TeamMembership.objects.filter(team=team, user=user).exists():
+        if not TeamMembership.objects.filter(team=team, user=user, is_active=True).exists():
             return Task.objects.none()
         return Task.objects.filter(team=team)
     ids = personal_visible_task_ids(user)
@@ -217,14 +218,31 @@ def tasks_for_workspace(user: User, team: Team | None) -> QuerySet[Task]:
 
 def task_rows_for_tree(qs: QuerySet[Task]) -> list[dict]:
     rows = []
+    active_usernames_by_team: dict[int, set[str]] = {}
+
+    def is_active_assignee(*, team_id: int | None, username: str) -> bool:
+        if not team_id:
+            return True
+        key = int(team_id)
+        if key not in active_usernames_by_team:
+            active_usernames_by_team[key] = {
+                (x or '').strip().lower()
+                for x in TeamMembership.objects.filter(team_id=key, is_active=True)
+                .values_list('user__username', flat=True)
+            }
+        return (username or '').strip().lower() in active_usernames_by_team[key]
+
     for t in qs.order_by('id'):
+        assignee = (t.assignee_username or '').strip()
+        if assignee and not is_active_assignee(team_id=t.team_id, username=assignee):
+            assignee = ''
         rows.append(
             {
                 'id': t.id,
                 'parent_id': t.parent_id,
-                'title': t.title,
+                'title': decrypt_task_title(t.title),
                 'due_date': t.due_date,
-                'assignee': t.assignee_username or None,
+                'assignee': assignee or None,
                 'is_completed': bool(t.is_completed),
             }
         )
@@ -242,7 +260,7 @@ def user_can_access_task(user: User, task: Task, team: Team | None) -> bool:
     if team is not None:
         if task.team_id != team.id:
             return False
-        return TeamMembership.objects.filter(team=team, user=user).exists()
+        return TeamMembership.objects.filter(team=team, user=user, is_active=True).exists()
     ids = personal_visible_task_ids(user)
     return task.id in ids and task.team_id is None
 

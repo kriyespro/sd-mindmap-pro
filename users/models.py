@@ -5,12 +5,15 @@ from django.utils import timezone
 
 class Profile(models.Model):
     TEAM_USER_LIMIT = 5
+    TEAM_20_USER_LIMIT = 20
 
     PLAN_SOLO = 'solo'
     PLAN_TEAM = 'team'
+    PLAN_TEAM_20 = 'team_20'
     PLAN_CHOICES = (
         (PLAN_SOLO, 'Solo'),
         (PLAN_TEAM, 'Team (up to 5 users)'),
+        (PLAN_TEAM_20, 'Team Pro (up to 20 users)'),
     )
 
     user = models.OneToOneField(
@@ -46,3 +49,15 @@ class Profile(models.Model):
         if not self.is_trial or not self.trial_ends:
             return False
         return self.trial_ends >= timezone.localdate()
+
+    @classmethod
+    def supports_team_plan(cls, plan: str) -> bool:
+        return plan in {cls.PLAN_TEAM, cls.PLAN_TEAM_20}
+
+    @classmethod
+    def seat_limit_for_plan(cls, plan: str) -> int:
+        if plan == cls.PLAN_TEAM_20:
+            return cls.TEAM_20_USER_LIMIT
+        if plan == cls.PLAN_TEAM:
+            return cls.TEAM_USER_LIMIT
+        return 1

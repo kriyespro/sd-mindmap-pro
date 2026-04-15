@@ -1,0 +1,15 @@
+1 - can we add task encription so in admin dashboard task cannot be seen , also add mindmap export button in exel or google sheet formet.
+STATUS: DONE - Task content is masked in /sd/ admin and task titles now use encryption-at-rest in DB (with migration for existing rows); export added as CSV button on board/mindmap header (works with Excel + Google Sheets import).
+
+2- new team space button not working on billing page .
+STATUS: IN PROGRESS - not part of this change set; needs dedicated fix pass after reproducing current billing behavior.
+
+3- can be export in png /pdf
+STATUS: DONE - Added mindmap export endpoints and header buttons for PNG/PDF (also supports SVG format param internally).
+
+4- billing page member management (owner: assign/remove team members)
+STATUS: DONE - Added owner-only team member table (User / Team / Active), direct username assign, and remove-from-team action without deleting user account/dashboard.
+
+5- deactivated member still shown on mindmap cards + simplify active/deactive controls
+STATUS: DONE - Team membership now supports activate/deactivate state; deactivation removes team access, keeps user account, clears team task assignee labels for that user, and billing table now has active/deactive toggle for owner.
+

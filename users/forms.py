@@ -16,9 +16,10 @@ class AppLoginForm(AuthenticationForm):
 class SignUpForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ('username', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name in self.fields:
             self.fields[name].widget.attrs.setdefault('class', _INPUT)
+        self.fields['email'].required = True

@@ -1,0 +1,359 @@
+USER + TEAM ACCESS LOGIC PLAN (NO CODE)
+
+Goal
+- Define how single users and team users access the product.
+- Allow team users (admins/owners) to invite others.
+- Support invite links so invited users can join a team on a free plan.
+- Keep logic clear for MVP launch and future scale.
+
+==================================================
+1) CORE USER TYPES
+==================================================
+
+1.1 Individual User
+- A person who signs up directly and uses the app alone.
+- Not attached to any team by default.
+- Access limited to own workspace/data.
+- Can upgrade to paid individual plan later.
+
+1.2 Team User
+- A person who is a member of a team workspace.
+- Access depends on role (owner/admin/member/viewer).
+- Can collaborate in shared team space.
+- Team billing and feature limits apply.
+
+1.3 User State (important)
+- A person can exist in one of these states:
+  - standalone_user
+  - team_member
+  - both (if product allows personal + team context)
+- MVP recommendation:
+  - Keep one active context at a time for simplicity.
+  - Later support switching between personal and team spaces.
+
+==================================================
+2) TEAM ROLES AND PERMISSIONS
+==================================================
+
+2.1 Owner
+- Full control over team.
+- Can manage billing, upgrade plan, remove team, transfer ownership.
+- Can invite/remove all team users.
+- Can generate/revoke invite links.
+
+2.2 Admin
+- Can manage members, invite users, and generate invite links.
+- Cannot delete team or change ownership (recommended for safety).
+- Billing permissions optional (MVP: no billing control unless owner).
+
+2.3 Member
+- Regular collaborator.
+- Can access assigned features/resources.
+- Cannot invite unless explicitly enabled.
+
+2.4 Viewer (optional for MVP)
+- Read-only access.
+- No creation/editing permissions.
+
+2.5 Permission Principle
+- Role-based access control (RBAC).
+- Every team action checks:
+  - authenticated user
+  - current team context
+  - role permission for action
+
+==================================================
+3) TEAM CREATION FLOW
+==================================================
+
+3.1 Create Team
+- User clicks "Create Team".
+- Becomes team owner automatically.
+- Team gets:
+  - team name
+  - unique team identifier
+  - default free team plan
+  - member limit (free tier rule)
+
+3.2 Team Plan at Start
+- Default: Free Team Plan.
+- Include strict limits to encourage upgrades:
+  - max members
+  - feature caps
+  - usage quotas
+
+==================================================
+4) INVITE USER FLOW (EMAIL + LINK)
+==================================================
+
+4.1 Who Can Invite
+- Owner/Admin can invite by default.
+- Member cannot invite unless special permission enabled.
+
+4.2 Invite Methods
+- Method A: Email invite
+  - Admin enters email + role.
+  - Invite record created with pending state.
+  - Email sent with secure invite URL.
+
+- Method B: Shareable invite link
+  - Admin generates link with role preset (e.g., member).
+  - Link can be shared manually.
+  - Link has expiration + usage limit.
+
+4.3 Invite Token Rules
+- Unique, hard-to-guess token.
+- Bound to:
+  - team
+  - intended role
+  - created_by user
+  - expiry date
+  - max uses
+- Revocable by owner/admin anytime.
+
+4.4 Invite States
+- pending
+- accepted
+- expired
+- revoked
+- cancelled
+
+==================================================
+5) JOIN VIA FREE TEAM LINK (KEY REQUIREMENT)
+==================================================
+
+5.1 Expected Behavior
+- Team admin can generate a "Join Team Free" link.
+- Recipient opens link and joins team without payment step.
+- Joined member is counted under free team limits.
+
+5.2 Link Types
+- Public team link (controlled use):
+  - Anyone with link can request/join.
+  - Must have strong limits and expiration.
+
+- Email-bound link (safer default):
+  - Link valid only for invited email account.
+  - Better abuse prevention.
+
+MVP recommendation:
+- Start with email-bound + optional public limited link.
+
+5.3 Join Flow (User not logged in)
+- User opens invite link.
+- Sees "Join Team" page with team name + role + plan note.
+- User signs up/login.
+- System re-validates token (not expired/revoked/used up).
+- If valid, user added to team under free team plan.
+
+5.4 Join Flow (User already logged in)
+- User opens link.
+- If token valid, show confirm screen.
+- On confirm, add user to team and redirect to team dashboard.
+
+5.5 Free Plan Capacity Validation
+- Before final join:
+  - check current member count against free plan limit
+  - check team status (active/suspended)
+  - check invite token validity
+- If free limit exceeded:
+  - block join
+  - show "team full, upgrade required" message
+  - offer owner/admin upgrade CTA
+
+==================================================
+6) ACCESS CONTROL LOGIC
+==================================================
+
+6.1 Team Data Isolation
+- Every team resource query scoped by:
+  - team_id from current context
+  - membership check for current user
+- Prevent cross-team data access.
+
+6.2 Personal vs Team Context
+- If user belongs to a team, app should know active context.
+- All actions use active context for permissions and data.
+- Add clear UI indicator (Personal / Team Name).
+
+6.3 Removed Member Behavior
+- If removed from team:
+  - immediate loss of team access
+  - personal account remains active
+  - personal data untouched
+
+==================================================
+7) BILLING + REVENUE LOGIC
+==================================================
+
+7.1 Free Team Strategy
+- Free join lowers friction and improves team adoption.
+- Limits should push upgrade naturally:
+  - member cap
+  - automation/reporting caps
+  - storage/usage limits
+
+7.2 Upgrade Triggers
+- Trigger prompts when:
+  - member cap reached
+  - premium feature used
+  - quota exhausted
+
+7.3 Who Can Upgrade
+- Owner only by default.
+- Optional: Admin with billing permission.
+
+==================================================
+8) SECURITY + ABUSE PREVENTION
+==================================================
+
+8.1 Invite Security
+- Expiring links (default 3-7 days).
+- Max uses per link (default 1 for email-bound, small number for public).
+- One-click revoke.
+- Audit logs for invite creation/accept/revoke.
+
+8.2 Abuse Controls
+- Rate-limit invite generation.
+- Domain restrictions optional (e.g., company emails only).
+- Detect repeated failed token attempts.
+
+8.3 Compliance Basics
+- Track who invited whom and when.
+- Keep membership change history for auditability.
+
+==================================================
+9) EDGE CASES TO HANDLE
+==================================================
+
+- Invite link expired before signup complete.
+- User already in same team and clicks invite again.
+- User in another team joins new team (allowed/blocked policy).
+- Invite role changed after link generation.
+- Team downgraded and exceeds free limits.
+- Inviter loses admin role after generating links.
+- Team suspended or deleted before invite acceptance.
+
+==================================================
+10) MVP POLICY RECOMMENDATION
+==================================================
+
+Phase 1 (fast launch)
+- Individual signup + team creation.
+- Owner/admin invites via email.
+- Secure invite link with expiry.
+- Join free team if capacity available.
+- Basic roles: owner/admin/member.
+- Hard free plan member cap.
+
+Phase 2
+- Public invite links with usage limits.
+- Viewer role.
+- Domain allowlist and stronger invite analytics.
+- Multi-workspace switching for users with many teams.
+
+Phase 3
+- Advanced RBAC custom permissions.
+- SSO/SCIM style team provisioning.
+- Enterprise governance and approval workflows.
+
+==================================================
+11) USER-FACING COPY IDEAS (MVP)
+==================================================
+
+- "Invite teammates for free on your Team plan."
+- "Share this secure link to let teammates join instantly."
+- "Your team is at free limit. Upgrade to add more members."
+- "This invite link is invalid or expired. Ask your admin for a new one."
+
+==================================================
+12) SUCCESS METRICS
+==================================================
+
+- Invite acceptance rate.
+- Time from invite sent to team join.
+- Teams created per day.
+- Free teams hitting member cap.
+- Free-to-paid conversion from team limits.
+- Team retention after first 30 days.
+
+==================================================
+13) SIMPLE MVP CONFIRMED FLOW (FINAL)
+==================================================
+
+- Team owner creates the team workspace.
+- Team owner is the billing owner by default.
+- Team owner can invite users from Billing page using email IDs.
+- Team owner can generate a team join link from Billing page.
+- Invited users can sign up and join the team for free.
+- Joined users use the same shared team workspace.
+- Team owner pays team billing (members do not pay individually).
+- Free plan supports up to defined seat limit (example: owner + 4 users).
+- If free seat limit is reached, owner must upgrade to add more users.
+- MVP permission rule: only owner/admin can invite or generate join links.
+
+==================================================
+14) EXECUTION-ONLY MVP CHECKLIST
+==================================================
+
+MVP Scope (ship first)
+- Single team workspace model.
+- Roles: owner, admin, member.
+- Team billing paid by owner only.
+- Free seats: 5 total (owner + 4 users).
+- Invite by email + join via secure link.
+
+Build Order (execution sequence)
+1. Auth + Team Foundation
+- Signup/login flow for users.
+- Create team flow (creator becomes owner).
+- Team context set as active after creation.
+
+2. Team Membership Rules
+- Membership model with role and status.
+- Enforce unique membership per team/user.
+- Access control checks for all team routes.
+
+3. Billing Ownership Rules
+- Mark owner as billing owner.
+- Restrict billing page access to owner (admin optional later).
+- Show current seat usage on billing page.
+
+4. Invite by Email (Billing Page)
+- Owner/admin enters email + role.
+- Create pending invite with expiry.
+- Send invite email with secure token link.
+
+5. Team Join Link (Billing Page)
+- Owner/admin can generate link.
+- Link includes expiry and max use count.
+- Owner/admin can revoke and regenerate link.
+
+6. Join Team Flow
+- Invitee opens link.
+- If not logged in: signup/login first, then validate token.
+- If valid + seat available: add as member and redirect to team workspace.
+
+7. Free Seat Limit Enforcement
+- Before accepting invite, check seat count.
+- If team is full: block join and show upgrade message.
+- Only owner sees upgrade CTA.
+
+8. Core UI Screens (minimum)
+- Team dashboard (shared workspace view).
+- Billing page (seats, invites, join link, upgrade prompt).
+- Invite acceptance page (valid/expired/revoked states).
+
+9. Audit + Safety
+- Log invite created, accepted, revoked.
+- Prevent reused/expired tokens.
+- Remove access instantly when member removed.
+
+10. MVP Launch Criteria
+- Owner can invite by email successfully.
+- Owner can generate and revoke join link.
+- New user can join free via invite link.
+- Joined users access same team workspace.
+- Billing is owner-only and seat cap enforced.
+
+End of logic plan.

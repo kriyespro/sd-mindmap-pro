@@ -94,7 +94,8 @@
                       @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
-                           class="rounded border border-slate-200 px-1 py-0.5 text-[10px] font-medium w-[104px]">
+                           class="rounded border border-slate-200 px-1 py-0.5 text-[10px] font-medium w-[104px]"
+                           @change="$el.form.requestSubmit()">
                     <input type="hidden" name="assignee_username" :value="assigneeDraft">
                 </form>
             </div>

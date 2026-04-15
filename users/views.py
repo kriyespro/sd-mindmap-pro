@@ -32,6 +32,9 @@ class SignUpView(CreateView):
         response = super().form_valid(form)
         login(self.request, self.object)
         messages.success(self.request, 'Welcome! Your workspace is ready.')
+        next_url = (self.request.GET.get('next') or self.request.POST.get('next') or '').strip()
+        if next_url:
+            return redirect(next_url)
         return response
 
     def get_context_data(self, **kwargs):
@@ -46,7 +49,7 @@ class AppLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self):
-        return reverse_lazy('planner:board_personal')
+        return self.get_redirect_url() or reverse_lazy('planner:board_personal')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

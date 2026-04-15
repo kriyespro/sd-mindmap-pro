@@ -24,7 +24,7 @@ class TaskImportViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        root = Task.objects.get(title='Website Redesign')
+        root = next(t for t in Task.objects.all() if t.title_plain == 'Website Redesign')
         self.assertIsNone(root.parent_id)
         self.assertEqual(Task.objects.filter(parent=root).count(), 2)
 
@@ -39,8 +39,8 @@ class TaskImportViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        root = Task.objects.get(title='Launch Plan')
+        root = next(t for t in Task.objects.all() if t.title_plain == 'Launch Plan')
         subtasks = Task.objects.filter(parent=root).order_by('id')
         self.assertEqual(subtasks.count(), 2)
-        self.assertEqual(subtasks[0].title, 'Landing page')
-        self.assertEqual(subtasks[1].title, 'Email campaign')
+        self.assertEqual(subtasks[0].title_plain, 'Landing page')
+        self.assertEqual(subtasks[1].title_plain, 'Email campaign')

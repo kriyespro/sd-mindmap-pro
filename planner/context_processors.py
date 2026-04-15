@@ -14,7 +14,7 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
         layout = 'mindmap'
     return {
         'team_memberships': (
-            TeamMembership.objects.filter(user=request.user)
+            TeamMembership.objects.filter(user=request.user, is_active=True)
             .select_related('team')
             .order_by('team__name')
         ),
