@@ -7,9 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# libpq: psycopg2-binary runtime; gosu: drop root after fixing volume permissions
+# Runtime libs for psycopg + CairoSVG PDF/PNG export in slim image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libcairo2 \
+    libffi8 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 

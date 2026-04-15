@@ -623,16 +623,23 @@ class MindmapExportView(LoginRequiredMixin, View):
             import cairosvg  # noqa: PLC0415
         except ImportError:
             return HttpResponse('Install cairosvg to enable PNG/PDF exports', status=503)
-        if export_format == 'png':
-            png_bytes = cairosvg.svg2png(bytestring=svg_bytes)
-            response = HttpResponse(png_bytes, content_type='image/png')
+        try:
+            if export_format == 'png':
+                png_bytes = cairosvg.svg2png(bytestring=svg_bytes)
+                response = HttpResponse(png_bytes, content_type='image/png')
+                response['Content-Disposition'] = (
+                    f'attachment; filename="mindmap-{workspace}.png"'
+                )
+                return response
+            pdf_bytes = cairosvg.svg2pdf(bytestring=svg_bytes)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = (
-                f'attachment; filename="mindmap-{workspace}.png"'
+                f'attachment; filename="mindmap-{workspace}.pdf"'
             )
             return response
-        pdf_bytes = cairosvg.svg2pdf(bytestring=svg_bytes)
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = (
-            f'attachment; filename="mindmap-{workspace}.pdf"'
-        )
-        return response
+        except Exception:
+            # Common in slim Docker images when system Cairo libs are missing.
+            return HttpResponse(
+                'PDF export engine unavailable. Install Cairo libs in Docker and rebuild web image.',
+                status=503,
+            )

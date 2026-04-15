@@ -1,138 +1,120 @@
-GIT + LIVE SERVER UPDATE STEPS (SAFE CHECKLIST)
+DOCKER DEPLOY UPDATE STEPS (GITHUB -> VPS)
 
-Assumptions:
-- Local repo path: /Users/kumarsunilverma/Desktop/nTarque
-- Branch to deploy: main (change if you use another branch)
-- Live server already has project, venv, and service configured
+Based on your deploy setup in deploy.txt:
+- VPS IP: 161.97.146.14
+- Repo folder on VPS: ~/sd-mindmap-pro
+- Deploy method: Docker Compose (web + nginx + db)
+- Branch: main
 
 ==================================================
-1) LOCAL MACHINE: REVIEW + COMMIT + PUSH
+1) LOCAL LAPTOP: COMMIT + PUSH
 ==================================================
 
-1. Check current branch
-   git branch --show-current
+cd /Users/kumarsunilverma/Desktop/nTarque
 
-2. See changed files
-   git status
+git branch --show-current
+git status
+git add -A
+git commit -m "Update billing/team controls and task behavior"
+git push origin main
 
-3. Review diff before commit
-   git diff
-
-4. Stage required files
-   git add .
-   (or stage specific files only)
-
-5. Commit with message
-   git commit -m "Update billing team controls, exports, and member deactivation flow"
-
-6. Push to remote
-   git push origin main
-
-7. Confirm push success
-   git log --oneline -n 3
+# Quick confirm:
+git log --oneline -n 3
 
 
 ==================================================
-2) LIVE SERVER: BACKUP + PULL LATEST
+2) VPS: SSH + PRE-DEPLOY SAFETY
 ==================================================
 
-1. SSH into server
-   ssh <server-user>@<server-ip>
+ssh root@161.97.146.14
+# or your non-root user
 
-2. Go to project folder
-   cd /path/to/nTarque
+cd ~/sd-mindmap-pro
 
-3. Check branch + local changes
-   git branch --show-current
-   git status
+git branch --show-current
+git status
 
-4. (Optional but recommended) backup DB before update
-   cp db.sqlite3 "db.sqlite3.backup.$(date +%Y%m%d_%H%M%S)"
-
-5. Get latest code
-   git fetch origin
-   git pull origin main
+# DB backup BEFORE pull (recommended every deploy):
+docker compose exec -T db pg_dump -U ntarque -d ntarque > predeploy_$(date +%F_%H%M).sql
 
 
 ==================================================
-3) LIVE SERVER: INSTALL + MIGRATE + STATIC
+3) VPS: PULL LATEST CODE
 ==================================================
 
-1. Activate venv
-   source venv/bin/activate
-   (or your actual virtualenv path)
-
-2. Install/update dependencies
-   pip install -r requirements.txt
-
-3. Run migrations
-   python3 manage.py migrate --noinput
-
-4. Collect static (if using whitenoise/nginx static flow)
-   python3 manage.py collectstatic --noinput
-
-5. Quick Django health check
-   python3 manage.py check
+cd ~/sd-mindmap-pro
+git fetch origin
+git pull origin main
 
 
 ==================================================
-4) RESTART APP SERVICE
+4) VPS: BUILD + MIGRATE + STATIC + RESTART
 ==================================================
 
-If using systemd + gunicorn:
-   sudo systemctl restart gunicorn
-   sudo systemctl restart nginx
+# Build only app image first
+docker compose build web
 
-Check status:
-   sudo systemctl status gunicorn --no-pager
-   sudo systemctl status nginx --no-pager
+# Run DB migrations using new image
+docker compose run --rm web python manage.py migrate --noinput
 
-If using supervisor:
-   sudo supervisorctl reread
-   sudo supervisorctl update
-   sudo supervisorctl restart all
+# Collect static
+docker compose run --rm web python manage.py collectstatic --noinput
 
-If using docker compose:
-   docker compose pull
-   docker compose up -d --build
-   docker compose logs -f --tail=100
+# Restart app edge services (keeps DB volume/data)
+docker compose up -d web nginx
 
 
 ==================================================
-5) POST-DEPLOY VERIFICATION (MANDATORY)
+5) VPS: HEALTH CHECK
 ==================================================
 
-1. Open app in browser:
-   - Login works
-   - Billing page loads
-   - Team member activate/deactivate works
-   - Mindmap export (CSV/PDF) works
+docker compose ps
+docker compose logs web --tail=120
+docker compose logs nginx --tail=80
+curl -s http://127.0.0.1/health/
 
-2. Validate encryption migration behavior:
-   - Old tasks still readable in app
-   - /sd/ admin task content remains masked
-
-3. Watch server logs for errors:
-   journalctl -u gunicorn -n 100 --no-pager
-   (or docker/supervisor logs)
+# Browser verify:
+# http://161.97.146.14/
+# http://161.97.146.14/sd/
 
 
 ==================================================
-6) QUICK ROLLBACK (IF SOMETHING BREAKS)
+6) FUNCTIONAL CHECKLIST AFTER DEPLOY
 ==================================================
 
-1. Identify previous good commit
-   git log --oneline -n 10
+- Login works
+- Billing page opens
+- Team member Activate/Deactivate works
+- Deactivated users no longer show as assignee on task cards
+- Export works (CSV/PDF)
+- Task titles still readable in app
+- /sd/ admin keeps task content masked
 
-2. Checkout previous commit (temporary)
-   git checkout <good-commit-sha>
 
-3. Restart service and verify
-   sudo systemctl restart gunicorn
+==================================================
+7) QUICK ROLLBACK (DOCKER SAFE PATH)
+==================================================
 
-4. For sqlite rollback (if needed)
-   cp db.sqlite3.backup.<timestamp> db.sqlite3
-   python3 manage.py migrate
+cd ~/sd-mindmap-pro
+git log --oneline -n 5
 
-Note: For production best practice, use tagged releases + tested backup/restore flow.
+# Switch to previous good commit:
+git checkout <previous_good_commit_sha>
+
+# Rebuild/restart app services:
+docker compose build web
+docker compose up -d web nginx
+
+# If DB restore is needed:
+# cat predeploy_YYYY-MM-DD_HHMM.sql | docker compose exec -T db psql -U ntarque -d ntarque
+
+
+==================================================
+8) IMPORTANT DO-NOT COMMANDS (PRODUCTION)
+==================================================
+
+# DO NOT run these if you want to keep production DB data:
+# docker compose down -v
+# docker volume rm sd-mindmap-pro_pgdata
+
 
