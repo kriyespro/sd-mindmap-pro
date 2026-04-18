@@ -65,7 +65,11 @@ DEBUG=False
 USE_HTTPS=False
 
 ALLOWED_HOSTS=127.0.0.1,localhost,161.97.146.14,nginx,web
-CSRF_TRUSTED_ORIGINS=http://161.97.146.14
+# Must match browser URL exactly — include :8080 when nginx is published on 8080 (see HTTP_PORT below).
+CSRF_TRUSTED_ORIGINS=http://161.97.146.14:8080
+
+# Maps host port → nginx container port 80 (default 80). Use 8080 when port 80 is taken or you prefer 8080.
+HTTP_PORT=8080
 
 POSTGRES_DB=ntarque
 POSTGRES_USER=ntarque
@@ -90,10 +94,11 @@ PART D — ON VPS: FIREWALL (DigitalOcean / UFW)
 # Allow HTTP and SSH (adjust if you use non-standard SSH port)
 sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
+sudo ufw allow 8080/tcp
 sudo ufw enable
 sudo ufw status
 
-# In DigitalOcean: Cloud Firewall should allow TCP 22 and 80 to the droplet.
+# In DigitalOcean: Cloud Firewall should allow TCP 22 and the port you publish (80 and/or 8080) to the droplet.
 
 --------------------------------------------------------------------------------
 PART E — ON VPS: BUILD AND RUN DOCKER
@@ -115,11 +120,11 @@ docker compose logs db --tail=30
 PART F — VERIFY (on VPS or your laptop)
 --------------------------------------------------------------------------------
 
-# On VPS:
-curl -s http://127.0.0.1/health/
+# On VPS (use :8080 if HTTP_PORT=8080 in .env):
+curl -s http://127.0.0.1:8080/health/
 
 # In browser (your laptop):
-http://161.97.146.14/
+http://161.97.146.14:8080/
 
 --------------------------------------------------------------------------------
 PART G — DJANGO SUPERUSER (must run INSIDE the web container)
@@ -129,7 +134,7 @@ cd ~/sd-mindmap-pro
 docker compose exec -it web python manage.py createsuperuser
 
 # Admin URL (Django admin at /sd/ per this project):
-#   http://161.97.146.14/sd/
+#   http://161.97.146.14:8080/sd/
 
 --------------------------------------------------------------------------------
 PART H — AFTER YOU CHANGE CODE (laptop → GitHub → VPS)
@@ -170,7 +175,7 @@ docker compose exec web python manage.py collectstatic --noinput
 # Health checks
 docker compose ps
 docker compose logs web --tail=80
-curl -s http://127.0.0.1/health/
+curl -s http://127.0.0.1:8080/health/
 
 --------------------------------------------------------------------------------
 PART I — PRODUCTION DATA SAFETY (IMPORTANT)
@@ -222,7 +227,7 @@ docker compose up -d web nginx
 
 # 6) Fast verification
 docker compose ps
-curl -s http://127.0.0.1/health/
+curl -s http://127.0.0.1:8080/health/
 docker compose logs web --tail=50
 
 # Rollback quick path (if deploy fails after pull):

@@ -20,7 +20,7 @@ python manage.py runserver
    cp .env.example .env
    ```
 
-   Set at least `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (your domain or server IP), and for HTTPS behind a reverse proxy or load balancer, `CSRF_TRUSTED_ORIGINS` (e.g. `https://yourdomain.com`).
+   Set at least `SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS` (your domain or server IP), and `CSRF_TRUSTED_ORIGINS` with the full origin including scheme — and **port** when not 80/443 (e.g. `http://203.0.113.7:8080` or `https://yourdomain.com`).
 
 2. Build and run:
 

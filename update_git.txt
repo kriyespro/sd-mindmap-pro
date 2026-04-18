@@ -71,11 +71,11 @@ docker compose up -d web nginx
 docker compose ps
 docker compose logs web --tail=120
 docker compose logs nginx --tail=80
-curl -s http://127.0.0.1/health/
+curl -s http://127.0.0.1:8080/health/
 
-# Browser verify:
-# http://161.97.146.14/
-# http://161.97.146.14/sd/
+# Browser verify (port must match HTTP_PORT in .env, CSRF_TRUSTED_ORIGINS must include :8080):
+# http://161.97.146.14:8080/
+# http://161.97.146.14:8080/sd/
 
 
 ==================================================
