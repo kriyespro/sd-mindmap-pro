@@ -12,6 +12,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+Optional: copy `.env.example` → `.env` and set `DEBUG=True` for Django’s detailed error pages while developing.
+
 ## Docker deployment
 
 1. Copy environment template and edit secrets:

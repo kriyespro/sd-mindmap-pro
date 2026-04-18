@@ -8,6 +8,15 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    """Parse truthy env values (1, true, yes, on); empty uses default."""
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return default
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 # ── Security ──────────────────────────────────────────────────────────────────
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
@@ -17,7 +26,8 @@ SECRET_KEY = os.environ.get(
 # Must be a urlsafe base64-encoded 32-byte key when provided.
 TASK_ENCRYPTION_KEY = os.environ.get('TASK_ENCRYPTION_KEY', '').strip()
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# Default False: set DEBUG=True in .env for local debugging (never on public servers).
+DEBUG = _env_bool('DEBUG', default=False)
 
 _raw_hosts = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,testserver')
 ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
@@ -155,7 +165,7 @@ SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 2 weeks
 # ── Production security (only when DEBUG=False) ───────────────────────────────
 # USE_HTTPS=true when users hit the site over HTTPS (or TLS terminates at a proxy
 # and you set X-Forwarded-Proto). For HTTP-only (e.g. raw droplet IP), keep False.
-USE_HTTPS = os.environ.get('USE_HTTPS', 'False') == 'True'
+USE_HTTPS = _env_bool('USE_HTTPS', default=False)
 
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
