@@ -1,0 +1,201 @@
+NTARQUE - PRACTICAL NEXT FEATURE ROADMAP (NO CODE)
+
+Date: 2026-04-15
+Goal: Build from current MVP toward stable, revenue-focused SaaS.
+
+==================================================
+1) CURRENT LIVE FEATURES (VERIFIED/IMPLEMENTED)
+==================================================
+
+Core product
+- Personal + Team workspace boards.
+- Tree and Mindmap task layouts.
+- Task create/edit/delete/toggle.
+- Task import (CSV/TXT) and export (CSV).
+- Mindmap export (PDF from board export menu).
+
+Team + billing
+- Team plans: Solo, Team (5), Team Pro (20).
+- Team invite by username + secure join links.
+- Billing page member control table.
+- Owner controls: assign member, activate/deactivate member.
+- Deactivation removes team access (not user account).
+- Seat-limit checks in invite/join/member activation flows.
+
+Security/ops
+- Task title encryption-at-rest in DB.
+- Admin masking for task content (/sd/ side).
+- Dockerized deploy flow with PostgreSQL.
+
+Known recently fixed
+- Deactivated users no longer should appear as assignee on task cards (cleanup + display guard).
+
+
+==================================================
+2) IN-PROGRESS / NEEDS HARDENING
+==================================================
+
+From project update notes
+- "New team space button on billing page not working" still marked in progress.
+
+Operational risk area
+- PDF export depends on Cairo runtime libs in Docker image. Needs deployment verification after rebuild.
+
+
+==================================================
+3) BEST PRACTICAL NEXT FEATURES (PRIORITIZED)
+==================================================
+
+Priority logic used:
+1) Revenue impact
+2) Data safety / trust
+3) Operational stability
+4) Team collaboration value
+5) Nice-to-have UX polish
+
+--------------------------------------------------
+P0 (Do Next) - Revenue + reliability blockers
+--------------------------------------------------
+
+P0.1 Billing reliability pass (must finish)
+- Fix "new team space" billing action completely.
+- Add user-visible success/error messages for all billing actions.
+- Add one smoke test checklist for billing flows after each deploy.
+Why: broken billing flows directly hurt paid conversion.
+
+P0.2 Plan limit guardrails everywhere
+- Enforce seat and feature caps consistently across all team entry points.
+- Show clear upgrade CTA when blocked (owner only).
+- Add counters on billing: active members / max seats / inactive members.
+Why: clear monetization mechanics + fewer support issues.
+
+P0.3 Deploy safety automation (Docker)
+- Add one deploy script (single command) with backup + pull + build + migrate + health check.
+- Add "fail fast" health checks and rollback command block.
+Why: reduces live incidents and manual deploy mistakes.
+
+
+--------------------------------------------------
+P1 (Next) - High-value collaboration + retention
+--------------------------------------------------
+
+P1.1 Task assignment UX hardening
+- Assignee dropdown/autocomplete from active team members only.
+- Show "inactive user removed from assignment" audit note.
+- Optional bulk reassign for owner/admin when deactivating a user.
+Why: removes assignment confusion and increases team trust.
+
+P1.2 Activity/audit timeline
+- Team event log: member activated/deactivated, invite sent/accepted, role changed, plan changed.
+- Lightweight timeline on billing/team page.
+Why: improves accountability for team owners.
+
+P1.3 Role management in billing table
+- Owner can change member role (member <-> admin) inline.
+- Protect owner row from accidental destructive actions.
+Why: reduces admin friction and support dependency.
+
+P1.4 Invite funnel metrics
+- Track invite created -> opened -> accepted.
+- Show invite conversion rate on billing page.
+Why: directly helps growth and team adoption.
+
+
+--------------------------------------------------
+P2 (Scale path) - Monetization expansion
+--------------------------------------------------
+
+P2.1 Feature-gated premium add-ons
+- Examples: advanced export packs, automation rules, audit retention, integrations.
+- Gate by plan tier and usage.
+Why: raises ARPU without heavy infra cost.
+
+P2.2 Quota-based upsell triggers
+- Trigger upgrade prompts when team nears limits (80%, 100%).
+- Add contextual messaging in board and billing.
+Why: improves conversion timing.
+
+P2.3 Owner billing center quality
+- Better invoice/payment history layout.
+- Trial countdown and renewal state clarity.
+Why: reduces churn due to billing ambiguity.
+
+
+==================================================
+4) RECOMMENDED "SMART" MEMBER LIFECYCLE MODEL
+==================================================
+
+Use this simple model:
+- Active: full team access + assignable.
+- Inactive: no team access + not assignable + preserved history.
+- Reactivated: access restored, optionally auto-reassign pending tasks.
+
+Recommended owner actions:
+- Deactivate member.
+- Reactivate member.
+- Reassign all tasks from X -> Y (bulk).
+- Archive member history.
+
+Do NOT:
+- Delete user account on team deactivation.
+- Lose task history when membership changes.
+
+
+==================================================
+5) SUGGESTED 2-WEEK EXECUTION PLAN
+==================================================
+
+Week 1 (stability + billing closure)
+1. Close billing "new team space" bug.
+2. Add stronger billing/member action feedback.
+3. Deploy script + rollback checklist in repo.
+4. Verify PDF export on production image after rebuild.
+
+Week 2 (collaboration improvement)
+1. Assignee autocomplete from active members.
+2. Role-change action in team member table.
+3. Bulk reassign tool on deactivate.
+4. Basic team activity log.
+
+
+==================================================
+6) SUCCESS METRICS FOR NEXT ITERATION
+==================================================
+
+Business
+- Team upgrade conversion rate (Team -> Team Pro).
+- Time-to-first-invite after team creation.
+- Invite acceptance rate.
+
+Reliability
+- Failed deploy count per month.
+- Billing action error rate.
+- Export failure rate (PDF/CSV).
+
+Product
+- % tasks with valid active assignee.
+- Member reactivation reuse rate.
+- 7-day retention for team owners.
+
+
+==================================================
+7) WHAT NOT TO BUILD NOW (AVOID OVER-ENGINEERING)
+==================================================
+
+- Complex custom RBAC matrix.
+- Real-time websockets for everything.
+- Enterprise SSO/SCIM before invite + billing flows are fully stable.
+- Heavy analytics warehouse before core conversion events are tracked.
+
+
+==================================================
+FINAL RECOMMENDATION
+==================================================
+
+Immediate best move:
+1) finish billing flow stability,
+2) harden member lifecycle (assign/reassign/deactivate/reactivate),
+3) improve upsell timing at seat limits.
+
+This gives fastest path to revenue + low support burden while keeping architecture scalable.
+

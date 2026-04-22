@@ -2,6 +2,7 @@ import json
 import csv
 from html import escape as html_escape
 
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, HttpResponse
@@ -556,6 +557,46 @@ class NotificationReadView(LoginRequiredMixin, View):
     def post(self, request, n_id):
         Notification.objects.filter(pk=n_id, user=request.user).update(is_read=True)
         return HttpResponse('')
+
+
+class TeamMindmapArchiveView(LoginRequiredMixin, View):
+    """Archive all tasks in a team workspace without deleting data."""
+
+    def post(self, request, team_slug):
+        team = _workspace_team(request.user, team_slug)
+        if team is None:
+            return HttpResponse('Not found', status=404)
+        membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_active=True
+        ).first()
+        if not membership or not membership.can_manage_invites:
+            return HttpResponse('Only owner/admin can archive team mindmap', status=403)
+        archived = Task.objects.filter(team=team, is_archived=False).update(is_archived=True)
+        if archived:
+            messages.success(request, f'Archived {archived} team task(s) from {team.name}.')
+        else:
+            messages.info(request, f'No active tasks to archive in {team.name}.')
+        return redirect('planner:board_team', team_slug=team.slug)
+
+
+class TeamMindmapUnarchiveView(LoginRequiredMixin, View):
+    """Restore archived tasks for a team workspace."""
+
+    def post(self, request, team_slug):
+        team = _workspace_team(request.user, team_slug)
+        if team is None:
+            return HttpResponse('Not found', status=404)
+        membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_active=True
+        ).first()
+        if not membership or not membership.can_manage_invites:
+            return HttpResponse('Only owner/admin can unarchive team mindmap', status=403)
+        restored = Task.objects.filter(team=team, is_archived=True).update(is_archived=False)
+        if restored:
+            messages.success(request, f'Restored {restored} archived task(s) in {team.name}.')
+        else:
+            messages.info(request, f'No archived tasks found for {team.name}.')
+        return redirect('billing:overview')
 
 
 class TaskExportCsvView(LoginRequiredMixin, View):

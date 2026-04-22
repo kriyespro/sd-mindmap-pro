@@ -54,9 +54,15 @@ class TeamCreateView(LoginRequiredMixin, View):
         try:
             profile = request.user.profile
         except Profile.DoesNotExist:
-            return HttpResponse('Upgrade to Team plan (₹399/mo) to create teams', status=403)
+            return HttpResponse(
+                'You are on Solo plan. Upgrade to Team plan (₹399/mo) to create teams.',
+                status=403,
+            )
         if not Profile.supports_team_plan(profile.plan):
-            return HttpResponse('Upgrade to Team plan (₹399/mo) to create teams', status=403)
+            return HttpResponse(
+                'You are on Solo plan. Upgrade to Team plan (₹399/mo) to create teams.',
+                status=403,
+            )
         form = TeamCreateForm(request.POST)
         if not form.is_valid():
             return HttpResponse('Invalid team name', status=400)

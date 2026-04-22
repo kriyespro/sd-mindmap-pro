@@ -10,6 +10,7 @@ from django.views.generic import TemplateView
 from django.utils import timezone
 
 from billing.models import Payment
+from planner.models import Task
 from teams.forms import TeamInviteForm, TeamJoinLinkForm
 from teams.models import TeamInvite, TeamMembership
 from users.models import Profile
@@ -130,6 +131,26 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['team_join_link_form'] = TeamJoinLinkForm()
         ctx['team_member_role_choices'] = TeamMembership.ROLE_CHOICES
         ctx['team_join_url'] = team_join_url
+        archived_teams = []
+        memberships = (
+            TeamMembership.objects.filter(user=self.request.user, is_active=True)
+            .select_related('team')
+            .order_by('team__name')
+        )
+        for membership in memberships:
+            has_active_tasks = Task.objects.filter(
+                team=membership.team,
+                is_archived=False,
+            ).exists()
+            if has_active_tasks:
+                continue
+            has_archived_tasks = Task.objects.filter(
+                team=membership.team,
+                is_archived=True,
+            ).exists()
+            if has_archived_tasks:
+                archived_teams.append(membership)
+        ctx['archived_team_memberships'] = archived_teams
         return ctx
 
 

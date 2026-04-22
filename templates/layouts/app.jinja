@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
@@ -26,6 +27,55 @@
         [x-cloak] { display: none !important; }
         .htmx-settling, .htmx-swapping { opacity: 0; transition: opacity .12s ease; }
         body { font-family: Inter, system-ui, sans-serif; }
+        .dark body { background: #191919; color: #e6e6e6; }
+        .dark .bg-white { background-color: #202020 !important; }
+        .dark .bg-slate-50 { background-color: #202020 !important; }
+        .dark .bg-slate-100 { background-color: #2a2a2a !important; }
+        .dark .text-slate-900 { color: #f3f3f3 !important; }
+        .dark .text-slate-800 { color: #ebebeb !important; }
+        .dark .text-slate-700 { color: #d9d9d9 !important; }
+        .dark .text-slate-600 { color: #bdbdbd !important; }
+        .dark .text-slate-500 { color: #9b9b9b !important; }
+        .dark .text-slate-400 { color: #8a8a8a !important; }
+        .dark .border-slate-200,
+        .dark .border-slate-200\/80,
+        .dark .border-slate-100 { border-color: #373737 !important; }
+        .dark .bg-indigo-50,
+        .dark .bg-indigo-50\/50,
+        .dark .bg-indigo-50\/40,
+        .dark .bg-violet-50,
+        .dark .bg-violet-50\/50,
+        .dark .bg-violet-50\/40,
+        .dark .bg-emerald-50,
+        .dark .bg-emerald-50\/50,
+        .dark .bg-amber-50,
+        .dark .bg-amber-50\/60,
+        .dark .bg-amber-50\/70,
+        .dark .bg-fuchsia-50\/50 { background-color: #2b2b2b !important; }
+        .dark .text-indigo-700,
+        .dark .text-violet-700,
+        .dark .text-emerald-700,
+        .dark .text-amber-800,
+        .dark .text-fuchsia-700 { color: #dbeafe !important; }
+        .dark input,
+        .dark select,
+        .dark textarea { background-color: #191919 !important; color: #e6e6e6 !important; border-color: #3a3a3a !important; }
+        .dark input::placeholder,
+        .dark textarea::placeholder { color: #9ca3af !important; }
+        .dark .shadow-sm,
+        .dark .shadow-md,
+        .dark .shadow-lg,
+        .dark .shadow-xl,
+        .dark .shadow-2xl { box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important; }
+        #task-tree {
+            background-color: #f1f5f9 !important;
+            background-image: radial-gradient(circle at 1.5px 1.5px, #cbd5e1 1.5px, transparent 0) !important;
+            background-size: 22px 22px !important;
+        }
+        .dark #task-tree {
+            background-color: #1b1b1b !important;
+            background-image: none !important;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -77,16 +127,29 @@
         });
     </script>
 </head>
-<body class="min-h-screen bg-slate-100 text-slate-900 antialiased"
+<body class="min-h-screen bg-slate-100 text-slate-900 antialiased transition-colors"
       x-data="{
         addModalOpen: false,
         importModalOpen: false,
         teamModalOpen: false,
         inviteModalOpen: false,
+        teamCreateError: '',
         parentIdForModal: '',
         sidebarOpen: true,
-        isMindmap: {{ (task_layout|default('mindmap') == 'mindmap')|tojson }}
+        isMindmap: {{ (task_layout|default('mindmap') == 'mindmap')|tojson }},
+        darkMode: false,
+        initTheme() {
+            const stored = localStorage.getItem('theme');
+            this.darkMode = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.classList.toggle('dark', this.darkMode);
+        },
+        toggleTheme() {
+            this.darkMode = !this.darkMode;
+            localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+            document.documentElement.classList.toggle('dark', this.darkMode);
+        }
       }"
+      x-init="initTheme()"
       @keydown.window.ctrl.k.prevent="addModalOpen = true; parentIdForModal = ''"
       @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
 <div class="flex min-h-screen">
@@ -148,6 +211,11 @@
         </nav>
 
         <div class="p-3 border-t border-slate-100 space-y-2">
+            <button type="button" @click="toggleTheme()"
+                    class="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                <span x-text="darkMode ? 'Dark theme on' : 'Light theme on'"></span>
+                <span class="text-[10px] text-slate-400" x-text="darkMode ? 'Switch to light' : 'Switch to dark'"></span>
+            </button>
             <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold uppercase">{{ user.username[0] }}</div>
                 <div class="min-w-0 flex-1">

@@ -56,4 +56,14 @@ urlpatterns = [
         views.MindmapCollapseToggleView.as_view(),
         name='mindmap_collapse_team',
     ),
+    path(
+        't/<slug:team_slug>/tasks/archive-mindmap/',
+        views.TeamMindmapArchiveView.as_view(),
+        name='archive_team_mindmap',
+    ),
+    path(
+        't/<slug:team_slug>/tasks/unarchive-mindmap/',
+        views.TeamMindmapUnarchiveView.as_view(),
+        name='unarchive_team_mindmap',
+    ),
 ]

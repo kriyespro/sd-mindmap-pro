@@ -209,11 +209,11 @@ def tasks_for_workspace(user: User, team: Team | None) -> QuerySet[Task]:
     if team is not None:
         if not TeamMembership.objects.filter(team=team, user=user, is_active=True).exists():
             return Task.objects.none()
-        return Task.objects.filter(team=team)
+        return Task.objects.filter(team=team, is_archived=False)
     ids = personal_visible_task_ids(user)
     if not ids:
         return Task.objects.none()
-    return Task.objects.filter(team__isnull=True, id__in=ids)
+    return Task.objects.filter(team__isnull=True, id__in=ids, is_archived=False)
 
 
 def task_rows_for_tree(qs: QuerySet[Task]) -> list[dict]:

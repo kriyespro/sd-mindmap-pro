@@ -288,6 +288,34 @@
         <p class="mt-1.5 text-sm text-slate-500">Create a team first, then billing owner can invite users and generate join links here.</p>
         {% endif %}
             </section>
+            <section class="rounded-lg border border-amber-200 bg-amber-50/70 p-3 shadow-sm">
+                <h2 class="text-sm font-semibold text-amber-900">Archived team mindmaps</h2>
+                <p class="mt-1 text-xs text-amber-800">Archived teams are hidden from the sidebar until restored.</p>
+                {% if archived_team_memberships %}
+                <div class="mt-2 space-y-2">
+                    {% for archived_membership in archived_team_memberships %}
+                    <div class="flex items-center justify-between rounded-lg border border-amber-200 bg-white px-3 py-2">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-800">{{ archived_membership.team.name }}</p>
+                            <p class="text-[11px] text-slate-500">Team workspace archived</p>
+                        </div>
+                        {% if archived_membership.can_manage_invites %}
+                        <form method="post" action="{{ url('planner:unarchive_team_mindmap', team_slug=archived_membership.team.slug) }}">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <button type="submit" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100">
+                                Unarchive
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-[10px] text-slate-400">Ask owner/admin</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="mt-2 text-xs text-amber-800">No archived team mindmap yet.</p>
+                {% endif %}
+            </section>
         </div>
     </section>
 </div>

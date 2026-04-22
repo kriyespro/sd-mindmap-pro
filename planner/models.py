@@ -28,6 +28,7 @@ class Task(models.Model):
     due_date = models.DateField(null=True, blank=True)
     assignee_username = models.CharField(max_length=150, blank=True)
     is_completed = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['id']
