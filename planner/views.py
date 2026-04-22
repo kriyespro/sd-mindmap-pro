@@ -8,8 +8,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import TemplateView
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from planner.forms import TaskCreateForm, TaskImportForm, TaskMetaForm, TaskTitleForm
 from planner.crypto import decrypt_task_title
@@ -238,6 +240,7 @@ def _validate_assignee_for_workspace(*, team: Team | None, assignee_username: st
     return None
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class BoardView(LoginRequiredMixin, TemplateView):
     template_name = 'pages/board.jinja'
     login_url = reverse_lazy('users:login')

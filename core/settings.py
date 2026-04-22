@@ -35,6 +35,10 @@ ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
 # HTTPS sites behind a reverse proxy (required for CSRF from Django 4+)
 _raw_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(',') if o.strip()]
+if not CSRF_TRUSTED_ORIGINS:
+    # Fallback for deployments where CSRF_TRUSTED_ORIGINS was not configured.
+    derived_hosts = [h for h in ALLOWED_HOSTS if h not in {'localhost', '127.0.0.1', 'testserver'}]
+    CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in derived_hosts if h and '*' not in h]
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [

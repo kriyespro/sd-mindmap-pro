@@ -5,9 +5,11 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import TemplateView
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from billing.models import Payment
 from planner.models import Task
@@ -16,6 +18,7 @@ from teams.models import TeamInvite, TeamMembership
 from users.models import Profile
 
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class BillingView(LoginRequiredMixin, TemplateView):
     template_name = 'pages/billing.jinja'
     login_url = reverse_lazy('users:login')
