@@ -352,6 +352,25 @@ def get_mindmap_collapsed_ids(
     *,
     tree: list[dict] | None = None,
 ) -> set[int]:
+    if team is not None:
+        raw = team.mindmap_collapsed_task_ids
+        if raw is None:
+            if tree is None:
+                return set()
+            collapsed = set(collect_branch_ids_with_children(tree))
+            team.mindmap_collapsed_task_ids = sorted(collapsed)
+            team.save(update_fields=['mindmap_collapsed_task_ids'])
+            return collapsed
+        if not isinstance(raw, list):
+            return set()
+        out: set[int] = set()
+        for x in raw:
+            try:
+                out.add(int(x))
+            except (TypeError, ValueError):
+                continue
+        return out
+
     key = mindmap_collapse_session_key(team)
     if key not in request.session:
         if tree is not None:
@@ -372,6 +391,10 @@ def get_mindmap_collapsed_ids(
 
 
 def set_mindmap_collapsed_ids(request, team: Team | None, ids: set[int]) -> None:
+    if team is not None:
+        team.mindmap_collapsed_task_ids = sorted(ids)
+        team.save(update_fields=['mindmap_collapsed_task_ids'])
+        return
     key = mindmap_collapse_session_key(team)
     request.session[key] = sorted(ids)
     request.session.modified = True

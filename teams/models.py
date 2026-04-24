@@ -15,6 +15,7 @@ class Team(models.Model):
         null=True,
         related_name='teams_created',
     )
+    mindmap_collapsed_task_ids = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
