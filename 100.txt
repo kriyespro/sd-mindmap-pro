@@ -1,0 +1,94 @@
+NTARQUE 100-PERSON TEAM MANAGEMENT PLAN (SIMPLE, NO-CODE)
+
+Goal
+- Run a 100-person team with clear ownership, fast decisions, and low meeting overhead.
+- Focus on revenue and reliability first, based on current project priorities.
+
+1) TEAM STRUCTURE (5 STREAMS)
+- Stream A: Billing and Monetization (billing/)
+- Stream B: Core Product and Planner Experience (planner/, teams/)
+- Stream C: Users, Access, and Membership Lifecycle (users/)
+- Stream D: Platform, Deploy, and Reliability (core/, Docker, CI)
+- Stream E: QA, Release, and Customer Feedback Loop
+
+Each stream must have:
+- 1 owner (decision-maker)
+- 1 backup owner
+- up to 20 members max
+
+2) SINGLE PAGE COMMAND CENTER (UPDATE WEEKLY)
+Track only these fields:
+- Top 3 priorities per stream
+- Owner and backup
+- KPI target vs current
+- Blockers older than 24h
+- This week: shipped / slipped / reason
+
+3) WEEKLY OPERATING CADENCE
+- Monday (30 min): lock weekly priorities and owners
+- Wednesday (15 min): cross-team blocker removal
+- Friday (30 min): KPI outcome review and next-step alignment
+
+Meeting rules:
+- No status storytelling
+- Only decisions, blockers, and outcomes
+- Anything unresolved gets owner + deadline
+
+4) DECISION AND ESCALATION RULES
+- Blocked >24h: escalate to stream owner
+- Blocked >48h: escalate to project leadership
+- Blocked >72h: priority reset in leadership sync
+
+Decision rights:
+- Product scope: Product owner + leadership
+- Technical approach: stream owner
+- Release go/no-go: QA + Platform owner
+- Incident response: Platform owner (immediate)
+
+5) KPI STACK FOR THIS PROJECT
+Revenue KPIs
+- Team-to-Team Pro upgrade rate
+- Invite acceptance rate
+- Time-to-first-invite
+
+Reliability KPIs
+- Billing action error rate
+- Failed deploys per month
+- PDF/CSV export failure rate
+
+Execution KPIs
+- Percent tasks with active valid assignee
+- Weekly completion ratio by stream
+- Critical blocker resolution time
+
+6) 30-DAY ROLLOUT
+Week 1
+- Finalize 5 streams
+- Assign owners and backups
+- Publish command center
+
+Week 2
+- Start cadence (Mon/Wed/Fri)
+- Enforce escalation rules
+- Identify top 10 blockers
+
+Week 3
+- Align work to P0 items:
+  - billing flow reliability
+  - seat-limit guardrails
+  - deploy safety checks
+
+Week 4
+- Measure KPIs
+- Remove process noise
+- Keep only rituals that improve delivery
+
+7) KEEP IT SIMPLE
+- Use existing tools only (GitHub + current docs)
+- No new heavy management software now
+- No extra meetings unless tied to a blocker or decision
+
+Outcome expected in 30 days
+- Faster delivery with less confusion
+- Better accountability across 100 people
+- Revenue and reliability priorities shipped with fewer surprises
