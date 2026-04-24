@@ -7,8 +7,26 @@ from django.utils.text import slugify
 
 
 class Team(models.Model):
+    COLOR_RED = 'red'
+    COLOR_ORANGE = 'orange'
+    COLOR_GREEN = 'green'
+    COLOR_BLUE = 'blue'
+    COLOR_PURPLE = 'purple'
+    COLOR_CHOICES = (
+        (COLOR_RED, 'Red'),
+        (COLOR_ORANGE, 'Orange'),
+        (COLOR_GREEN, 'Green'),
+        (COLOR_BLUE, 'Blue'),
+        (COLOR_PURPLE, 'Purple'),
+    )
+
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=80, unique=True, db_index=True)
+    sidebar_color = models.CharField(
+        max_length=16,
+        choices=COLOR_CHOICES,
+        default=COLOR_BLUE,
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -49,6 +67,8 @@ class TeamMembership(models.Model):
     )
     is_owner = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    is_pinned = models.BooleanField(default=False)
+    pinned_at = models.DateTimeField(null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
     joined_at = models.DateTimeField(auto_now_add=True)
 

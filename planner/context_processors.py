@@ -24,7 +24,7 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
             .annotate(has_active_tasks=Exists(active_tasks))
             .filter(Q(has_active_tasks=True) | Q(has_any_tasks=False))
             .select_related('team')
-            .order_by('team__name')
+            .order_by('-is_pinned', 'pinned_at', 'team__name')
         ),
         'notifications': Notification.objects.filter(
             user=request.user, is_read=False

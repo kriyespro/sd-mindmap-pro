@@ -53,11 +53,12 @@ class BillingView(LoginRequiredMixin, TemplateView):
         except Profile.DoesNotExist:
             pass
 
-        owned_membership = (
+        owned_memberships = list(
             TeamMembership.objects.filter(user=self.request.user, is_owner=True, is_active=True)
             .select_related('team')
-            .first()
+            .order_by('team__name')
         )
+        owned_membership = owned_memberships[0] if owned_memberships else None
         any_membership = (
             TeamMembership.objects.filter(user=self.request.user, is_active=True)
             .select_related('team')
@@ -123,6 +124,7 @@ class BillingView(LoginRequiredMixin, TemplateView):
                 self.request.session.pop('latest_team_join_token', None)
 
         ctx['owner_team'] = owner_team
+        ctx['owned_teams'] = [m.team for m in owned_memberships]
         ctx['billing_is_owner'] = billing_is_owner
         ctx['billing_can_invite'] = billing_can_invite
         ctx['owner_team_member_count'] = owner_team_member_count

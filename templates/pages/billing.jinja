@@ -160,8 +160,14 @@
                 {% endif %}
             </div>
             {% if billing_is_owner %}
-            <form action="{{ url('teams:member_add', team_slug=owner_team.slug) }}" method="post" class="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
+            <form action="{{ url('teams:member_add_any') }}" method="post" class="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <select name="team_slug"
+                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    {% for owned_team in owned_teams %}
+                    <option value="{{ owned_team.slug }}" {% if owned_team.id == owner_team.id %}selected{% endif %}>{{ owned_team.name }}</option>
+                    {% endfor %}
+                </select>
                 <input type="text" name="username" required placeholder="username to add"
                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                 <select name="role"

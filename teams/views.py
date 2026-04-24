@@ -275,6 +275,58 @@ class TeamMemberAddView(LoginRequiredMixin, View):
         return redirect('billing:overview')
 
 
+class TeamMemberAddAnyTeamView(LoginRequiredMixin, View):
+    """Owner can add user to any owned team from billing page."""
+
+    def post(self, request):
+        team_slug = (request.POST.get('team_slug') or '').strip()
+        if not team_slug:
+            return HttpResponse('Select a team first', status=400)
+        team = Team.objects.filter(slug=team_slug).first()
+        if not team:
+            return HttpResponse('Team not found', status=404)
+        owner_membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_owner=True, is_active=True
+        ).first()
+        if not owner_membership:
+            return HttpResponse('Only owner can manage team members', status=403)
+
+        seat_limit = _team_seat_limit(team)
+        if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
+            return HttpResponse(f'Team member limit reached (max {seat_limit} users)', status=400)
+
+        username = (request.POST.get('username') or '').strip()
+        role = (request.POST.get('role') or TeamMembership.ROLE_MEMBER).strip()
+        if not username:
+            return HttpResponse('Username is required', status=400)
+        if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
+            return HttpResponse('Invalid role', status=400)
+
+        user = User.objects.filter(username__iexact=username).first()
+        if not user:
+            return HttpResponse('No user with that username', status=400)
+        existing = TeamMembership.objects.filter(team=team, user=user).first()
+        if existing and existing.is_active:
+            return HttpResponse('That user is already in this team', status=400)
+        if existing:
+            existing.is_active = True
+            existing.role = role
+            existing.save(update_fields=['is_active', 'role'])
+        else:
+            TeamMembership.objects.create(
+                team=team,
+                user=user,
+                is_owner=False,
+                is_active=True,
+                role=role,
+            )
+        Notification.objects.create(
+            user=user,
+            message=f'{request.user.username} added you to "{team.name}" team.',
+        )
+        return redirect('billing:overview')
+
+
 class TeamMemberRemoveView(LoginRequiredMixin, View):
     """Owner can deactivate member from team without deleting account."""
 
@@ -343,3 +395,40 @@ class TeamMemberStatusView(LoginRequiredMixin, View):
         )
         messages.success(request, f'{verb.title()} @{target.user.username}.')
         return redirect('billing:overview')
+
+
+class TeamSidebarSettingsView(LoginRequiredMixin, View):
+    """Set team color and pin status for the current user in sidebar."""
+
+    def post(self, request, team_slug):
+        team = get_object_or_404(Team, slug=team_slug)
+        membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_active=True
+        ).first()
+        if not membership:
+            return HttpResponse('Only team members can update sidebar settings', status=403)
+
+        color = (request.POST.get('sidebar_color') or '').strip()
+        action = (request.POST.get('pin_action') or '').strip().lower()
+
+        if color and color in {choice[0] for choice in Team.COLOR_CHOICES}:
+            team.sidebar_color = color
+            team.save(update_fields=['sidebar_color'])
+
+        if action == 'pin':
+            if not membership.is_pinned:
+                pinned_count = TeamMembership.objects.filter(
+                    user=request.user, is_active=True, is_pinned=True
+                ).count()
+                if pinned_count >= 3:
+                    messages.error(request, 'You can pin maximum 3 teams.')
+                    return redirect(request.META.get('HTTP_REFERER') or 'billing:overview')
+                membership.is_pinned = True
+                membership.pinned_at = timezone.now()
+                membership.save(update_fields=['is_pinned', 'pinned_at'])
+        elif action == 'unpin' and membership.is_pinned:
+            membership.is_pinned = False
+            membership.pinned_at = None
+            membership.save(update_fields=['is_pinned', 'pinned_at'])
+
+        return redirect(request.META.get('HTTP_REFERER') or 'billing:overview')

@@ -87,32 +87,40 @@
             document.body.addEventListener('htmx:beforeRequest', function (e) {
                 var source = e && e.detail ? e.detail.elt : null;
                 if (!source || !source.closest) return;
+                var method = ((e.detail && e.detail.requestConfig && e.detail.requestConfig.verb) || 'get').toLowerCase();
+                if (method === 'get') return;
                 var card = source.closest('[data-task-id]');
                 if (!card) return;
-                document.body.dataset.currentTaskId = card.getAttribute('data-task-id') || '';
+                document.body.dataset.pendingFocusTaskId = card.getAttribute('data-task-id') || '';
+                document.body.dataset.pendingFocusEnabled = '1';
             });
 
             document.body.addEventListener('htmx:afterSwap', function (e) {
                 var target = e && e.detail ? e.detail.target : null;
                 if (!target || target.id !== 'task-tree') return;
-                var taskId = document.body.dataset.currentTaskId;
+                if (document.body.dataset.pendingFocusEnabled !== '1') return;
+                var taskId = document.body.dataset.pendingFocusTaskId;
                 if (!taskId) return;
                 var card = document.querySelector('[data-task-id="' + taskId + '"]');
-                if (!card) return;
-                card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                if (typeof card.focus === 'function') {
-                    card.focus({ preventScroll: true });
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    if (typeof card.focus === 'function') {
+                        card.focus({ preventScroll: true });
+                    }
+                    card.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                    window.setTimeout(function () {
+                        card.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                    }, 900);
                 }
-                card.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
-                window.setTimeout(function () {
-                    card.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
-                }, 900);
+                delete document.body.dataset.pendingFocusTaskId;
+                delete document.body.dataset.pendingFocusEnabled;
             });
 
             document.body.addEventListener('taskCreated', function (e) {
                 var taskId = e && e.detail ? String(e.detail.taskId || '') : '';
                 if (!taskId) return;
-                document.body.dataset.currentTaskId = taskId;
+                document.body.dataset.pendingFocusTaskId = taskId;
+                document.body.dataset.pendingFocusEnabled = '1';
                 var card = document.querySelector('[data-task-id="' + taskId + '"]');
                 if (!card) return;
                 card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
@@ -188,13 +196,42 @@
             </div>
 
             {% for m in team_memberships %}
-            <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
-               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition
+            <div class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100 text-violet-600 text-[10px] font-bold">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
+            <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
+               class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
+                    {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
+                    {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
+                    {% elif m.team.sidebar_color == 'green' %}bg-green-100 text-green-600
+                    {% elif m.team.sidebar_color == 'purple' %}bg-purple-100 text-purple-600
+                    {% else %}bg-blue-100 text-blue-600{% endif %}">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
                 <span class="truncate">{{ m.team.name }}</span>
-                {% if m.is_owner %}<span class="ml-auto text-[9px] text-slate-400 shrink-0">Owner</span>{% endif %}
+                {% if m.is_pinned %}
+                <span class="ml-auto text-[10px] text-amber-600">📌</span>
+                {% elif m.is_owner %}
+                <span class="ml-auto text-[9px] text-slate-400 shrink-0">Owner</span>
+                {% endif %}
             </a>
+                <div class="flex items-center gap-1">
+                    <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="sidebar_color"
+                           value="{% if m.team.sidebar_color == 'green' %}red{% elif m.team.sidebar_color == 'red' %}blue{% else %}green{% endif %}">
+                    <button type="submit"
+                            class="h-3 w-3 rounded-full {% if m.team.sidebar_color == 'red' %}bg-red-500{% elif m.team.sidebar_color == 'blue' %}bg-blue-500{% else %}bg-green-500{% endif %}"
+                            title="Toggle team color"></button>
+                    </form>
+                    <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        {% if m.is_pinned %}
+                        <button type="submit" name="pin_action" value="unpin" class="text-xs leading-none" title="Unpin team">📌</button>
+                        {% else %}
+                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-500 hover:text-slate-700" title="Pin team">📍</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
             {% else %}
             <p class="px-2 text-xs text-slate-400">No teams yet — create one below.</p>
             {% endfor %}
