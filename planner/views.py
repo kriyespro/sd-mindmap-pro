@@ -57,6 +57,12 @@ class WorkspaceUrls:
         return reverse('planner:task_create_personal')
 
     @property
+    def tree_partial(self) -> str:
+        if self._slug:
+            return reverse('planner:task_tree_partial_team', kwargs={'team_slug': self._slug})
+        return reverse('planner:task_tree_partial_personal')
+
+    @property
     def task_import(self) -> str:
         if self._slug:
             return reverse('planner:task_import_team', kwargs={'team_slug': self._slug})
@@ -554,6 +560,11 @@ class StatsPartialView(LoginRequiredMixin, View):
             'partials/stats.jinja',
             {'total_main': total_main, 'done_main': done_main},
         )
+
+
+class TaskTreePartialView(LoginRequiredMixin, View):
+    def get(self, request, team_slug=None):
+        return _tree_partial(request, team_slug)
 
 
 class NotificationReadView(LoginRequiredMixin, View):

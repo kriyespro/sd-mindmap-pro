@@ -11,6 +11,12 @@ urlpatterns = [
     path('t/<slug:team_slug>/stats/', views.StatsPartialView.as_view(), name='stats_team'),
     path('tasks/', views.TaskCreateView.as_view(), name='task_create_personal'),
     path('t/<slug:team_slug>/tasks/', views.TaskCreateView.as_view(), name='task_create_team'),
+    path('tasks/partial/', views.TaskTreePartialView.as_view(), name='task_tree_partial_personal'),
+    path(
+        't/<slug:team_slug>/tasks/partial/',
+        views.TaskTreePartialView.as_view(),
+        name='task_tree_partial_team',
+    ),
     path('tasks/import/', views.TaskImportView.as_view(), name='task_import_personal'),
     path('t/<slug:team_slug>/tasks/import/', views.TaskImportView.as_view(), name='task_import_team'),
     path('tasks/export/', views.TaskExportCsvView.as_view(), name='task_export_personal'),

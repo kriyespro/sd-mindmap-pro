@@ -127,7 +127,11 @@
 {% endif %}
 
 <main class="flex-1 overflow-auto p-4 sm:p-5">
-    <div id="task-tree" class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
+    <div id="task-tree"
+         hx-get="{{ u.tree_partial }}"
+         hx-trigger="every 12s"
+         hx-swap="innerHTML"
+         class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
         {% if task_layout == 'mindmap' %}
             {% include 'partials/task_mindmap.jinja' %}
         {% else %}
