@@ -160,15 +160,20 @@
                 {% endif %}
             </div>
             {% if billing_is_owner %}
-            <form action="{{ url('teams:member_add_any') }}" method="post" class="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
+            <form action="{{ url('teams:member_add_any') }}" method="post" class="mt-2 grid gap-2 md:grid-cols-2">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <select name="team_slug"
                         class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                     {% for owned_team in owned_teams %}
                     <option value="{{ owned_team.slug }}" {% if owned_team.id == owner_team.id %}selected{% endif %}>{{ owned_team.name }}</option>
                     {% endfor %}
                 </select>
-                <input type="text" name="username" required placeholder="username to add"
+                <input type="text" name="username" placeholder="existing username (optional)"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <input type="email" name="email" placeholder="new member email (optional)"
+                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <input type="text" name="full_name" placeholder="full name (needed with email)"
                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
                 <select name="role"
                         class="rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
@@ -178,6 +183,7 @@
                 </select>
                 <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Assign</button>
             </form>
+            <p class="mt-1 text-[10px] text-slate-500">If username does not exist, add email + full name to create an invite for account signup.</p>
             {% endif %}
             {% if owner_team_members %}
             <div class="mt-2 overflow-x-auto">

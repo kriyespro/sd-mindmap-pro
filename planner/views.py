@@ -146,6 +146,18 @@ def _workspace_team(user, team_slug: str | None) -> Team | None:
     return team
 
 
+def _active_team_usernames(team: Team | None) -> list[str]:
+    if team is None:
+        return []
+    usernames = (
+        TeamMembership.objects.filter(team=team, is_active=True)
+        .select_related('user')
+        .values_list('user__username', flat=True)
+    )
+    clean = [(u or '').strip() for u in usernames]
+    return sorted({u for u in clean if u}, key=str.lower)
+
+
 def _svg_text_lines(value: str, max_chars: int = 24, max_lines: int = 3) -> list[str]:
     text = (value or '').strip()
     if not text:
@@ -172,12 +184,10 @@ def _svg_text_lines(value: str, max_chars: int = 24, max_lines: int = 3) -> list
     return lines
 
 
-def _mindmap_svg_bytes(*, tree: list[dict]) -> bytes:
-    layout = compute_mindmap_layout(tree)
+def _mindmap_svg_bytes(*, tree: list[dict], flow_style: str = 'natural') -> bytes:
+    layout = compute_mindmap_layout(tree, flow_style=flow_style)
     width = max(int(layout['width']), 640)
     height = max(int(layout['height']), 360)
-    card_w = int(layout['card_w'])
-    card_h = int(layout['card_h'])
     out: list[str] = []
     out.append(
         (
@@ -187,24 +197,30 @@ def _mindmap_svg_bytes(*, tree: list[dict]) -> bytes:
     )
     out.append('<rect x="0" y="0" width="100%" height="100%" fill="#f8fafc"/>')
     for p in layout['paths']:
+        stroke_w = float(p.get('stroke_w', 2.25))
+        opacity = float(p.get('opacity', 0.88))
+        dash = str(p.get('dash', '')).strip()
+        dash_attr = f' stroke-dasharray="{html_escape(dash)}"' if dash else ''
         out.append(
             f'<path d="{html_escape(p["d"])}" fill="none" stroke="{html_escape(p["stroke"])}" '
-            'stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>'
+            f'stroke-width="{stroke_w:.2f}" stroke-linecap="round" opacity="{opacity:.2f}"{dash_attr}/>'
         )
     for n in layout['nodes']:
         left = int(n['left'])
         top = int(n['top'])
+        node_w = int(n.get('width', layout['card_w']))
+        node_h = int(n.get('height', layout['card_h']))
         task = n['task']
         completed = bool(task.get('is_completed'))
         title = str(task.get('title') or '')
         due = str(task.get('due_date') or '')
         assignee = str(task.get('assignee') or '')
         out.append(
-            f'<rect x="{left}" y="{top}" width="{card_w}" height="{card_h}" rx="10" ry="10" '
+            f'<rect x="{left}" y="{top}" width="{node_w}" height="{node_h}" rx="10" ry="10" '
             'fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>'
         )
         out.append(
-            f'<rect x="{left}" y="{top}" width="{card_w}" height="4" rx="10" ry="10" '
+            f'<rect x="{left}" y="{top}" width="{node_w}" height="4" rx="10" ry="10" '
             f'fill="{html_escape(str(n["accent"]))}"/>'
         )
         lines = _svg_text_lines(title)
@@ -224,7 +240,7 @@ def _mindmap_svg_bytes(*, tree: list[dict]) -> bytes:
             meta.append('Done')
         meta_text = ' · '.join(meta) if meta else 'Open'
         out.append(
-            f'<text x="{left + 10}" y="{top + card_h - 10}" font-size="10" '
+            f'<text x="{left + 10}" y="{top + node_h - 10}" font-size="10" '
             f'font-family="Arial, sans-serif" fill="#475569">{html_escape(meta_text)}</text>'
         )
     out.append('</svg>')
@@ -281,13 +297,17 @@ class BoardView(LoginRequiredMixin, TemplateView):
         branch_children = collect_task_has_children(task_tree)
         pruned_for_mm = prune_mindmap_tree(task_tree, mm_collapsed)
         mindmap = (
-            compute_mindmap_layout(pruned_for_mm) if layout == 'mindmap' else None
+            compute_mindmap_layout(pruned_for_mm, flow_style='natural')
+            if layout == 'mindmap'
+            else None
         )
+        flowmap = compute_mindmap_layout(task_tree, flow_style='relaxed') if layout == 'flow' else None
         total_main, done_main = root_stats(qs)
         u: WorkspaceUrls = workspace_urls(team)
         team_is_owner = False
         team_can_invite = False
         team_roster = []
+        team_assignee_usernames = _active_team_usernames(team)
         if team:
             try:
                 has_team_plan = Profile.supports_team_plan(user.profile.plan)
@@ -309,6 +329,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'task_tree': task_tree,
                 'task_layout': layout,
                 'mindmap': mindmap,
+                'flowmap': flowmap,
                 'mindmap_collapsed_ids': sorted(mm_collapsed),
                 'mindmap_branch_children': branch_children,
                 'total_main': total_main,
@@ -321,6 +342,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'team_is_owner': team_is_owner,
                 'team_can_invite': team_can_invite,
                 'team_roster': team_roster,
+                'team_assignee_usernames': team_assignee_usernames,
                 'tree_focus_expand_ids': _get_tree_focus_expand_ids(self.request),
                 'u': u,
             }
@@ -339,16 +361,18 @@ def _tree_partial(request, team_slug: str | None):
     if layout not in ('tree', 'mindmap'):
         layout = 'mindmap'
     u = workspace_urls(team)
+    team_assignee_usernames = _active_team_usernames(team)
     if layout == 'mindmap':
         mm_collapsed = get_mindmap_collapsed_ids(request, team, tree=tree)
         branch_children = collect_task_has_children(tree)
         pruned = prune_mindmap_tree(tree, mm_collapsed)
         ctx = {
-            'mindmap': compute_mindmap_layout(pruned),
+            'mindmap': compute_mindmap_layout(pruned, flow_style='natural'),
             'task_tree': tree,
             'mindmap_collapsed_ids': sorted(mm_collapsed),
             'mindmap_branch_children': branch_children,
             'current_team': team,
+            'team_assignee_usernames': team_assignee_usernames,
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
             'u': u,
         }
@@ -357,6 +381,7 @@ def _tree_partial(request, team_slug: str | None):
         ctx = {
             'task_tree': tree,
             'current_team': team,
+            'team_assignee_usernames': team_assignee_usernames,
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
             'u': u,
         }
@@ -666,7 +691,7 @@ class MindmapExportView(LoginRequiredMixin, View):
         qs = tasks_for_workspace(request.user, team)
         rows = task_rows_for_tree(qs)
         tree = build_task_tree(rows)
-        svg_bytes = _mindmap_svg_bytes(tree=tree)
+        svg_bytes = _mindmap_svg_bytes(tree=tree, flow_style='natural')
         workspace = team.slug if team else 'personal'
         if export_format == 'svg':
             response = HttpResponse(svg_bytes, content_type='image/svg+xml')

@@ -110,9 +110,17 @@
                       hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML"
                       @click.outside="editingAssignee=false" @keydown.escape.prevent="editingAssignee=false">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                    <input x-ref="assigneeInput" x-model="assigneeDraft" name="assignee_username" maxlength="80" placeholder="User"
+                    <input x-ref="assigneeInput" x-model="assigneeDraft" name="assignee_username" maxlength="150" placeholder="User"
+                           {% if team_assignee_usernames %}list="team-assignee-options-{{ task.id }}"{% endif %}
                            class="w-[80px] rounded border border-slate-200 px-1 py-0.5 text-[10px] font-medium"
                            @change="$el.form.requestSubmit()">
+                    {% if team_assignee_usernames %}
+                    <datalist id="team-assignee-options-{{ task.id }}">
+                        {% for uname in team_assignee_usernames %}
+                        <option value="{{ uname }}"></option>
+                        {% endfor %}
+                    </datalist>
+                    {% endif %}
                     <input type="hidden" name="due_date" :value="dueDraft">
                 </form>
             </div>

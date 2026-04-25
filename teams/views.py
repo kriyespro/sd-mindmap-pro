@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -47,6 +49,96 @@ def _team_seat_limit(team: Team) -> int:
         except Profile.DoesNotExist:
             return Profile.TEAM_USER_LIMIT
     return Profile.TEAM_USER_LIMIT
+
+
+def _add_or_invite_member(
+    *,
+    request,
+    team: Team,
+    actor,
+    username: str,
+    email: str,
+    full_name: str,
+    role: str,
+) -> tuple[bool, str]:
+    clean_username = (username or '').strip()
+    clean_email = (email or '').strip().lower()
+    clean_name = (full_name or '').strip()
+
+    if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
+        return (False, 'Invalid role')
+    if not clean_username and not clean_email:
+        return (False, 'Enter username, or provide email + name for invite')
+
+    target_user = None
+    if clean_username:
+        target_user = User.objects.filter(username__iexact=clean_username).first()
+    if target_user is None and clean_email:
+        target_user = User.objects.filter(email__iexact=clean_email).first()
+
+    if target_user:
+        existing = TeamMembership.objects.filter(team=team, user=target_user).first()
+        if existing and existing.is_active:
+            return (False, 'That user is already in this team')
+        if existing:
+            existing.is_active = True
+            existing.role = role
+            existing.save(update_fields=['is_active', 'role'])
+        else:
+            TeamMembership.objects.create(
+                team=team,
+                user=target_user,
+                is_owner=False,
+                is_active=True,
+                role=role,
+            )
+        Notification.objects.create(
+            user=target_user,
+            message=f'{actor.username} added you to "{team.name}" team.',
+        )
+        return (True, f'Added @{target_user.username} to {team.name}.')
+
+    if not clean_email:
+        return (False, 'No user with that username. Add email + name to send invite.')
+    try:
+        validate_email(clean_email)
+    except ValidationError:
+        return (False, 'Enter a valid email address')
+    if not clean_name:
+        return (False, 'Enter full name for new member invite')
+
+    seat_limit = _team_seat_limit(team)
+    usable_invite = TeamInvite.objects.filter(
+        team=team,
+        email__iexact=clean_email,
+        is_revoked=False,
+        use_count__lt=1,
+        expires_at__gt=timezone.now(),
+    ).first()
+    if usable_invite:
+        return (False, 'Active invite already exists for this email')
+
+    invite = TeamInvite.objects.create(
+        team=team,
+        invited_by=actor,
+        email=clean_email,
+        invited_username='',
+        role=role,
+        expires_at=timezone.now() + timedelta(days=7),
+        max_uses=min(max(seat_limit, 1), 1),
+    )
+    accept_url = request.build_absolute_uri(
+        reverse('teams:accept_invite', kwargs={'token': invite.token})
+    )
+    Notification.objects.create(
+        user=actor,
+        message=f'Invite created for {clean_name} ({clean_email}) in "{team.name}". Share: {accept_url}',
+    )
+    messages.info(
+        request,
+        f'No account found. Invite created for {clean_name} ({clean_email}). Share this join link: {accept_url}',
+    )
+    return (True, 'Invite created for new member email.')
 
 
 class TeamCreateView(LoginRequiredMixin, View):
@@ -232,99 +324,88 @@ class TeamMemberAddView(LoginRequiredMixin, View):
     """Owner can directly add existing user to team."""
 
     def post(self, request, team_slug):
+        is_hx = bool(request.headers.get('HX-Request'))
+
+        def _error(message: str, *, status: int = 400):
+            return HttpResponse(message, status=status)
+
+        next_url = (request.POST.get('next') or '').strip() or request.META.get('HTTP_REFERER') or reverse('billing:overview')
         team = get_object_or_404(Team, slug=team_slug)
-        owner_membership = TeamMembership.objects.filter(
-            team=team, user=request.user, is_owner=True, is_active=True
+        membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_active=True
         ).first()
-        if not owner_membership:
-            return HttpResponse('Only owner can manage team members', status=403)
+        if not membership or not membership.can_manage_invites:
+            return _error('Only owner/admin can manage team members', status=403)
 
         seat_limit = _team_seat_limit(team)
         if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
-            return HttpResponse(f'Team member limit reached (max {seat_limit} users)', status=400)
+            return _error(f'Team member limit reached (max {seat_limit} users)')
 
         username = (request.POST.get('username') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        full_name = (request.POST.get('full_name') or '').strip()
         role = (request.POST.get('role') or TeamMembership.ROLE_MEMBER).strip()
-        if not username:
-            return HttpResponse('Username is required', status=400)
-        if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
-            return HttpResponse('Invalid role', status=400)
-
-        user = User.objects.filter(username__iexact=username).first()
-        if not user:
-            return HttpResponse('No user with that username', status=400)
-        existing = TeamMembership.objects.filter(team=team, user=user).first()
-        if existing and existing.is_active:
-            return HttpResponse('That user is already in this team', status=400)
-        if existing:
-            existing.is_active = True
-            existing.role = role
-            existing.save(update_fields=['is_active', 'role'])
-        else:
-            TeamMembership.objects.create(
-                team=team,
-                user=user,
-                is_owner=False,
-                is_active=True,
-                role=role,
-            )
-        Notification.objects.create(
-            user=user,
-            message=f'{request.user.username} added you to "{team.name}" team.',
+        ok, msg = _add_or_invite_member(
+            request=request,
+            team=team,
+            actor=request.user,
+            username=username,
+            email=email,
+            full_name=full_name,
+            role=role,
         )
-        return redirect('billing:overview')
+        if not ok:
+            return _error(msg)
+        messages.success(request, msg)
+        if is_hx:
+            resp = HttpResponse('')
+            resp['HX-Redirect'] = next_url
+            return resp
+        return redirect(next_url)
 
 
 class TeamMemberAddAnyTeamView(LoginRequiredMixin, View):
     """Owner can add user to any owned team from billing page."""
 
     def post(self, request):
+        next_url = (request.POST.get('next') or '').strip() or request.META.get('HTTP_REFERER') or reverse('billing:overview')
+
+        def _fail(message: str):
+            messages.error(request, message)
+            return redirect(next_url)
+
         team_slug = (request.POST.get('team_slug') or '').strip()
         if not team_slug:
-            return HttpResponse('Select a team first', status=400)
+            return _fail('Select a team first')
         team = Team.objects.filter(slug=team_slug).first()
         if not team:
-            return HttpResponse('Team not found', status=404)
+            return _fail('Team not found')
         owner_membership = TeamMembership.objects.filter(
             team=team, user=request.user, is_owner=True, is_active=True
         ).first()
         if not owner_membership:
-            return HttpResponse('Only owner can manage team members', status=403)
-
-        seat_limit = _team_seat_limit(team)
-        if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
-            return HttpResponse(f'Team member limit reached (max {seat_limit} users)', status=400)
+            return _fail('Only owner can manage team members')
 
         username = (request.POST.get('username') or '').strip()
+        email = (request.POST.get('email') or '').strip()
+        full_name = (request.POST.get('full_name') or '').strip()
         role = (request.POST.get('role') or TeamMembership.ROLE_MEMBER).strip()
-        if not username:
-            return HttpResponse('Username is required', status=400)
-        if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
-            return HttpResponse('Invalid role', status=400)
-
-        user = User.objects.filter(username__iexact=username).first()
-        if not user:
-            return HttpResponse('No user with that username', status=400)
-        existing = TeamMembership.objects.filter(team=team, user=user).first()
-        if existing and existing.is_active:
-            return HttpResponse('That user is already in this team', status=400)
-        if existing:
-            existing.is_active = True
-            existing.role = role
-            existing.save(update_fields=['is_active', 'role'])
-        else:
-            TeamMembership.objects.create(
-                team=team,
-                user=user,
-                is_owner=False,
-                is_active=True,
-                role=role,
-            )
-        Notification.objects.create(
-            user=user,
-            message=f'{request.user.username} added you to "{team.name}" team.',
+        seat_limit = _team_seat_limit(team)
+        if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
+            return _fail(f'Team member limit reached (max {seat_limit} users)')
+        ok, msg = _add_or_invite_member(
+            request=request,
+            team=team,
+            actor=request.user,
+            username=username,
+            email=email,
+            full_name=full_name,
+            role=role,
         )
-        return redirect('billing:overview')
+        if not ok:
+            return _fail(msg)
+        messages.success(request, msg)
+        return redirect(next_url)
 
 
 class TeamMemberRemoveView(LoginRequiredMixin, View):

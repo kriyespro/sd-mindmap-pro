@@ -267,79 +267,190 @@ def user_can_access_task(user: User, task: Task, team: Team | None) -> bool:
 
 # ── Mind map (horizontal tree, SVG connectors) ─────────────────────────────
 
-MINDMAP_CARD_W = 268
-MINDMAP_CARD_H = 82
+MINDMAP_CARD_MIN_W = 228
+MINDMAP_CARD_MAX_W = 372
+MINDMAP_CARD_BASE_H = 78
 MINDMAP_COL_GAP = 36
 MINDMAP_ROW_GAP = 6
 MINDMAP_ROOT_GAP = 13
 MINDMAP_PAD = 40
 
-# Branch curves — distinct hues aligned with card depth accents
+# Subtle multicolor connectors by depth for easier branch scanning.
 MINDMAP_EDGE_COLORS = [
-    '#ea580c',  # orange — depth 0
-    '#0891b2',  # cyan — depth 1
-    '#db2777',  # pink — depth 2
-    '#65a30d',  # lime — depth 3+
-    '#7c3aed',  # violet (extra cycle)
-    '#ca8a04',  # yellow-600
-    '#4f46e5',  # indigo
+    '#94a3b8',  # slate
+    '#93c5fd',  # soft blue
+    '#86efac',  # soft green
+    '#fcd34d',  # soft amber
+    '#c4b5fd',  # soft violet
 ]
+
+
+def _connector_pull_distance(
+    *,
+    dx: float,
+    dy: float,
+    sibling_count: int,
+    depth: int,
+) -> float:
+    """
+    Dynamic curve pull for natural threads.
+    - Wider columns -> longer sweep
+    - Larger vertical jumps -> smoother longer bend
+    - More siblings -> slight extra spacing to avoid crowding
+    - Deeper levels -> slightly tighter curves
+    """
+    horizontal = max(min(dx * 0.48, 210.0), 28.0)
+    vertical = max(min(abs(dy) * 0.18, 54.0), 0.0)
+    branch_load = max(min((sibling_count - 1) * 3.0, 24.0), 0.0)
+    depth_tighten = min(depth * 2.0, 10.0)
+    return max(36.0, horizontal + vertical + branch_load - depth_tighten)
 
 
 def _mindmap_subtree(
     node: dict,
     depth: int,
     y_ptr: list[float],
+    depth_lefts: dict[int, float],
     positions: dict[int, dict],
     paths: list[dict],
+    flow_style: str,
+    row_gap: float,
+    col_gap: float,
 ) -> dict:
     """Recursive layout left → right. Fills positions and paths (parent → child Béziers)."""
     ch = node.get('children') or []
-    x = depth * (MINDMAP_CARD_W + MINDMAP_COL_GAP) + MINDMAP_PAD
-    color = MINDMAP_EDGE_COLORS[depth % len(MINDMAP_EDGE_COLORS)]
+    node_w = float(node.get('_mm_w') or MINDMAP_CARD_MIN_W)
+    node_h = float(node.get('_mm_h') or MINDMAP_CARD_BASE_H)
+    x = depth_lefts.get(depth, float(MINDMAP_PAD))
 
     if not ch:
         top = y_ptr[0]
-        y_ptr[0] += MINDMAP_CARD_H + MINDMAP_ROW_GAP
+        y_ptr[0] += node_h + row_gap
         positions[node['id']] = {
             'task': node,
             'left': x,
             'top': top,
+            'width': node_w,
+            'height': node_h,
             'depth': depth,
-            'accent': color,
+            'accent': '#6366f1',
         }
-        return {'top': top, 'bottom': top + MINDMAP_CARD_H}
+        return {'top': top, 'bottom': top + node_h}
 
     ranges = []
-    for c in ch:
-        ranges.append(_mindmap_subtree(c, depth + 1, y_ptr, positions, paths))
+    for idx, c in enumerate(ch):
+        ranges.append(
+            _mindmap_subtree(
+                c,
+                depth + 1,
+                y_ptr,
+                depth_lefts,
+                positions,
+                paths,
+                flow_style,
+                row_gap,
+                col_gap,
+            )
+        )
+        if idx < len(ch) - 1:
+            # Add breathing room between large sibling branches.
+            subtree_weight = int(c.get('subtask_total') or 0)
+            sibling_branch_gap = min(26.0, 4.0 + (subtree_weight * 0.65))
+            y_ptr[0] += sibling_branch_gap
 
     min_top = min(r['top'] for r in ranges)
     max_bot = max(r['bottom'] for r in ranges)
     cy = (min_top + max_bot) / 2
-    top = cy - MINDMAP_CARD_H / 2
+    top = cy - node_h / 2
     positions[node['id']] = {
         'task': node,
         'left': x,
         'top': top,
+        'width': node_w,
+        'height': node_h,
         'depth': depth,
-        'accent': color,
+        'accent': '#6366f1',
     }
 
-    px_out = x + MINDMAP_CARD_W
-    for c in ch:
+    px_out = x + node_w
+    child_count = len(ch)
+    for idx, c in enumerate(ch):
         cp = positions[c['id']]
-        cy_c = cp['top'] + MINDMAP_CARD_H / 2
+        cy_c = cp['top'] + cp['height'] / 2
         cx_in = cp['left']
-        stroke = MINDMAP_EDGE_COLORS[(depth + 1) % len(MINDMAP_EDGE_COLORS)]
+        stroke = MINDMAP_EDGE_COLORS[(depth + idx + 1) % len(MINDMAP_EDGE_COLORS)]
         dx = cx_in - px_out
-        pull = max(min(dx * 0.55, 140), 48)
+        py = cy
+        dy = cy_c - py
+        pull = _connector_pull_distance(
+            dx=dx,
+            dy=dy,
+            sibling_count=child_count,
+            depth=depth,
+        )
         c1x = px_out + pull
         c2x = cx_in - pull
-        d = f'M {px_out:.1f},{cy:.1f} C {c1x:.1f},{cy:.1f} {c2x:.1f},{cy_c:.1f} {cx_in:.1f},{cy_c:.1f}'
-        paths.append({'d': d, 'stroke': stroke})
+        d = f'M {px_out:.1f},{py:.1f} C {c1x:.1f},{py:.1f} {c2x:.1f},{cy_c:.1f} {cx_in:.1f},{cy_c:.1f}'
+        stroke_w = 1.5
+        stroke_opacity = 0.8
+        dash = ''
+        paths.append(
+            {
+                'd': d,
+                'stroke': stroke,
+                'stroke_w': stroke_w,
+                'opacity': stroke_opacity,
+                'dash': dash,
+            }
+        )
 
-    return {'top': top, 'bottom': top + MINDMAP_CARD_H}
+    return {'top': top, 'bottom': top + node_h}
+
+
+def _mindmap_node_size(node: dict) -> tuple[int, int]:
+    title = str(node.get('title') or '').strip()
+    if not title:
+        return (MINDMAP_CARD_MIN_W, MINDMAP_CARD_BASE_H)
+    words = title.split()
+    title_len = len(title)
+    longest_word = max((len(w) for w in words), default=0)
+    width_boost = max(title_len - 28, 0) * 2 + max(longest_word - 14, 0) * 3
+    width = min(MINDMAP_CARD_MAX_W, MINDMAP_CARD_MIN_W + width_boost)
+    chars_per_line = max(24, int(width // 8))
+    est_lines = max(1, min(4, (title_len + chars_per_line - 1) // chars_per_line))
+    height = MINDMAP_CARD_BASE_H + ((est_lines - 1) * 14)
+    return (int(width), int(height))
+
+
+def _annotate_mindmap_sizes(
+    roots: list[dict],
+    *,
+    col_gap: float,
+) -> tuple[dict[int, float], int, int]:
+    depth_widths: dict[int, float] = {}
+    max_w = MINDMAP_CARD_MIN_W
+    max_h = MINDMAP_CARD_BASE_H
+
+    def walk(node: dict, depth: int) -> None:
+        nonlocal max_w, max_h
+        width, height = _mindmap_node_size(node)
+        node['_mm_w'] = width
+        node['_mm_h'] = height
+        depth_widths[depth] = max(depth_widths.get(depth, 0.0), float(width))
+        max_w = max(max_w, width)
+        max_h = max(max_h, height)
+        for child in node.get('children') or []:
+            walk(child, depth + 1)
+
+    for root in roots:
+        walk(root, 0)
+
+    depth_lefts: dict[int, float] = {}
+    cursor = float(MINDMAP_PAD)
+    for depth in sorted(depth_widths.keys()):
+        depth_lefts[depth] = cursor
+        cursor += depth_widths[depth] + col_gap
+    return depth_lefts, max_w, max_h
 
 
 def mindmap_collapse_session_key(team: Team | None) -> str:
@@ -445,7 +556,7 @@ def prune_mindmap_tree(roots: list[dict], collapsed_ids: set[int]) -> list[dict]
     return [clone(r) for r in roots]
 
 
-def compute_mindmap_layout(roots: list[dict]) -> dict:
+def compute_mindmap_layout(roots: list[dict], *, flow_style: str = 'natural') -> dict:
     """
     Build node positions and cubic SVG paths for a forest of task trees.
     """
@@ -454,29 +565,46 @@ def compute_mindmap_layout(roots: list[dict]) -> dict:
         'paths': [],
         'width': 920,
         'height': 480,
-        'card_w': MINDMAP_CARD_W,
-        'card_h': MINDMAP_CARD_H,
+        'card_w': MINDMAP_CARD_MIN_W,
+        'card_h': MINDMAP_CARD_BASE_H,
     }
     if not roots:
         return empty
 
+    total_nodes = sum(1 + int(r.get('subtask_total') or 0) for r in roots)
+    density_boost = min(46.0, max(0.0, total_nodes - 6) * 1.8)
+
+    if flow_style == 'tight':
+        row_gap = 2.0 + (density_boost * 0.22)
+        col_gap = 20.0 + (density_boost * 0.26)
+        root_gap = 8.0 + (density_boost * 0.26)
+    elif flow_style == 'relaxed':
+        row_gap = 30.0 + (density_boost * 1.3)
+        col_gap = 110.0 + (density_boost * 1.25)
+        root_gap = 46.0 + (density_boost * 1.15)
+    else:
+        row_gap = 12.0 + (density_boost * 0.68)
+        col_gap = 60.0 + (density_boost * 0.72)
+        root_gap = 22.0 + (density_boost * 0.62)
+
     positions: dict[int, dict] = {}
     paths: list[dict] = []
     y_ptr = [float(MINDMAP_PAD)]
+    depth_lefts, max_card_w, max_card_h = _annotate_mindmap_sizes(roots, col_gap=col_gap)
     for root in roots:
-        _mindmap_subtree(root, 0, y_ptr, positions, paths)
-        y_ptr[0] += MINDMAP_ROOT_GAP
+        _mindmap_subtree(root, 0, y_ptr, depth_lefts, positions, paths, flow_style, row_gap, col_gap)
+        y_ptr[0] += root_gap
 
     nodes = sorted(positions.values(), key=lambda n: (n['top'], n['left'], n['task']['id']))
-    width = int(max(n['left'] + MINDMAP_CARD_W for n in nodes) + MINDMAP_PAD)
-    height = int(max(n['top'] + MINDMAP_CARD_H for n in nodes) + MINDMAP_PAD)
+    width = int(max(n['left'] + n['width'] for n in nodes) + MINDMAP_PAD)
+    height = int(max(n['top'] + n['height'] for n in nodes) + MINDMAP_PAD)
     return {
         'nodes': nodes,
         'paths': paths,
         'width': max(width, 640),
         'height': max(height, 360),
-        'card_w': MINDMAP_CARD_W,
-        'card_h': MINDMAP_CARD_H,
+        'card_w': max_card_w,
+        'card_h': max_card_h,
     }
 
 

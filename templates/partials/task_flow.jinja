@@ -1,0 +1,27 @@
+<div class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto p-3">
+{% if flowmap and flowmap.nodes %}
+    <p class="mb-2 px-1 text-[11px] font-medium text-slate-500">Flow view: clean connected threads for better reading.</p>
+    <div class="relative rounded-2xl bg-slate-100/80 p-3" style="width:{{ flowmap.width }}px;height:{{ flowmap.height }}px;min-width:min(100%,{{ flowmap.width }}px);">
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="{{ flowmap.width }}"
+             height="{{ flowmap.height }}"
+             class="absolute left-0 top-0 overflow-visible text-[0]">
+            {% for p in flowmap.paths %}
+            <path d="{{ p.d }}" fill="none" stroke="#a8adb5" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/>
+            {% endfor %}
+        </svg>
+        {% for n in flowmap.nodes %}
+        {% set task = n.task %}
+        <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
+            <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <p class="truncate text-[13px] font-medium text-slate-800">{{ task.title }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="flex w-full flex-col items-center py-24 text-center">
+        <p class="text-sm font-semibold text-slate-600">No tasks to render in flow</p>
+    </div>
+{% endif %}
+</div>

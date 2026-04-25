@@ -9,12 +9,12 @@
              height="{{ mindmap.height }}"
              class="absolute left-0 top-0 overflow-visible text-[0]">
             {% for p in mindmap.paths %}
-            <path d="{{ p.d }}" fill="none" stroke="{{ p.stroke }}" stroke-width="2.25" stroke-linecap="round" opacity="0.88"/>
+            <path d="{{ p.d }}" fill="none" stroke="{{ p.stroke }}" stroke-width="{{ p.stroke_w or 2.25 }}" stroke-linecap="round" opacity="{{ p.opacity or 0.88 }}" {% if p.dash %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
             {% endfor %}
         </svg>
         {% for n in mindmap.nodes %}
         {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
-        <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ mindmap.card_w }}px;">
+        <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
             {{ node_card(n.task, n.depth, 'mindmap', mindmap_collapsed_ids, _hc) }}
         </div>
         {% endfor %}
