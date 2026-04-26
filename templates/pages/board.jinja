@@ -88,6 +88,8 @@
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
             Add member
         </button>
+        {% endif %}
+        {% if current_team and team_can_archive %}
         <form method="post" action="{{ url('planner:archive_team_mindmap', team_slug=current_team.slug) }}"
               onsubmit="return window.confirm('Archive all tasks in this team mindmap? You can keep data safe but it will be hidden from board view.')">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">

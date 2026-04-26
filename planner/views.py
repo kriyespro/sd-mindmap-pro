@@ -331,6 +331,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         u: WorkspaceUrls = workspace_urls(team)
         team_is_owner = False
         team_can_invite = False
+        team_can_archive = False
         team_roster = []
         team_assignee_usernames = _active_team_usernames(team)
         if team:
@@ -343,6 +344,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
             ).exists()
             membership = TeamMembership.objects.filter(team=team, user=user, is_active=True).first()
             team_can_invite = bool(membership and membership.can_manage_invites)
+            team_can_archive = bool(membership)
             team_roster = list(
                 TeamMembership.objects.filter(team=team, is_active=True)
                 .select_related('user')
@@ -365,6 +367,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'team_invite_form': TeamInviteForm(),
                 'team_is_owner': team_is_owner,
                 'team_can_invite': team_can_invite,
+                'team_can_archive': team_can_archive,
                 'team_roster': team_roster,
                 'team_assignee_usernames': team_assignee_usernames,
                 'tree_focus_expand_ids': _get_tree_focus_expand_ids(self.request),

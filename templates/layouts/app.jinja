@@ -350,6 +350,11 @@
                 {% endif %}
             </a>
                 <div class="flex items-center gap-1">
+                    <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
+                          onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <button type="submit" class="text-xs leading-none text-slate-500 hover:text-amber-700" title="Archive team mindmap">🗂</button>
+                    </form>
                     <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="sidebar_color"
@@ -397,6 +402,11 @@
                 <span class="truncate">{{ m.team.name }}</span>
             </a>
                 <div class="flex items-center gap-1">
+                    <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
+                          onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <button type="submit" class="text-xs leading-none text-slate-500 hover:text-amber-700" title="Archive team mindmap">🗂</button>
+                    </form>
                     <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="sidebar_color"
