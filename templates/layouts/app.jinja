@@ -27,19 +27,20 @@
         [x-cloak] { display: none !important; }
         .htmx-settling, .htmx-swapping { opacity: 0; transition: opacity .12s ease; }
         body { font-family: Inter, system-ui, sans-serif; }
-        .dark body { background: #191919; color: #e6e6e6; }
-        .dark .bg-white { background-color: #202020 !important; }
-        .dark .bg-slate-50 { background-color: #202020 !important; }
-        .dark .bg-slate-100 { background-color: #2a2a2a !important; }
-        .dark .text-slate-900 { color: #f3f3f3 !important; }
-        .dark .text-slate-800 { color: #ebebeb !important; }
-        .dark .text-slate-700 { color: #d9d9d9 !important; }
-        .dark .text-slate-600 { color: #bdbdbd !important; }
-        .dark .text-slate-500 { color: #9b9b9b !important; }
-        .dark .text-slate-400 { color: #8a8a8a !important; }
+        :root { --dark-accent: #DBAFA0; }
+        .dark body { background: #151719; color: #e7e8ea; }
+        .dark .bg-white { background-color: #202428 !important; }
+        .dark .bg-slate-50 { background-color: #202428 !important; }
+        .dark .bg-slate-100 { background-color: #272c31 !important; }
+        .dark .text-slate-900 { color: #f3f4f6 !important; }
+        .dark .text-slate-800 { color: #e5e7eb !important; }
+        .dark .text-slate-700 { color: #d1d5db !important; }
+        .dark .text-slate-600 { color: #b8bec7 !important; }
+        .dark .text-slate-500 { color: #9aa3af !important; }
+        .dark .text-slate-400 { color: #838d99 !important; }
         .dark .border-slate-200,
         .dark .border-slate-200\/80,
-        .dark .border-slate-100 { border-color: #373737 !important; }
+        .dark .border-slate-100 { border-color: #3a424b !important; }
         .dark .bg-indigo-50,
         .dark .bg-indigo-50\/50,
         .dark .bg-indigo-50\/40,
@@ -51,15 +52,52 @@
         .dark .bg-amber-50,
         .dark .bg-amber-50\/60,
         .dark .bg-amber-50\/70,
-        .dark .bg-fuchsia-50\/50 { background-color: #2b2b2b !important; }
+        .dark .bg-fuchsia-50\/50 { background-color: #2b3036 !important; }
         .dark .text-indigo-700,
         .dark .text-violet-700,
         .dark .text-emerald-700,
         .dark .text-amber-800,
-        .dark .text-fuchsia-700 { color: #dbeafe !important; }
+        .dark .text-fuchsia-700 { color: var(--dark-accent) !important; }
+        .dark .bg-indigo-600,
+        .dark .bg-violet-600,
+        .dark .bg-fuchsia-600 { background-color: #DBAFA0 !important; color: #1f2327 !important; }
+        .dark .hover\:bg-indigo-700:hover,
+        .dark .hover\:bg-violet-700:hover,
+        .dark .hover\:bg-fuchsia-700:hover { background-color: #c69c90 !important; }
+        .dark .hover\:text-indigo-600:hover,
+        .dark .hover\:text-indigo-700:hover,
+        .dark .hover\:text-violet-800:hover { color: var(--dark-accent) !important; }
+        .dark .dark-accent-btn {
+            background-color: #DBAFA0 !important;
+            color: #1f2327 !important;
+            border-color: #DBAFA0 !important;
+            box-shadow: none !important;
+        }
+        .dark .dark-accent-btn:hover { background-color: #e4bbb0 !important; border-color: #e4bbb0 !important; }
+        .dark .dark-soft-btn {
+            background-color: #262c31 !important;
+            border-color: #414a54 !important;
+            color: #dde1e6 !important;
+        }
+        .dark .dark-soft-btn:hover {
+            background-color: #2d343b !important;
+            border-color: #4d5965 !important;
+            color: #f0f3f7 !important;
+        }
+        .dark .ring-indigo-100,
+        .dark .ring-indigo-300 { --tw-ring-color: rgba(219, 175, 160, 0.45) !important; }
+        .dark .dark-topbar {
+            background-color: rgba(28, 32, 36, 0.92) !important;
+            border-color: #3a424b !important;
+        }
+        .dark .dark-topbar-pill {
+            background-color: #2a3036 !important;
+            border-color: #48525d !important;
+            color: #e1e5ea !important;
+        }
         .dark input,
         .dark select,
-        .dark textarea { background-color: #191919 !important; color: #e6e6e6 !important; border-color: #3a3a3a !important; }
+        .dark textarea { background-color: #1e2328 !important; color: #ecf0f4 !important; border-color: #48525d !important; }
         .dark input::placeholder,
         .dark textarea::placeholder { color: #9ca3af !important; }
         .dark .shadow-sm,
@@ -73,8 +111,14 @@
             background-size: 22px 22px !important;
         }
         .dark #task-tree {
-            background-color: #1b1b1b !important;
-            background-image: none !important;
+            background-color: #1d2227 !important;
+            background-image: radial-gradient(circle at 1.5px 1.5px, rgba(219, 175, 160, 0.18) 1.2px, transparent 0) !important;
+            background-size: 24px 24px !important;
+        }
+        .dark #task-tree [data-task-id] {
+            background-color: #242a31 !important;
+            border-color: #46505a !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
         }
     </style>
     <script>
@@ -144,6 +188,7 @@
         teamCreateError: '',
         parentIdForModal: '',
         sidebarOpen: true,
+        isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree'])|tojson }},
         isMindmap: {{ (task_layout|default('mindmap') == 'mindmap')|tojson }},
         darkMode: false,
         initTheme() {
@@ -163,12 +208,9 @@
 <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="relative flex flex-col border-r border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out"
-           :class="isMindmap && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
-        <button type="button" x-show="isMindmap && sidebarOpen" x-cloak @click="sidebarOpen = false"
-                class="absolute -right-3 top-1/2 z-30 flex h-9 w-3 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-slate-200 bg-white text-xs font-bold text-slate-400 shadow-sm hover:text-indigo-600"
-                title="Hide sidebar">‹</button>
+           :class="isBoardView && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
         <div class="p-4 border-b border-slate-100">
-            <a href="{{ url('planner:board_personal') }}" class="flex items-center gap-2.5">
+            <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
@@ -248,11 +290,6 @@
         </nav>
 
         <div class="p-3 border-t border-slate-100 space-y-2">
-            <button type="button" @click="toggleTheme()"
-                    class="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
-                <span x-text="darkMode ? 'Dark theme on' : 'Light theme on'"></span>
-                <span class="text-[10px] text-slate-400" x-text="darkMode ? 'Switch to light' : 'Switch to dark'"></span>
-            </button>
             <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold uppercase">{{ user.username[0] }}</div>
                 <div class="min-w-0 flex-1">
@@ -265,10 +302,6 @@
             </div>
         </div>
     </aside>
-
-    <button type="button" x-show="isMindmap && !sidebarOpen" x-cloak @click="sidebarOpen = true"
-            class="fixed left-0 top-28 z-40 flex items-center rounded-r-lg border border-l-0 border-slate-200 bg-white py-3 pl-1 pr-1.5 text-sm font-bold text-slate-400 shadow-md hover:text-indigo-600"
-            title="Show sidebar">›</button>
 
     <!-- Main -->
     <div class="flex min-w-0 flex-1 flex-col">

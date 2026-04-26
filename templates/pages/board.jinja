@@ -2,8 +2,14 @@
 {% block title %}{% if current_team %}{{ current_team.name }} · MindMap{% else %}Personal · MindMap{% endif %}{% endblock %}
 
 {% block main %}
-<header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-md">
+<header class="dark-topbar sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-md">
     <div class="flex min-w-0 items-center gap-2.5">
+        <button type="button"
+                @click="sidebarOpen = !sidebarOpen"
+                class="dark-topbar-pill inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600"
+                title="Toggle sidebar">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
         <h1 class="truncate text-sm font-semibold text-slate-900">
             {% if current_team %}{{ current_team.name }}{% else %}Personal workspace{% endif %}
         </h1>
@@ -26,14 +32,14 @@
 
         <div class="hidden h-4 w-px bg-slate-200 lg:block"></div>
 
-        <div class="flex rounded-md border border-slate-200 bg-slate-100/90 p-0.5 text-[10px] font-semibold shadow-sm">
+        <div class="dark-topbar-pill flex rounded-md border border-slate-200 bg-slate-100/90 p-0.5 text-[10px] font-semibold shadow-sm">
             <a href="{{ request.path }}?layout=tree"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'tree' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Tree</a>
             <a href="{{ request.path }}?layout=mindmap"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mindmap' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Map</a>
         </div>
         <div class="relative" x-data="{ open: false }">
-            <button type="button" @click="open = !open" class="relative rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600">
+            <button type="button" @click="open = !open" class="dark-topbar-pill relative rounded-md border border-transparent p-1 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 {% if notifications|length > 0 %}
                 <span class="absolute right-1 top-1 flex h-2 w-2">
@@ -68,10 +74,17 @@
                 </div>
             </div>
         </div>
+        <button type="button"
+                @click="toggleTheme()"
+                class="dark-topbar-pill inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600"
+                :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+            <svg x-show="!darkMode" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m7-9h2M3 12H5m12.364 6.364l1.414 1.414M5.222 5.222l1.414 1.414m0 10.728l-1.414 1.414m12.728-12.728l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+            <svg x-show="darkMode" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
 
         {% if current_team and team_can_invite %}
         <button type="button" @click="inviteModalOpen = true"
-                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-800">
+                class="dark-soft-btn inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-800">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
             Add member
         </button>
@@ -79,25 +92,25 @@
               onsubmit="return window.confirm('Archive all tasks in this team mindmap? You can keep data safe but it will be hidden from board view.')">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <button type="submit"
-                    class="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-white px-2 py-1 text-[10px] font-semibold text-amber-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800">
+                    class="dark-soft-btn inline-flex items-center gap-1 rounded-md border border-amber-200 bg-white px-2 py-1 text-[10px] font-semibold text-amber-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800">
                 Archive
             </button>
         </form>
         {% endif %}
 
         <button type="button" @click="addModalOpen = true; parentIdForModal = ''"
-                class="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold text-white shadow-md shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]">
+                class="dark-accent-btn inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-[10px] font-semibold text-white shadow-md shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]">
             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             New
             <kbd class="hidden rounded border border-white/30 px-1 py-0.5 text-[9px] font-normal opacity-80 xl:inline">⌘K</kbd>
         </button>
         <button type="button" @click="importModalOpen = true"
-                class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">
+                class="dark-soft-btn inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">
             Import
         </button>
         <div class="relative" x-data="{ exportOpen: false }">
             <button type="button" @click="exportOpen = !exportOpen"
-                    class="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800">
+                    class="dark-soft-btn inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800">
                 Export
                 <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
