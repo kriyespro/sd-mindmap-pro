@@ -463,15 +463,13 @@ def get_mindmap_collapsed_ids(
     *,
     tree: list[dict] | None = None,
 ) -> set[int]:
+    all_branch_ids = set(collect_branch_ids_with_children(tree or [])) if tree is not None else set()
+
     if team is not None:
         raw = team.mindmap_collapsed_task_ids
         if raw is None:
-            if tree is None:
-                return set()
-            collapsed = set(collect_branch_ids_with_children(tree))
-            team.mindmap_collapsed_task_ids = sorted(collapsed)
-            team.save(update_fields=['mindmap_collapsed_task_ids'])
-            return collapsed
+            # Default to expanded branches; user can collapse manually.
+            return set()
         if not isinstance(raw, list):
             return set()
         out: set[int] = set()
@@ -480,15 +478,19 @@ def get_mindmap_collapsed_ids(
                 out.add(int(x))
             except (TypeError, ValueError):
                 continue
+        # Backward compatibility: old behavior stored "all branches collapsed" by default.
+        # Auto-heal such state to expanded unless user explicitly collapses again.
+        if all_branch_ids and out == all_branch_ids:
+            team.mindmap_collapsed_task_ids = []
+            team.save(update_fields=['mindmap_collapsed_task_ids'])
+            return set()
         return out
 
     key = mindmap_collapse_session_key(team)
     if key not in request.session:
-        if tree is not None:
-            request.session[key] = sorted(collect_branch_ids_with_children(tree))
-            request.session.modified = True
-        else:
-            return set()
+        # Default to expanded branches; user can collapse manually.
+        request.session[key] = []
+        request.session.modified = True
     raw = request.session.get(key, [])
     if not isinstance(raw, list):
         return set()
@@ -498,6 +500,10 @@ def get_mindmap_collapsed_ids(
             out.add(int(x))
         except (TypeError, ValueError):
             continue
+    if all_branch_ids and out == all_branch_ids:
+        request.session[key] = []
+        request.session.modified = True
+        return set()
     return out
 
 

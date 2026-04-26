@@ -144,7 +144,7 @@
 {% endmacro %}
 
 {% macro render_task(task, depth=0) %}
-<div class="relative" id="task-node-{{ task.id }}" x-data="{ collapsed: {{ 'false' if task.id in tree_focus_expand_ids else 'true' }} }">
+<div class="relative" id="task-node-{{ task.id }}" x-data="{ collapsed: false }">
     {{ node_card(task, depth) }}
     {% if task.children %}
     <div x-show="!collapsed" x-transition.duration.150ms class="relative mt-1.5 ml-7 space-y-1.5 border-l border-slate-200 pl-3.5">
