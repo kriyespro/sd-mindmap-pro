@@ -335,16 +335,12 @@
                             <p class="text-xs font-semibold text-slate-800">{{ archived_membership.team.name }}</p>
                             <p class="text-[11px] text-slate-500">Team workspace archived</p>
                         </div>
-                        {% if archived_membership.can_manage_invites %}
                         <form method="post" action="{{ url('planner:unarchive_team_mindmap', team_slug=archived_membership.team.slug) }}">
                             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                             <button type="submit" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100">
                                 Unarchive
                             </button>
                         </form>
-                        {% else %}
-                        <span class="text-[10px] text-slate-400">Ask owner/admin</span>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
