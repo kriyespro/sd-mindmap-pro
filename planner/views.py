@@ -158,6 +158,25 @@ def _active_team_usernames(team: Team | None) -> list[str]:
     return sorted({u for u in clean if u}, key=str.lower)
 
 
+def _direct_branch_child_ids(roots: list[dict], parent_id: int) -> set[int]:
+    """Return direct child ids that themselves have children (branch nodes)."""
+
+    def walk(nodes: list[dict]) -> set[int]:
+        for node in nodes:
+            if int(node.get('id', 0)) == parent_id:
+                branch_ids: set[int] = set()
+                for child in node.get('children') or []:
+                    if child.get('children'):
+                        branch_ids.add(int(child['id']))
+                return branch_ids
+            out = walk(node.get('children') or [])
+            if out:
+                return out
+        return set()
+
+    return walk(roots)
+
+
 def _svg_text_lines(value: str, max_chars: int = 24, max_lines: int = 3) -> list[str]:
     text = (value or '').strip()
     if not text:
@@ -412,6 +431,8 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
         tid = int(task_id)
         if tid in cur:
             cur.discard(tid)
+            # Progressive reveal: when opening a node, keep deeper branches collapsed.
+            cur.update(_direct_branch_child_ids(tree, tid))
         else:
             cur.add(tid)
         set_mindmap_collapsed_ids(request, team, cur)
