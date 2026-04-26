@@ -316,12 +316,12 @@
             </a>
 
             <div class="pt-4 flex items-center justify-between px-2">
-                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Teams</p>
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">My Team Mindmap</p>
                 <button type="button" @click="teamModalOpen = true"
                         class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800">+ New</button>
             </div>
 
-            {% for m in team_memberships %}
+            {% for m in my_team_memberships %}
             <div class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
@@ -369,7 +369,54 @@
                 </div>
             </div>
             {% else %}
-            <p class="px-2 text-xs text-slate-400">No teams yet — create one below.</p>
+            <p class="px-2 text-xs text-slate-400">No owned teams yet — create one.</p>
+            {% endfor %}
+
+            <p class="px-2 pt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Others Team Mindmap</p>
+            {% for m in other_team_memberships %}
+            <div class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition
+                      {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+            <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
+               class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
+                    {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
+                    {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
+                    {% elif m.team.sidebar_color == 'green' %}bg-green-100 text-green-600
+                    {% elif m.team.sidebar_color == 'purple' %}bg-purple-100 text-purple-600
+                    {% else %}bg-blue-100 text-blue-600{% endif %}">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
+                <span data-team-pct="{{ m.team_id }}" class="ml-1 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold
+                    {% if m.done_pct >= 60 %}
+                        border-emerald-200 bg-emerald-50 text-emerald-700
+                    {% elif m.done_pct < 30 %}
+                        border-rose-200 bg-rose-50 text-rose-700
+                    {% elif m.done_pct < 50 %}
+                        border-amber-200 bg-amber-50 text-amber-700
+                    {% else %}
+                        border-slate-200 bg-slate-50 text-slate-600
+                    {% endif %}">{{ m.done_pct }}%</span>
+                <span class="truncate">{{ m.team.name }}</span>
+            </a>
+                <div class="flex items-center gap-1">
+                    <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="sidebar_color"
+                           value="{% if m.team.sidebar_color == 'green' %}red{% elif m.team.sidebar_color == 'red' %}blue{% else %}green{% endif %}">
+                    <button type="submit"
+                            class="h-3 w-3 rounded-full {% if m.team.sidebar_color == 'red' %}bg-red-500{% elif m.team.sidebar_color == 'blue' %}bg-blue-500{% else %}bg-green-500{% endif %}"
+                            title="Toggle team color"></button>
+                    </form>
+                    <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        {% if m.is_pinned %}
+                        <button type="submit" name="pin_action" value="unpin" class="text-xs leading-none" title="Unpin team">📌</button>
+                        {% else %}
+                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-500 hover:text-slate-700" title="Pin team">📍</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <p class="px-2 text-xs text-slate-400">No shared teams yet.</p>
             {% endfor %}
 
             <p class="px-2 pt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Account</p>

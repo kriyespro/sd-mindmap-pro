@@ -137,6 +137,7 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['team_member_role_choices'] = TeamMembership.ROLE_CHOICES
         ctx['team_join_url'] = team_join_url
         archived_teams = []
+        manageable_active_teams = []
         memberships = (
             TeamMembership.objects.filter(user=self.request.user, is_active=True)
             .select_related('team')
@@ -147,6 +148,8 @@ class BillingView(LoginRequiredMixin, TemplateView):
                 team=membership.team,
                 is_archived=False,
             ).exists()
+            if has_active_tasks and membership.can_manage_invites:
+                manageable_active_teams.append(membership)
             if has_active_tasks:
                 continue
             has_archived_tasks = Task.objects.filter(
@@ -155,6 +158,7 @@ class BillingView(LoginRequiredMixin, TemplateView):
             ).exists()
             if has_archived_tasks:
                 archived_teams.append(membership)
+        ctx['manageable_active_team_memberships'] = manageable_active_teams
         ctx['archived_team_memberships'] = archived_teams
         return ctx
 

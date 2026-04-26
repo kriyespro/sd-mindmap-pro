@@ -655,8 +655,8 @@ class TeamMindmapArchiveView(LoginRequiredMixin, View):
         membership = TeamMembership.objects.filter(
             team=team, user=request.user, is_active=True
         ).first()
-        if not membership or not membership.can_manage_invites:
-            return HttpResponse('Only owner/admin can archive team mindmap', status=403)
+        if not membership:
+            return HttpResponse('Only team members can archive team mindmap', status=403)
         archived = Task.objects.filter(team=team, is_archived=False).update(is_archived=True)
         if archived:
             messages.success(request, f'Archived {archived} team task(s) from {team.name}.')
@@ -675,8 +675,8 @@ class TeamMindmapUnarchiveView(LoginRequiredMixin, View):
         membership = TeamMembership.objects.filter(
             team=team, user=request.user, is_active=True
         ).first()
-        if not membership or not membership.can_manage_invites:
-            return HttpResponse('Only owner/admin can unarchive team mindmap', status=403)
+        if not membership:
+            return HttpResponse('Only team members can unarchive team mindmap', status=403)
         restored = Task.objects.filter(team=team, is_archived=True).update(is_archived=False)
         if restored:
             messages.success(request, f'Restored {restored} archived task(s) in {team.name}.')

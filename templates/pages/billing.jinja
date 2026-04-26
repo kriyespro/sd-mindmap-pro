@@ -301,7 +301,31 @@
         {% endif %}
             </section>
             <section class="archived-mindmap-panel rounded-lg border border-amber-200 bg-amber-50/70 p-3 shadow-sm">
-                <h2 class="text-sm font-semibold text-amber-900">Archived team mindmaps</h2>
+                <h2 class="text-sm font-semibold text-amber-900">Active team mindmaps</h2>
+                <p class="mt-1 text-xs text-amber-800">Archive any team you manage (owner/admin).</p>
+                {% if manageable_active_team_memberships %}
+                <div class="mt-2 space-y-2">
+                    {% for active_membership in manageable_active_team_memberships %}
+                    <div class="flex items-center justify-between rounded-lg border border-amber-200 bg-white px-3 py-2">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-800">{{ active_membership.team.name }}</p>
+                            <p class="text-[11px] text-slate-500">Active team workspace</p>
+                        </div>
+                        <form method="post" action="{{ url('planner:archive_team_mindmap', team_slug=active_membership.team.slug) }}"
+                              onsubmit="return window.confirm('Archive all tasks in this team mindmap?')">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <button type="submit" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100">
+                                Archive
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="mt-2 text-xs text-amber-800">No manageable active team mindmap.</p>
+                {% endif %}
+
+                <h2 class="mt-4 text-sm font-semibold text-amber-900">Archived team mindmaps</h2>
                 <p class="mt-1 text-xs text-amber-800">Archived teams are hidden from the sidebar until restored.</p>
                 {% if archived_team_memberships %}
                 <div class="mt-2 space-y-2">

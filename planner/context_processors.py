@@ -30,8 +30,13 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
         team_qs = tasks_for_workspace(request.user, m.team)
         setattr(m, 'done_pct', workspace_root_average_percent(team_qs))
 
+    my_teams = [m for m in memberships if bool(m.is_owner)]
+    other_teams = [m for m in memberships if not bool(m.is_owner)]
+
     return {
         'team_memberships': memberships,
+        'my_team_memberships': my_teams,
+        'other_team_memberships': other_teams,
         'notifications': Notification.objects.filter(
             user=request.user, is_read=False
         )[:30],
