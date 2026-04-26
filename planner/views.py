@@ -23,9 +23,13 @@ from planner.services import (
     compute_mindmap_layout,
     get_mindmap_collapsed_ids,
     import_tasks_from_upload,
+    normalize_workspace_completion,
     notify_assignee,
     prune_mindmap_tree,
     root_stats,
+    sync_descendant_completion,
+    sync_parent_completion_from_children,
+    workspace_root_average_percent,
     set_mindmap_collapsed_ids,
     task_rows_for_tree,
     tasks_for_workspace,
@@ -305,6 +309,8 @@ class BoardView(LoginRequiredMixin, TemplateView):
             raise Http404('Team not found')
 
         qs = tasks_for_workspace(user, team)
+        normalize_workspace_completion(qs)
+        qs = tasks_for_workspace(user, team)
         rows = task_rows_for_tree(qs)
         task_tree = build_task_tree(rows)
         layout = self.request.session.get('task_layout', 'mindmap')
@@ -335,9 +341,8 @@ class BoardView(LoginRequiredMixin, TemplateView):
             team_is_owner = has_team_plan and TeamMembership.objects.filter(
                 team=team, user=user, is_owner=True, is_active=True
             ).exists()
-            if has_team_plan:
-                membership = TeamMembership.objects.filter(team=team, user=user, is_active=True).first()
-                team_can_invite = bool(membership and membership.can_manage_invites)
+            membership = TeamMembership.objects.filter(team=team, user=user, is_active=True).first()
+            team_can_invite = bool(membership and membership.can_manage_invites)
             team_roster = list(
                 TeamMembership.objects.filter(team=team, is_active=True)
                 .select_related('user')
@@ -374,6 +379,8 @@ def _tree_partial(request, team_slug: str | None):
     if team_slug and team is None:
         return HttpResponse('Not found', status=404)
     qs = tasks_for_workspace(request.user, team)
+    normalize_workspace_completion(qs)
+    qs = tasks_for_workspace(request.user, team)
     rows = task_rows_for_tree(qs)
     tree = build_task_tree(rows)
     layout = request.session.get('task_layout', 'mindmap')
@@ -407,7 +414,11 @@ def _tree_partial(request, team_slug: str | None):
         tmpl = 'partials/task_tree.jinja'
     html = render(request, tmpl, ctx).content.decode()
     resp = HttpResponse(html)
-    resp['HX-Trigger'] = 'updateStats'
+    trigger_payload: dict[str, object] = {'updateStats': True}
+    if team is not None:
+        pct = workspace_root_average_percent(qs)
+        trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
+    resp['HX-Trigger'] = json.dumps(trigger_payload)
     return resp
 
 
@@ -473,6 +484,8 @@ class TaskCreateView(LoginRequiredMixin, View):
         task.team = team
         task.parent = parent
         task.save()
+        # New child can change parent completion status (e.g. completed parent gets a new open child).
+        sync_parent_completion_from_children(task.parent)
         # Keep only the new task path expanded in mind map; collapse other branches.
         qs = tasks_for_workspace(request.user, team)
         rows = task_rows_for_tree(qs)
@@ -492,11 +505,15 @@ class TaskCreateView(LoginRequiredMixin, View):
             old_assignee='',
         )
         response = _tree_partial(request, team_slug)
+        trigger_payload: dict[str, object] = {
+            'updateStats': True,
+            'taskCreated': {'taskId': task.id},
+        }
+        if team is not None:
+            pct = workspace_root_average_percent(qs)
+            trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
         response['HX-Trigger'] = json.dumps(
-            {
-                'updateStats': True,
-                'taskCreated': {'taskId': task.id},
-            }
+            trigger_payload
         )
         return response
 
@@ -530,6 +547,10 @@ class TaskToggleView(LoginRequiredMixin, View):
             return HttpResponse('Not found', status=404)
         task.is_completed = not task.is_completed
         task.save(update_fields=['is_completed'])
+        # Keep branch behavior consistent: toggling a parent cascades to all descendants.
+        sync_descendant_completion(task, task.is_completed)
+        # Propagate completion consistency upward through all ancestors.
+        sync_parent_completion_from_children(task.parent)
         return _tree_partial(request, team_slug)
 
 
@@ -541,7 +562,10 @@ class TaskDeleteView(LoginRequiredMixin, View):
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
+        parent = task.parent
         task.delete()
+        # Deleting a child can complete/reopen ancestor branches.
+        sync_parent_completion_from_children(parent)
         return _tree_partial(request, team_slug)
 
 
@@ -599,6 +623,8 @@ class StatsPartialView(LoginRequiredMixin, View):
         team = _workspace_team(request.user, team_slug)
         if team_slug and team is None:
             return HttpResponse('Not found', status=404)
+        qs = tasks_for_workspace(request.user, team)
+        normalize_workspace_completion(qs)
         qs = tasks_for_workspace(request.user, team)
         total_main, done_main = root_stats(qs)
         return render(

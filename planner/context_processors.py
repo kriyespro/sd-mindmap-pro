@@ -6,6 +6,7 @@ from django.db.models import Exists, OuterRef, Q
 
 from planner.models import Notification
 from planner.models import Task
+from planner.services import tasks_for_workspace, workspace_root_average_percent
 from teams.models import TeamMembership
 
 
@@ -17,15 +18,20 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
         layout = 'mindmap'
     team_tasks = Task.objects.filter(team_id=OuterRef('team_id'))
     active_tasks = team_tasks.filter(is_archived=False)
+    memberships = list(
+        TeamMembership.objects.filter(user=request.user, is_active=True)
+        .annotate(has_any_tasks=Exists(team_tasks))
+        .annotate(has_active_tasks=Exists(active_tasks))
+        .filter(Q(has_active_tasks=True) | Q(has_any_tasks=False))
+        .select_related('team')
+        .order_by('-is_pinned', 'pinned_at', 'team__name')
+    )
+    for m in memberships:
+        team_qs = tasks_for_workspace(request.user, m.team)
+        setattr(m, 'done_pct', workspace_root_average_percent(team_qs))
+
     return {
-        'team_memberships': (
-            TeamMembership.objects.filter(user=request.user, is_active=True)
-            .annotate(has_any_tasks=Exists(team_tasks))
-            .annotate(has_active_tasks=Exists(active_tasks))
-            .filter(Q(has_active_tasks=True) | Q(has_any_tasks=False))
-            .select_related('team')
-            .order_by('-is_pinned', 'pinned_at', 'team__name')
-        ),
+        'team_memberships': memberships,
         'notifications': Notification.objects.filter(
             user=request.user, is_read=False
         )[:30],

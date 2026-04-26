@@ -625,3 +625,104 @@ def notify_assignee(*, assignee_username: str, actor: User, title: str, old_assi
         return
     msg = f'{actor.username} assigned you to task "{title}"'
     Notification.objects.create(user=u, message=msg)
+
+
+def sync_parent_completion_from_children(task: Task | None) -> None:
+    """
+    Keep branch completion status consistent:
+    - parent is completed iff all its direct children are completed
+    - applies recursively upward to root
+    """
+    if task is None:
+        return
+    # `task` is treated as the first parent node to recalculate.
+    current = task
+    while current is not None:
+        has_children = Task.objects.filter(parent_id=current.id).exists()
+        if has_children:
+            all_children_done = not Task.objects.filter(
+                parent_id=current.id,
+                is_completed=False,
+            ).exists()
+            if current.is_completed != all_children_done:
+                current.is_completed = all_children_done
+                current.save(update_fields=['is_completed'])
+        current = current.parent
+
+
+def sync_descendant_completion(task: Task, is_completed: bool) -> None:
+    """
+    Apply completion status to all descendants of a task.
+    Used for branch-level consistency when toggling parent/branch tasks.
+    """
+    child_ids = list(Task.objects.filter(parent_id=task.id).values_list('id', flat=True))
+    while child_ids:
+        Task.objects.filter(id__in=child_ids).update(is_completed=is_completed)
+        child_ids = list(Task.objects.filter(parent_id__in=child_ids).values_list('id', flat=True))
+
+
+def workspace_root_average_percent(qs: QuerySet[Task]) -> int:
+    """
+    Sidebar completion metric:
+    average of root task percentages (0-100), rounded to int.
+    """
+    rows = task_rows_for_tree(qs)
+    roots = build_task_tree(rows)
+    if not roots:
+        return 0
+    total = sum(int(r.get('percent') or 0) for r in roots)
+    return int(round(total / len(roots)))
+
+
+def normalize_workspace_completion(qs: QuerySet[Task]) -> None:
+    """
+    Self-heal completion consistency for a workspace.
+    For any task with children, `is_completed` must equal all(children completed).
+    This fixes historical/stale inconsistencies before tree/mindmap calculations.
+    """
+    rows = list(qs.values('id', 'parent_id', 'is_completed'))
+    if not rows:
+        return
+
+    parent_by_id: dict[int, int | None] = {}
+    children_by_parent: dict[int, list[int]] = {}
+    state: dict[int, bool] = {}
+    for r in rows:
+        tid = int(r['id'])
+        pid = r['parent_id']
+        pid_i = int(pid) if pid is not None else None
+        parent_by_id[tid] = pid_i
+        state[tid] = bool(r['is_completed'])
+        if pid_i is not None:
+            children_by_parent.setdefault(pid_i, []).append(tid)
+
+    depth_cache: dict[int, int] = {}
+
+    def depth(tid: int) -> int:
+        if tid in depth_cache:
+            return depth_cache[tid]
+        pid = parent_by_id.get(tid)
+        if pid is None:
+            depth_cache[tid] = 0
+            return 0
+        d = depth(pid) + 1
+        depth_cache[tid] = d
+        return d
+
+    for tid in parent_by_id.keys():
+        depth(tid)
+
+    changed_ids: list[int] = []
+    for tid in sorted(parent_by_id.keys(), key=lambda x: depth_cache[x], reverse=True):
+        children = children_by_parent.get(tid, [])
+        if not children:
+            continue
+        desired = all(state[cid] for cid in children)
+        if state[tid] != desired:
+            state[tid] = desired
+            changed_ids.append(tid)
+
+    if not changed_ids:
+        return
+    Task.objects.filter(id__in=changed_ids).update(is_completed=False)
+    Task.objects.filter(id__in=[x for x in changed_ids if state[x]]).update(is_completed=True)
