@@ -391,8 +391,10 @@ def _mindmap_subtree(
         c1x = px_out + pull
         c2x = cx_in - pull
         d = f'M {px_out:.1f},{py:.1f} C {c1x:.1f},{py:.1f} {c2x:.1f},{cy_c:.1f} {cx_in:.1f},{cy_c:.1f}'
-        stroke_w = 1.5
-        stroke_opacity = 0.8
+        # Smoother visual hierarchy for connectors:
+        # stronger near root, lighter on deeper levels.
+        stroke_w = max(1.15, 1.95 - (depth * 0.18))
+        stroke_opacity = max(0.46, 0.86 - (depth * 0.08))
         dash = ''
         paths.append(
             {
@@ -407,7 +409,16 @@ def _mindmap_subtree(
     return {'top': top, 'bottom': top + node_h}
 
 
-def _mindmap_node_size(node: dict) -> tuple[int, int]:
+def _mindmap_node_size(node: dict, *, compact_mode: bool = False) -> tuple[int, int]:
+    if compact_mode:
+        title = str(node.get('title') or '').strip()
+        if not title:
+            return (160, 28)
+        title_len = len(title)
+        # Idea mode should show full title without trimming in collapsed state.
+        width = min(520, max(160, 140 + (title_len * 6)))
+        return (int(width), 28)
+
     title = str(node.get('title') or '').strip()
     if not title:
         return (MINDMAP_CARD_MIN_W, MINDMAP_CARD_BASE_H)
@@ -426,6 +437,7 @@ def _annotate_mindmap_sizes(
     roots: list[dict],
     *,
     col_gap: float,
+    compact_mode: bool = False,
 ) -> tuple[dict[int, float], int, int]:
     depth_widths: dict[int, float] = {}
     max_w = MINDMAP_CARD_MIN_W
@@ -433,7 +445,7 @@ def _annotate_mindmap_sizes(
 
     def walk(node: dict, depth: int) -> None:
         nonlocal max_w, max_h
-        width, height = _mindmap_node_size(node)
+        width, height = _mindmap_node_size(node, compact_mode=compact_mode)
         node['_mm_w'] = width
         node['_mm_h'] = height
         depth_widths[depth] = max(depth_widths.get(depth, 0.0), float(width))
@@ -562,7 +574,12 @@ def prune_mindmap_tree(roots: list[dict], collapsed_ids: set[int]) -> list[dict]
     return [clone(r) for r in roots]
 
 
-def compute_mindmap_layout(roots: list[dict], *, flow_style: str = 'natural') -> dict:
+def compute_mindmap_layout(
+    roots: list[dict],
+    *,
+    flow_style: str = 'natural',
+    compact_mode: bool = False,
+) -> dict:
     """
     Build node positions and cubic SVG paths for a forest of task trees.
     """
@@ -580,7 +597,13 @@ def compute_mindmap_layout(roots: list[dict], *, flow_style: str = 'natural') ->
     total_nodes = sum(1 + int(r.get('subtask_total') or 0) for r in roots)
     density_boost = min(46.0, max(0.0, total_nodes - 6) * 1.8)
 
-    if flow_style == 'tight':
+    if compact_mode:
+        # Mini2 keeps cards collapsed visually, but hover reveals extra controls.
+        # Increase vertical breathing room so neighboring nodes do not overlap.
+        row_gap = 34.0 + (density_boost * 0.36)
+        col_gap = 56.0 + (density_boost * 0.40)
+        root_gap = 44.0 + (density_boost * 0.34)
+    elif flow_style == 'tight':
         row_gap = 2.0 + (density_boost * 0.22)
         col_gap = 20.0 + (density_boost * 0.26)
         root_gap = 8.0 + (density_boost * 0.26)
@@ -596,7 +619,11 @@ def compute_mindmap_layout(roots: list[dict], *, flow_style: str = 'natural') ->
     positions: dict[int, dict] = {}
     paths: list[dict] = []
     y_ptr = [float(MINDMAP_PAD)]
-    depth_lefts, max_card_w, max_card_h = _annotate_mindmap_sizes(roots, col_gap=col_gap)
+    depth_lefts, max_card_w, max_card_h = _annotate_mindmap_sizes(
+        roots,
+        col_gap=col_gap,
+        compact_mode=compact_mode,
+    )
     for root in roots:
         _mindmap_subtree(root, 0, y_ptr, depth_lefts, positions, paths, flow_style, row_gap, col_gap)
         y_ptr[0] += root_gap

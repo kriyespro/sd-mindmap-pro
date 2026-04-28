@@ -14,7 +14,7 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
         return {}
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap'):
+    if layout not in ('tree', 'mindmap', 'mini', 'idea'):
         layout = 'mindmap'
     team_tasks = Task.objects.filter(team_id=OuterRef('team_id'))
     active_tasks = team_tasks.filter(is_archived=False)

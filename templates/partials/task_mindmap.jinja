@@ -1,21 +1,34 @@
 {% from 'partials/task_tree.jinja' import node_card with context %}
 {# Mind map uses same task cards as tree view; dot-grid background comes from parent #task-tree #}
-<div class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto p-2">
+{% set card_mode = 'idea' if task_layout == 'idea' else ('mini' if task_layout == 'mini' else 'mindmap') %}
+<div class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto {% if card_mode == 'idea' %}rounded-2xl bg-[#eeeeef] p-3{% else %}p-2{% endif %}">
 {% if mindmap.nodes %}
+    {% if card_mode == 'idea' %}
+    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Idea mode: clean node pills like your sample. Connectors stay centered on collapsed nodes; hover reveals controls.</p>
+    {% elif card_mode == 'mini' %}
+    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Mini mode: cards stay compact and expand on hover · Use <span class="font-bold text-slate-800">− / +</span> for branches.</p>
+    {% else %}
     <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Use <span class="font-bold text-slate-800">− / +</span> on cards to hide or show branches · Sidebar: edge control for more canvas.</p>
+    {% endif %}
     <div class="relative" style="width:{{ mindmap.width }}px;height:{{ mindmap.height }}px;min-width:min(100%,{{ mindmap.width }}px);">
         <svg xmlns="http://www.w3.org/2000/svg"
              width="{{ mindmap.width }}"
              height="{{ mindmap.height }}"
              class="absolute left-0 top-0 overflow-visible text-[0]">
             {% for p in mindmap.paths %}
-            <path d="{{ p.d }}" fill="none" stroke="{{ p.stroke }}" stroke-width="{{ p.stroke_w or 2.25 }}" stroke-linecap="round" opacity="{{ p.opacity or 0.88 }}" {% if p.dash %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
+            <path d="{{ p.d }}"
+                  fill="none"
+                  stroke="{% if card_mode == 'idea' %}#b9bcc4{% else %}{{ p.stroke }}{% endif %}"
+                  stroke-width="{% if card_mode == 'idea' %}2.2{% else %}{{ p.stroke_w or 2.25 }}{% endif %}"
+                  stroke-linecap="round"
+                  opacity="{% if card_mode == 'idea' %}0.78{% else %}{{ p.opacity or 0.88 }}{% endif %}"
+                  {% if p.dash and card_mode != 'idea' %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
             {% endfor %}
         </svg>
         {% for n in mindmap.nodes %}
         {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
         <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
-            {{ node_card(n.task, n.depth, 'mindmap', mindmap_collapsed_ids, _hc) }}
+            {{ node_card(n.task, n.depth, card_mode, mindmap_collapsed_ids, _hc) }}
         </div>
         {% endfor %}
     </div>

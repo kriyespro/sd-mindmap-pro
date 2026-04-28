@@ -294,8 +294,8 @@
         teamCreateError: '',
         parentIdForModal: '',
         sidebarOpen: true,
-        isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree'])|tojson }},
-        isMindmap: {{ (task_layout|default('mindmap') == 'mindmap')|tojson }},
+        isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
+        isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
         darkMode: false,
         initTheme() {
             const stored = localStorage.getItem('theme');
@@ -313,42 +313,42 @@
       @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
 <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="relative flex flex-col border-r border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out"
+    <aside class="relative flex flex-col border-r border-slate-700/80 bg-slate-900 text-slate-100 shadow-xl shadow-slate-900/20 transition-all duration-300 ease-out"
            :class="isBoardView && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
-        <div class="p-3 border-b border-slate-100">
+        <div class="p-3 border-b border-slate-700/70 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
             <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold tracking-tight text-slate-900">MindMap Tasks</p>
-                    <p class="text-[10px] text-slate-400">Teams & OKRs</p>
-                    <p class="text-[9px] font-bold text-red-600">All your data is safe and encrypted.</p>
+                    <p class="text-sm font-semibold tracking-tight text-white">MindMap Tasks</p>
+                    <p class="text-[10px] text-slate-300">Teams & OKRs</p>
+                    <p class="text-[9px] font-bold text-emerald-300">All your data is safe and encrypted.</p>
                 </div>
             </a>
         </div>
 
         <nav class="flex-1 overflow-y-auto p-2.5 space-y-0.5">
-            <p class="px-2 text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Workspace</p>
+            <p class="px-2 text-[9px] font-semibold uppercase tracking-wider text-indigo-300 mb-1.5">Workspace</p>
             <a href="{{ url('planner:board_personal') }}"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
-                      {% if not current_team %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-500 text-xs">Me</span>
+                      {% if not current_team %}bg-indigo-500/25 text-indigo-100 ring-1 ring-indigo-400/40{% else %}text-slate-200 hover:bg-slate-800{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-700 text-slate-100 text-xs">Me</span>
                 Personal
             </a>
 
             <div class="pt-2.5 px-2">
-                <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400">My Task</p>
+                <p class="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-300">My Task</p>
             </div>
             {% for task in my_assigned_tasks %}
             {% set target_href = url('planner:board_team', team_slug=task.team.slug) ~ '?focus_task=' ~ task.id if task.team else url('planner:board_personal') ~ '?focus_task=' ~ task.id %}
             <a href="{{ target_href }}"
-               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition text-slate-600 hover:bg-slate-50">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold {% if task.is_completed %}bg-emerald-100 text-emerald-700{% else %}bg-fuchsia-100 text-fuchsia-700{% endif %}">
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition text-slate-200 hover:bg-slate-800">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold {% if task.is_completed %}bg-emerald-500/20 text-emerald-200{% else %}bg-fuchsia-500/20 text-fuchsia-200{% endif %}">
                     {% if task.is_completed %}✓{% else %}•{% endif %}
                 </span>
                 <span class="min-w-0 flex-1 truncate">{{ task.title_plain }}</span>
-                <span class="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">
+                <span class="shrink-0 rounded-full bg-slate-700 px-1.5 py-0.5 text-[9px] text-slate-200">
                     {% if task.team %}{{ task.team.name }}{% else %}Personal{% endif %}
                 </span>
             </a>
@@ -357,14 +357,14 @@
             {% endfor %}
 
             <div class="pt-2.5 flex items-center justify-between px-2">
-                <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400">My Team Mindmap</p>
+                <p class="text-[9px] font-semibold uppercase tracking-wider text-violet-300">My Team Mindmap</p>
                 <button type="button" @click="teamModalOpen = true"
-                        class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800">+ New</button>
+                        class="text-[10px] font-semibold text-indigo-200 hover:text-white">+ New</button>
             </div>
 
             {% for m in my_team_memberships %}
             <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
-                      {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                      {% if current_team and current_team.id == m.team.id %}bg-indigo-500/25 text-indigo-100 ring-1 ring-indigo-400/40{% else %}text-slate-200 hover:bg-slate-800{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
                class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
@@ -394,7 +394,7 @@
                     <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
                           onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        <button type="submit" class="text-xs leading-none text-slate-500 hover:text-amber-700" title="Archive team mindmap">🗂</button>
+                        <button type="submit" class="text-xs leading-none text-slate-300 hover:text-amber-300" title="Archive team mindmap">🗂</button>
                     </form>
                     <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -409,7 +409,7 @@
                         {% if m.is_pinned %}
                         <button type="submit" name="pin_action" value="unpin" class="text-xs leading-none" title="Unpin team">📌</button>
                         {% else %}
-                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-500 hover:text-slate-700" title="Pin team">📍</button>
+                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-300 hover:text-white" title="Pin team">📍</button>
                         {% endif %}
                     </form>
                 </div>
@@ -418,10 +418,10 @@
             <p class="px-2 text-xs text-slate-400">No owned teams yet — create one.</p>
             {% endfor %}
 
-            <p class="px-2 pt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Others Team Mindmap</p>
+            <p class="px-2 pt-2.5 text-[9px] font-semibold uppercase tracking-wider text-cyan-300">Others Team Mindmap</p>
             {% for m in other_team_memberships %}
             <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
-                      {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                      {% if current_team and current_team.id == m.team.id %}bg-indigo-500/25 text-indigo-100 ring-1 ring-indigo-400/40{% else %}text-slate-200 hover:bg-slate-800{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
                class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
@@ -446,7 +446,7 @@
                     <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
                           onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        <button type="submit" class="text-xs leading-none text-slate-500 hover:text-amber-700" title="Archive team mindmap">🗂</button>
+                        <button type="submit" class="text-xs leading-none text-slate-300 hover:text-amber-300" title="Archive team mindmap">🗂</button>
                     </form>
                     <form action="{{ url('teams:sidebar_settings', team_slug=m.team.slug) }}" method="post" class="flex items-center gap-1">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -461,7 +461,7 @@
                         {% if m.is_pinned %}
                         <button type="submit" name="pin_action" value="unpin" class="text-xs leading-none" title="Unpin team">📌</button>
                         {% else %}
-                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-500 hover:text-slate-700" title="Pin team">📍</button>
+                        <button type="submit" name="pin_action" value="pin" class="text-xs leading-none text-slate-300 hover:text-white" title="Pin team">📍</button>
                         {% endif %}
                     </form>
                 </div>
@@ -470,25 +470,25 @@
             <p class="px-2 text-xs text-slate-400">No shared teams yet.</p>
             {% endfor %}
 
-            <p class="px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Account</p>
+            <p class="px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-emerald-300 mb-1.5">Account</p>
             <a href="{{ url('billing:overview') }}"
-               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">$</span>
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-slate-800">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/20 text-emerald-200 text-xs font-bold">$</span>
                 Billing
                 {% if account_profile and account_profile.trial_active %}
-                <span class="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold text-amber-800">Trial</span>
+                <span class="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold text-amber-200">Trial</span>
                 {% endif %}
             </a>
         </nav>
 
-        <div class="p-3 border-t border-slate-100 space-y-2">
-            <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2">
+        <div class="p-3 border-t border-slate-700/70 space-y-2 bg-slate-900/80">
+            <div class="flex items-center gap-2 rounded-lg bg-slate-800 px-2 py-2">
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 text-xs font-bold uppercase">{{ user.username[0] }}</div>
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-xs font-medium text-slate-800">{{ user.username }}</p>
+                    <p class="truncate text-xs font-medium text-slate-100">{{ user.username }}</p>
                     <form action="{{ url('users:logout') }}" method="post" class="inline">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        <button type="submit" class="text-[10px] text-rose-600 hover:underline">Log out</button>
+                        <button type="submit" class="text-[10px] text-rose-300 hover:underline">Log out</button>
                     </form>
                 </div>
             </div>

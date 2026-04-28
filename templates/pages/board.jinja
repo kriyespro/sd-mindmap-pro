@@ -37,6 +37,10 @@
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'tree' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Tree</a>
             <a href="{{ request.path }}?layout=mindmap"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mindmap' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Map</a>
+            <a href="{{ request.path }}?layout=mini"
+               class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mini' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Mini</a>
+            <a href="{{ request.path }}?layout=idea"
+               class="rounded px-1.5 py-0.5 transition {% if task_layout == 'idea' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Idea</a>
         </div>
         <div class="relative" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="dark-topbar-pill relative rounded-md border border-transparent p-1 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600">
@@ -146,7 +150,7 @@
          hx-trigger="load, refreshTree from:body"
          hx-swap="innerHTML"
          class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
-        {% if task_layout == 'mindmap' %}
+        {% if task_layout in ['mindmap', 'mini', 'idea'] %}
             {% include 'partials/task_mindmap.jinja' %}
         {% else %}
             {% include 'partials/task_tree.jinja' %}

@@ -302,7 +302,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         request.session.setdefault('task_layout', 'mindmap')
         lay = request.GET.get('layout')
-        if lay in ('tree', 'mindmap'):
+        if lay in ('tree', 'mindmap', 'mini', 'idea'):
             request.session['task_layout'] = lay
             return redirect(request.path)
         return super().get(request, *args, **kwargs)
@@ -323,7 +323,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         rows = task_rows_for_tree(qs)
         task_tree = build_task_tree(rows)
         layout = self.request.session.get('task_layout', 'mindmap')
-        if layout not in ('tree', 'mindmap'):
+        if layout not in ('tree', 'mindmap', 'mini', 'idea'):
             layout = 'mindmap'
         mm_collapsed = get_mindmap_collapsed_ids(
             self.request, team, tree=task_tree
@@ -349,8 +349,12 @@ class BoardView(LoginRequiredMixin, TemplateView):
         branch_children = collect_task_has_children(task_tree)
         pruned_for_mm = prune_mindmap_tree(task_tree, mm_collapsed)
         mindmap = (
-            compute_mindmap_layout(pruned_for_mm, flow_style='natural')
-            if layout == 'mindmap'
+            compute_mindmap_layout(
+                pruned_for_mm,
+                flow_style='natural',
+                compact_mode=(layout == 'idea'),
+            )
+            if layout in ('mindmap', 'mini', 'idea')
             else None
         )
         flowmap = compute_mindmap_layout(task_tree, flow_style='relaxed') if layout == 'flow' else None
@@ -415,17 +419,22 @@ def _tree_partial(request, team_slug: str | None):
     rows = task_rows_for_tree(qs)
     tree = build_task_tree(rows)
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap'):
+    if layout not in ('tree', 'mindmap', 'mini', 'idea'):
         layout = 'mindmap'
     u = workspace_urls(team)
     team_assignee_usernames = _active_team_usernames(team)
-    if layout == 'mindmap':
+    if layout in ('mindmap', 'mini', 'idea'):
         mm_collapsed = get_mindmap_collapsed_ids(request, team, tree=tree)
         branch_children = collect_task_has_children(tree)
         pruned = prune_mindmap_tree(tree, mm_collapsed)
         ctx = {
-            'mindmap': compute_mindmap_layout(pruned, flow_style='natural'),
+            'mindmap': compute_mindmap_layout(
+                pruned,
+                flow_style='natural',
+                compact_mode=(layout == 'idea'),
+            ),
             'task_tree': tree,
+            'task_layout': layout,
             'mindmap_collapsed_ids': sorted(mm_collapsed),
             'mindmap_branch_children': branch_children,
             'current_team': team,
@@ -437,6 +446,7 @@ def _tree_partial(request, team_slug: str | None):
     else:
         ctx = {
             'task_tree': tree,
+            'task_layout': layout,
             'current_team': team,
             'team_assignee_usernames': team_assignee_usernames,
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
