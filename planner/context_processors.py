@@ -32,11 +32,24 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
 
     my_teams = [m for m in memberships if bool(m.is_owner)]
     other_teams = [m for m in memberships if not bool(m.is_owner)]
+    active_team_ids = [m.team_id for m in memberships]
+    username = (request.user.username or '').strip()
+    my_assigned_tasks = (
+        Task.objects.filter(
+            assignee_username__iexact=username,
+            is_archived=False,
+            is_completed=False,
+        )
+        .filter(Q(team__isnull=True) | Q(team_id__in=active_team_ids))
+        .select_related('team')
+        .order_by('is_completed', 'due_date', '-id')[:20]
+    )
 
     return {
         'team_memberships': memberships,
         'my_team_memberships': my_teams,
         'other_team_memberships': other_teams,
+        'my_assigned_tasks': my_assigned_tasks,
         'notifications': Notification.objects.filter(
             user=request.user, is_read=False
         )[:30],

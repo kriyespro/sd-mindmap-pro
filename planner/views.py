@@ -162,6 +162,15 @@ def _active_team_usernames(team: Team | None) -> list[str]:
     return sorted({u for u in clean if u}, key=str.lower)
 
 
+def _task_ancestor_ids(task: Task) -> set[int]:
+    ancestor_ids: set[int] = set()
+    current = task
+    while current.parent_id is not None:
+        ancestor_ids.add(int(current.parent_id))
+        current = current.parent
+    return ancestor_ids
+
+
 def _direct_branch_child_ids(roots: list[dict], parent_id: int) -> set[int]:
     """Return direct child ids that themselves have children (branch nodes)."""
 
@@ -319,6 +328,24 @@ class BoardView(LoginRequiredMixin, TemplateView):
         mm_collapsed = get_mindmap_collapsed_ids(
             self.request, team, tree=task_tree
         )
+        focus_task_id: int | None = None
+        raw_focus_task = (self.request.GET.get('focus_task') or '').strip()
+        if raw_focus_task:
+            try:
+                requested_task_id = int(raw_focus_task)
+            except ValueError:
+                requested_task_id = 0
+            if requested_task_id > 0:
+                focus_task = qs.filter(pk=requested_task_id).first()
+                if focus_task is not None:
+                    focus_task_id = focus_task.id
+                    keep_open_ids = _task_ancestor_ids(focus_task)
+                    _set_tree_focus_expand_ids(self.request, keep_open_ids | {focus_task.id})
+                    all_branch_ids = set(collect_branch_ids_with_children(task_tree))
+                    set_mindmap_collapsed_ids(self.request, team, all_branch_ids - keep_open_ids)
+                    mm_collapsed = get_mindmap_collapsed_ids(
+                        self.request, team, tree=task_tree
+                    )
         branch_children = collect_task_has_children(task_tree)
         pruned_for_mm = prune_mindmap_tree(task_tree, mm_collapsed)
         mindmap = (
@@ -371,6 +398,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'team_roster': team_roster,
                 'team_assignee_usernames': team_assignee_usernames,
                 'tree_focus_expand_ids': _get_tree_focus_expand_ids(self.request),
+                'focus_task_id': focus_task_id,
                 'u': u,
             }
         )

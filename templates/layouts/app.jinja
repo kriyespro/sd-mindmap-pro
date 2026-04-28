@@ -174,6 +174,27 @@
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            function focusTaskCard(taskId) {
+                if (!taskId) return;
+                var card = document.querySelector('[data-task-id="' + taskId + '"]');
+                if (!card) return;
+                card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                if (typeof card.focus === 'function') {
+                    card.focus({ preventScroll: true });
+                }
+                card.classList.add('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                window.setTimeout(function () {
+                    card.classList.remove('ring-2', 'ring-indigo-300', 'ring-offset-1');
+                }, 1200);
+            }
+
+            var initialFocusTaskId = document.body.dataset.focusTaskId || '';
+            if (initialFocusTaskId) {
+                window.setTimeout(function () {
+                    focusTaskCard(initialFocusTaskId);
+                }, 120);
+            }
+
             document.body.addEventListener('htmx:configRequest', function (e) {
                 var meta = document.querySelector('meta[name=csrf-token]');
                 if (meta && meta.content) e.detail.headers['X-CSRFToken'] = meta.content;
@@ -264,6 +285,7 @@
     </script>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-900 antialiased transition-colors"
+      data-focus-task-id="{{ focus_task_id|default('') }}"
       x-data="{
         addModalOpen: false,
         importModalOpen: false,
@@ -293,7 +315,7 @@
     <!-- Sidebar -->
     <aside class="relative flex flex-col border-r border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out"
            :class="isBoardView && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
-        <div class="p-4 border-b border-slate-100">
+        <div class="p-3 border-b border-slate-100">
             <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -306,26 +328,45 @@
             </a>
         </div>
 
-        <nav class="flex-1 overflow-y-auto p-3 space-y-1">
-            <p class="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Workspace</p>
+        <nav class="flex-1 overflow-y-auto p-2.5 space-y-0.5">
+            <p class="px-2 text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Workspace</p>
             <a href="{{ url('planner:board_personal') }}"
-               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if not current_team %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-500 text-xs">Me</span>
                 Personal
             </a>
 
-            <div class="pt-4 flex items-center justify-between px-2">
-                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">My Team Mindmap</p>
+            <div class="pt-2.5 px-2">
+                <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400">My Task</p>
+            </div>
+            {% for task in my_assigned_tasks %}
+            {% set target_href = url('planner:board_team', team_slug=task.team.slug) ~ '?focus_task=' ~ task.id if task.team else url('planner:board_personal') ~ '?focus_task=' ~ task.id %}
+            <a href="{{ target_href }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition text-slate-600 hover:bg-slate-50">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold {% if task.is_completed %}bg-emerald-100 text-emerald-700{% else %}bg-fuchsia-100 text-fuchsia-700{% endif %}">
+                    {% if task.is_completed %}✓{% else %}•{% endif %}
+                </span>
+                <span class="min-w-0 flex-1 truncate">{{ task.title_plain }}</span>
+                <span class="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">
+                    {% if task.team %}{{ task.team.name }}{% else %}Personal{% endif %}
+                </span>
+            </a>
+            {% else %}
+            <p class="px-2 text-xs text-slate-400">No assigned tasks yet.</p>
+            {% endfor %}
+
+            <div class="pt-2.5 flex items-center justify-between px-2">
+                <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400">My Team Mindmap</p>
                 <button type="button" @click="teamModalOpen = true"
                         class="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800">+ New</button>
             </div>
 
             {% for m in my_team_memberships %}
-            <div class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition
+            <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
-               class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1">
+               class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
                     {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
                     {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
@@ -342,7 +383,7 @@
                     {% else %}
                         border-slate-200 bg-slate-50 text-slate-600
                     {% endif %}">{{ m.done_pct }}%</span>
-                <span class="truncate">{{ m.team.name }}</span>
+                <span class="truncate text-[11px]">{{ m.team.name }}</span>
                 {% if m.is_pinned %}
                 <span class="ml-auto text-[10px] text-amber-600">📌</span>
                 {% elif m.is_owner %}
@@ -377,12 +418,12 @@
             <p class="px-2 text-xs text-slate-400">No owned teams yet — create one.</p>
             {% endfor %}
 
-            <p class="px-2 pt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Others Team Mindmap</p>
+            <p class="px-2 pt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Others Team Mindmap</p>
             {% for m in other_team_memberships %}
-            <div class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-medium transition
+            <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
-               class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1">
+               class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
                     {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
                     {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
@@ -399,7 +440,7 @@
                     {% else %}
                         border-slate-200 bg-slate-50 text-slate-600
                     {% endif %}">{{ m.done_pct }}%</span>
-                <span class="truncate">{{ m.team.name }}</span>
+                <span class="truncate text-[11px]">{{ m.team.name }}</span>
             </a>
                 <div class="flex items-center gap-1">
                     <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
@@ -429,9 +470,9 @@
             <p class="px-2 text-xs text-slate-400">No shared teams yet.</p>
             {% endfor %}
 
-            <p class="px-2 pt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Account</p>
+            <p class="px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Account</p>
             <a href="{{ url('billing:overview') }}"
-               class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
                 <span class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">$</span>
                 Billing
                 {% if account_profile and account_profile.trial_active %}
