@@ -144,7 +144,12 @@
 </div>
 {% endif %}
 
-<main class="flex-1 overflow-auto p-4 sm:p-5">
+<main class="relative flex-1 overflow-auto p-4 sm:p-5">
+    <div id="board-hx-busy"
+         class="pointer-events-none fixed bottom-5 right-5 z-[70] flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-white/95 shadow-lg htmx-indicator opacity-0 transition-opacity duration-150">
+        <span class="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" aria-hidden="true"></span>
+        <span class="sr-only">Updating board…</span>
+    </div>
     <div id="task-tree"
          hx-get="{{ u.tree_partial }}"
          hx-trigger="load, refreshTree from:body"
@@ -175,6 +180,7 @@
             </button>
         </div>
         <form hx-post="{{ u.task_import }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+              hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
               enctype="multipart/form-data"
               @htmx:after-request="if(event.detail.successful){ importModalOpen=false; $el.reset(); document.getElementById('import-err').textContent=''; } else { var x=event.detail.xhr; document.getElementById('import-err').textContent = (x && x.responseText) ? x.responseText.trim() : 'Import failed'; }">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -210,6 +216,7 @@
             </button>
         </div>
         <form hx-post="{{ u.tasks }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+              hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
               @htmx:after-request="if(event.detail.successful){ addModalOpen=false; $el.reset(); }">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <input type="hidden" name="parent_id" x-model="parentIdForModal">

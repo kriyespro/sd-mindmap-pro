@@ -7,6 +7,7 @@ app_name = 'planner'
 urlpatterns = [
     path('app/', views.BoardView.as_view(), name='board_personal'),
     path('t/<slug:team_slug>/', views.BoardView.as_view(), name='board_team'),
+    path('sidebar/my-tasks/', views.SidebarMyTasksPartialView.as_view(), name='sidebar_my_tasks'),
     path('stats/', views.StatsPartialView.as_view(), name='stats_personal'),
     path('t/<slug:team_slug>/stats/', views.StatsPartialView.as_view(), name='stats_team'),
     path('tasks/', views.TaskCreateView.as_view(), name='task_create_personal'),

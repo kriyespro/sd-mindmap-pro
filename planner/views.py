@@ -13,6 +13,7 @@ from django.views import View
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from planner.context_processors import workspace_chrome
 from planner.forms import TaskCreateForm, TaskImportForm, TaskMetaForm, TaskTitleForm
 from planner.crypto import decrypt_task_title
 from planner.models import Notification, Task
@@ -387,7 +388,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'task_layout': layout,
                 'mindmap': mindmap,
                 'flowmap': flowmap,
-                'mindmap_collapsed_ids': sorted(mm_collapsed),
+                'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
                 'mindmap_branch_children': branch_children,
                 'total_main': total_main,
                 'done_main': done_main,
@@ -435,7 +436,7 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
             ),
             'task_tree': tree,
             'task_layout': layout,
-            'mindmap_collapsed_ids': sorted(mm_collapsed),
+            'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
             'mindmap_branch_children': branch_children,
             'current_team': team,
             'team_assignee_usernames': team_assignee_usernames,
@@ -455,8 +456,12 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
         tmpl = 'partials/task_tree.jinja'
     html = render(request, tmpl, ctx).content.decode()
     resp = HttpResponse(html)
+    resp['Cache-Control'] = 'no-store, max-age=0'
     if hx_triggers:
-        trigger_payload: dict[str, object] = {'updateStats': True}
+        trigger_payload: dict[str, object] = {
+            'updateStats': True,
+            'refreshMyTasks': True,
+        }
         if team is not None:
             pct = workspace_root_average_percent(qs)
             trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
@@ -673,6 +678,21 @@ class StatsPartialView(LoginRequiredMixin, View):
             request,
             'partials/stats.jinja',
             {'total_main': total_main, 'done_main': done_main},
+        )
+
+
+class SidebarMyTasksPartialView(LoginRequiredMixin, View):
+    """HTMX fragment: assigned open tasks for sidebar (keeps list in sync after toggles)."""
+
+    def get(self, request):
+        chrome = workspace_chrome(request)
+        tasks = chrome.get('my_assigned_tasks')
+        if tasks is None:
+            tasks = []
+        return render(
+            request,
+            'partials/sidebar_my_tasks_list.jinja',
+            {'my_assigned_tasks': tasks},
         )
 
 

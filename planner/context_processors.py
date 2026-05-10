@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.db.models import Exists, OuterRef, Q
+from django.urls import reverse
 
 from planner.models import Notification
 from planner.models import Task
@@ -54,4 +55,5 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
             user=request.user, is_read=False
         )[:30],
         'task_layout': layout,
+        'sidebar_my_tasks_url': reverse('planner:sidebar_my_tasks'),
     }

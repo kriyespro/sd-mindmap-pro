@@ -1,0 +1,13 @@
+{% for task in my_assigned_tasks %}
+{% set target_href = url('planner:board_team', team_slug=task.team.slug) ~ '?focus_task=' ~ task.id if task.team else url('planner:board_personal') ~ '?focus_task=' ~ task.id %}
+<a href="{{ target_href }}"
+   class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition text-stone-800 hover:bg-stone-400/25">
+    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-fuchsia-400/25 text-[10px] font-bold text-fuchsia-900">•</span>
+    <span class="min-w-0 flex-1 truncate">{{ task.title_plain }}</span>
+    <span class="shrink-0 rounded-full bg-stone-300/80 px-1.5 py-0.5 text-[9px] font-semibold text-stone-800">
+        {% if task.team %}{{ task.team.name }}{% else %}Personal{% endif %}
+    </span>
+</a>
+{% else %}
+<p class="px-2 text-xs text-stone-600">No open assigned tasks.</p>
+{% endfor %}
