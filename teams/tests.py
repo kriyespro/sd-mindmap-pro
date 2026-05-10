@@ -110,7 +110,7 @@ class TeamCreateViewTests(TestCase):
 
         response = self.client.post(
             reverse('teams:create'),
-            {'name': 'Growth Team'},
+            {'name': 'Growth Team', 'sidebar_color': Team.COLOR_BLUE},
             HTTP_HX_REQUEST='true',
         )
 

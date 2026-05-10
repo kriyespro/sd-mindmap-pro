@@ -4,9 +4,12 @@ Reads secrets and env-specific values from environment variables.
 """
 
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+_manage_cmd = sys.argv[1] if len(sys.argv) >= 2 else ''
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -155,7 +158,13 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 _static_src = BASE_DIR / 'static'
 STATICFILES_DIRS = [_static_src] if _static_src.is_dir() else []
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Hashed filenames require collectstatic + manifest. Tests skip collectstatic, so avoid manifest there.
+# Production/Docker: DEBUG=False and command is collectstatic/run → manifest storage.
+STATICFILES_STORAGE = (
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    if (not DEBUG and _manage_cmd != 'test')
+    else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

@@ -409,7 +409,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         return ctx
 
 
-def _tree_partial(request, team_slug: str | None):
+def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
     team = _workspace_team(request.user, team_slug)
     if team_slug and team is None:
         return HttpResponse('Not found', status=404)
@@ -455,11 +455,12 @@ def _tree_partial(request, team_slug: str | None):
         tmpl = 'partials/task_tree.jinja'
     html = render(request, tmpl, ctx).content.decode()
     resp = HttpResponse(html)
-    trigger_payload: dict[str, object] = {'updateStats': True}
-    if team is not None:
-        pct = workspace_root_average_percent(qs)
-        trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
-    resp['HX-Trigger'] = json.dumps(trigger_payload)
+    if hx_triggers:
+        trigger_payload: dict[str, object] = {'updateStats': True}
+        if team is not None:
+            pct = workspace_root_average_percent(qs)
+            trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
+        resp['HX-Trigger'] = json.dumps(trigger_payload)
     return resp
 
 
@@ -488,7 +489,7 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
         else:
             cur.add(tid)
         set_mindmap_collapsed_ids(request, team, cur)
-        return _tree_partial(request, team_slug)
+        return _tree_partial(request, team_slug, hx_triggers=False)
 
 
 class TaskCreateView(LoginRequiredMixin, View):

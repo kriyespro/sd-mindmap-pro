@@ -5,27 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}MindMap Tasks{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                    colors: {
-                        ink: { DEFAULT: '#0f172a', muted: '#475569', faint: '#94a3b8' },
-                    },
-                },
-            },
-        };
-    </script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ static('css/tailwind.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         [x-cloak] { display: none !important; }
         .htmx-settling, .htmx-swapping { opacity: 0; transition: opacity .12s ease; }
+        #task-tree.htmx-settling,
+        #task-tree.htmx-swapping {
+            opacity: 1 !important;
+            transition: none !important;
+        }
         body { font-family: Inter, system-ui, sans-serif; }
         :root { --dark-accent: #93c5fd; }
         .dark body { background: #0f1722; color: #dbe3ee; }
@@ -205,6 +200,7 @@
                 if (!source || !source.closest) return;
                 var method = ((e.detail && e.detail.requestConfig && e.detail.requestConfig.verb) || 'get').toLowerCase();
                 if (method === 'get') return;
+                if (source.hasAttribute && source.hasAttribute('data-hx-no-task-focus')) return;
                 var card = source.closest('[data-task-id]');
                 if (!card) return;
                 document.body.dataset.pendingFocusTaskId = card.getAttribute('data-task-id') || '';
@@ -294,6 +290,7 @@
         teamCreateError: '',
         parentIdForModal: '',
         sidebarOpen: true,
+        uiReady: false,
         isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
         isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
         darkMode: false,
@@ -301,6 +298,7 @@
             const stored = localStorage.getItem('theme');
             this.darkMode = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
             document.documentElement.classList.toggle('dark', this.darkMode);
+            this.uiReady = true;
         },
         toggleTheme() {
             this.darkMode = !this.darkMode;
@@ -313,8 +311,11 @@
       @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
 <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="relative flex flex-col border-r border-slate-700/80 bg-slate-900 text-slate-100 shadow-xl shadow-slate-900/20 transition-all duration-300 ease-out"
-           :class="isBoardView && !sidebarOpen ? 'w-0 min-w-0 max-w-0 overflow-hidden border-transparent opacity-0 pointer-events-none' : 'w-64 shrink-0'">
+    <aside x-cloak
+           style="width:16rem;min-width:16rem;max-width:16rem;"
+           :style="isBoardView && !sidebarOpen ? 'width:0;min-width:0;max-width:0;' : 'width:16rem;min-width:16rem;max-width:16rem;'"
+           class="relative flex shrink-0 flex-col border-r border-slate-700/80 bg-slate-900 text-slate-100 shadow-xl shadow-slate-900/20 transition-all duration-300 ease-out"
+           :class="(!uiReady ? 'transition-none ' : '') + (isBoardView && !sidebarOpen ? 'overflow-hidden border-transparent opacity-0 pointer-events-none' : '')">
         <div class="p-3 border-b border-slate-700/70 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
             <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5">
                 <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">

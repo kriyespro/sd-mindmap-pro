@@ -148,7 +148,7 @@
     <div id="task-tree"
          hx-get="{{ u.tree_partial }}"
          hx-trigger="load, refreshTree from:body"
-         hx-swap="innerHTML"
+         hx-swap="innerHTML swap:0ms settle:0ms"
          class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
         {% if task_layout in ['mindmap', 'mini', 'idea'] %}
             {% include 'partials/task_mindmap.jinja' %}
@@ -174,7 +174,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-        <form hx-post="{{ u.task_import }}" hx-target="#task-tree" hx-swap="innerHTML"
+        <form hx-post="{{ u.task_import }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
               enctype="multipart/form-data"
               @htmx:after-request="if(event.detail.successful){ importModalOpen=false; $el.reset(); document.getElementById('import-err').textContent=''; } else { var x=event.detail.xhr; document.getElementById('import-err').textContent = (x && x.responseText) ? x.responseText.trim() : 'Import failed'; }">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -209,7 +209,7 @@
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-        <form hx-post="{{ u.tasks }}" hx-target="#task-tree" hx-swap="innerHTML"
+        <form hx-post="{{ u.tasks }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
               @htmx:after-request="if(event.detail.successful){ addModalOpen=false; $el.reset(); }">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <input type="hidden" name="parent_id" x-model="parentIdForModal">
