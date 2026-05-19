@@ -64,6 +64,26 @@ urlpatterns = [
         name='mindmap_collapse_team',
     ),
     path(
+        'tasks/mindmap-collapse-all/',
+        views.MindmapCollapseAllView.as_view(),
+        name='mindmap_collapse_all_personal',
+    ),
+    path(
+        't/<slug:team_slug>/tasks/mindmap-collapse-all/',
+        views.MindmapCollapseAllView.as_view(),
+        name='mindmap_collapse_all_team',
+    ),
+    path(
+        'tasks/mindmap-expand-all/',
+        views.MindmapExpandAllView.as_view(),
+        name='mindmap_expand_all_personal',
+    ),
+    path(
+        't/<slug:team_slug>/tasks/mindmap-expand-all/',
+        views.MindmapExpandAllView.as_view(),
+        name='mindmap_expand_all_team',
+    ),
+    path(
         't/<slug:team_slug>/tasks/archive-mindmap/',
         views.TeamMindmapArchiveView.as_view(),
         name='archive_team_mindmap',

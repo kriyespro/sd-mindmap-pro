@@ -119,6 +119,18 @@ class WorkspaceUrls:
             )
         return reverse('planner:mindmap_collapse_personal', kwargs={'task_id': task_id})
 
+    @property
+    def mindmap_collapse_all(self) -> str:
+        if self._slug:
+            return reverse('planner:mindmap_collapse_all_team', kwargs={'team_slug': self._slug})
+        return reverse('planner:mindmap_collapse_all_personal')
+
+    @property
+    def mindmap_expand_all(self) -> str:
+        if self._slug:
+            return reverse('planner:mindmap_expand_all_team', kwargs={'team_slug': self._slug})
+        return reverse('planner:mindmap_expand_all_personal')
+
 
 def workspace_urls(team: Team | None) -> WorkspaceUrls:
     return WorkspaceUrls(team)
@@ -319,8 +331,8 @@ class BoardView(LoginRequiredMixin, TemplateView):
             raise Http404('Team not found')
 
         qs = tasks_for_workspace(user, team)
-        normalize_workspace_completion(qs)
-        qs = tasks_for_workspace(user, team)
+        if normalize_workspace_completion(qs):
+            qs = tasks_for_workspace(user, team)
         rows = task_rows_for_tree(qs)
         task_tree = build_task_tree(rows)
         layout = self.request.session.get('task_layout', 'mindmap')
@@ -415,8 +427,8 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
     if team_slug and team is None:
         return HttpResponse('Not found', status=404)
     qs = tasks_for_workspace(request.user, team)
-    normalize_workspace_completion(qs)
-    qs = tasks_for_workspace(request.user, team)
+    if normalize_workspace_completion(qs):
+        qs = tasks_for_workspace(request.user, team)
     rows = task_rows_for_tree(qs)
     tree = build_task_tree(rows)
     layout = request.session.get('task_layout', 'mindmap')
@@ -494,6 +506,32 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
         else:
             cur.add(tid)
         set_mindmap_collapsed_ids(request, team, cur)
+        return _tree_partial(request, team_slug, hx_triggers=False)
+
+
+class MindmapCollapseAllView(LoginRequiredMixin, View):
+    """Collapse all branches in the mind map."""
+
+    def post(self, request, team_slug=None):
+        team = _workspace_team(request.user, team_slug)
+        if team_slug and team is None:
+            return HttpResponse('Not found', status=404)
+        qs = tasks_for_workspace(request.user, team)
+        rows = task_rows_for_tree(qs)
+        tree = build_task_tree(rows)
+        all_branch_ids = set(collect_branch_ids_with_children(tree))
+        set_mindmap_collapsed_ids(request, team, all_branch_ids)
+        return _tree_partial(request, team_slug, hx_triggers=False)
+
+
+class MindmapExpandAllView(LoginRequiredMixin, View):
+    """Expand all branches in the mind map."""
+
+    def post(self, request, team_slug=None):
+        team = _workspace_team(request.user, team_slug)
+        if team_slug and team is None:
+            return HttpResponse('Not found', status=404)
+        set_mindmap_collapsed_ids(request, team, set())
         return _tree_partial(request, team_slug, hx_triggers=False)
 
 
@@ -671,8 +709,8 @@ class StatsPartialView(LoginRequiredMixin, View):
         if team_slug and team is None:
             return HttpResponse('Not found', status=404)
         qs = tasks_for_workspace(request.user, team)
-        normalize_workspace_completion(qs)
-        qs = tasks_for_workspace(request.user, team)
+        if normalize_workspace_completion(qs):
+            qs = tasks_for_workspace(request.user, team)
         total_main, done_main = root_stats(qs)
         return render(
             request,

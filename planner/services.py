@@ -529,12 +529,13 @@ def set_mindmap_collapsed_ids(request, team: Team | None, ids: set[int]) -> None
     request.session.modified = True
 
 
-def collect_task_has_children(roots: list[dict]) -> dict[int, bool]:
-    out: dict[int, bool] = {}
+def collect_task_has_children(roots: list[dict]) -> dict[int, int]:
+    """Returns {task_id: direct_child_count}. Count is from the full (unpruned) tree."""
+    out: dict[int, int] = {}
 
     def walk(n: dict) -> None:
         ch = n.get('children') or []
-        out[n['id']] = len(ch) > 0
+        out[n['id']] = len(ch)
         for c in ch:
             walk(c)
 
@@ -701,7 +702,7 @@ def workspace_root_average_percent(qs: QuerySet[Task]) -> int:
     return int(round(total / len(roots)))
 
 
-def normalize_workspace_completion(qs: QuerySet[Task]) -> None:
+def normalize_workspace_completion(qs: QuerySet[Task]) -> bool:
     """
     Self-heal completion consistency for a workspace.
     For any task with children, `is_completed` must equal all(children completed).
@@ -750,6 +751,7 @@ def normalize_workspace_completion(qs: QuerySet[Task]) -> None:
             changed_ids.append(tid)
 
     if not changed_ids:
-        return
+        return False
     Task.objects.filter(id__in=changed_ids).update(is_completed=False)
     Task.objects.filter(id__in=[x for x in changed_ids if state[x]]).update(is_completed=True)
+    return True

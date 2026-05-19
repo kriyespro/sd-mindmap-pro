@@ -1,15 +1,31 @@
 {% from 'partials/task_tree.jinja' import node_card with context %}
 {# Mind map uses same task cards as tree view; dot-grid background comes from parent #task-tree #}
 {% set card_mode = 'idea' if task_layout == 'idea' else ('mini' if task_layout == 'mini' else 'mindmap') %}
-<div class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto {% if card_mode == 'idea' %}rounded-2xl bg-[#eeeeef] p-3{% else %}p-2{% endif %}">
+<div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto {% if card_mode == 'idea' %}rounded-2xl bg-[#eeeeef] p-3{% else %}p-2{% endif %}">
 {% if mindmap.nodes %}
-    {% if card_mode == 'idea' %}
-    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Idea mode: clean node pills like your sample. Connectors stay centered on collapsed nodes; hover reveals controls.</p>
-    {% elif card_mode == 'mini' %}
-    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Mini mode: cards stay compact and expand on hover · Use <span class="font-bold text-slate-800">− / +</span> for branches.</p>
-    {% else %}
-    <p class="mb-2 px-1 text-[11px] font-semibold text-slate-600">Use <span class="font-bold text-slate-800">− / +</span> on cards to hide or show branches · Sidebar: edge control for more canvas.</p>
-    {% endif %}
+    <div class="mb-2 flex items-center gap-2 px-1">
+        <p class="flex-1 text-[11px] font-semibold text-slate-500">
+        {% if card_mode == 'idea' %}
+            Idea — hover node to reveal controls
+        {% elif card_mode == 'mini' %}
+            Mini — hover card to expand · <span class="font-bold text-slate-700">−/+N</span> for branches
+        {% else %}
+            <span class="font-bold text-slate-700">−/+N</span> on cards to collapse or expand branches
+        {% endif %}
+        </p>
+        <button type="button"
+                hx-post="{{ u.mindmap_collapse_all }}"
+                hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
+                title="Collapse all branches">Collapse all</button>
+        <button type="button"
+                hx-post="{{ u.mindmap_expand_all }}"
+                hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
+                title="Expand all branches">Expand all</button>
+    </div>
     <div class="relative" style="width:{{ mindmap.width }}px;height:{{ mindmap.height }}px;min-width:min(100%,{{ mindmap.width }}px);">
         <svg xmlns="http://www.w3.org/2000/svg"
              width="{{ mindmap.width }}"

@@ -322,4 +322,22 @@
     </div>
 </div>
 {% endif %}
+<script>
+(function () {
+  var _scroll = null;
+  document.addEventListener('htmx:beforeSwap', function (e) {
+    if (e.detail.target && e.detail.target.id === 'task-tree') {
+      var el = document.getElementById('mm-scroll-area');
+      _scroll = el ? { x: el.scrollLeft, y: el.scrollTop } : null;
+    }
+  });
+  document.addEventListener('htmx:afterSettle', function (e) {
+    if (e.detail.target && e.detail.target.id === 'task-tree' && _scroll) {
+      var el = document.getElementById('mm-scroll-area');
+      if (el) { el.scrollLeft = _scroll.x; el.scrollTop = _scroll.y; }
+      _scroll = null;
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -84,9 +84,9 @@
                     hx-sync="#task-tree:queue"
                     hx-indicator="#board-hx-busy"
                     hx-disabled-elt="this"
-                    class="relative z-20 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[11px] font-bold leading-none text-slate-600 shadow-md ring-1 ring-slate-200/80 transition hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-70 {% if layout_mode == 'mini' %}opacity-0 group-hover:opacity-100{% endif %}"
-                    title="{% if task.id in _mc %}Expand subtasks{% else %}Hide subtasks{% endif %}">
-                {% if task.id in _mc %}+{% else %}−{% endif %}
+                    class="relative z-20 flex {% if task.id in _mc %}min-w-[1.5rem]{% else %}h-6 w-6{% endif %} shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-1 text-[11px] font-bold leading-none text-slate-600 shadow-md ring-1 ring-slate-200/80 transition hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-70 {% if layout_mode == 'mini' %}opacity-0 group-hover:opacity-100{% endif %}"
+                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
             </button>
             {% endif %}
             {% if layout_mode == 'idea' and _branch %}
@@ -97,9 +97,9 @@
                     hx-sync="#task-tree:queue"
                     hx-indicator="#board-hx-busy"
                     hx-disabled-elt="this"
-                    class="relative z-20 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold leading-none text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-slate-300 disabled:cursor-wait disabled:opacity-60"
-                    title="{% if task.id in _mc %}Expand subtasks{% else %}Hide subtasks{% endif %}">
-                {% if task.id in _mc %}+{% else %}−{% endif %}
+                    class="relative z-20 flex h-4 {% if task.id in _mc %}min-w-[1rem] px-0.5{% else %}w-4{% endif %} shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold leading-none text-slate-600 opacity-0 transition group-hover:opacity-100 hover:bg-slate-300 disabled:cursor-wait disabled:opacity-60"
+                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
             </button>
             {% endif %}
         </div>
