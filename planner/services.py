@@ -136,43 +136,49 @@ def count_all_descendants(node: dict) -> tuple[int, int]:
 
 
 def build_task_tree(tasks: list[dict], parent_id: int | None = None) -> list[dict]:
-    tree = []
-    siblings = [t for t in tasks if t['parent_id'] == parent_id]
-    siblings.sort(key=lambda t: t['id'], reverse=(parent_id is None))
+    by_parent: dict[int | None, list[dict]] = {}
+    for task in tasks:
+        by_parent.setdefault(task['parent_id'], []).append(task)
 
-    for task in siblings:
-        node = dict(task)
-        node['due_state'] = 'none'
-        if node.get('due_date'):
-            due = node['due_date']
-            if hasattr(due, 'isoformat'):
-                d = due
-            else:
-                try:
-                    from datetime import datetime
-
-                    d = datetime.strptime(str(due), '%Y-%m-%d').date()
-                except ValueError:
-                    d = None
-            if d:
-                today = date.today()
-                if d < today:
-                    node['due_state'] = 'overdue'
-                elif d == today:
-                    node['due_state'] = 'today'
+    def build(pid: int | None) -> list[dict]:
+        siblings = by_parent.get(pid, [])
+        siblings.sort(key=lambda t: t['id'], reverse=(pid is None))
+        tree: list[dict] = []
+        for task in siblings:
+            node = dict(task)
+            node['due_state'] = 'none'
+            if node.get('due_date'):
+                due = node['due_date']
+                if hasattr(due, 'isoformat'):
+                    d = due
                 else:
-                    node['due_state'] = 'upcoming'
-        node['children'] = build_task_tree(tasks, task['id'])
-        sub_total, sub_done = count_all_descendants(node)
-        node['subtask_total'] = sub_total
-        node['subtask_done'] = sub_done
-        node['percent'] = (
-            round((sub_done / sub_total) * 100)
-            if sub_total > 0
-            else (100 if node['is_completed'] else 0)
-        )
-        tree.append(node)
-    return tree
+                    try:
+                        from datetime import datetime
+
+                        d = datetime.strptime(str(due), '%Y-%m-%d').date()
+                    except ValueError:
+                        d = None
+                if d:
+                    today = date.today()
+                    if d < today:
+                        node['due_state'] = 'overdue'
+                    elif d == today:
+                        node['due_state'] = 'today'
+                    else:
+                        node['due_state'] = 'upcoming'
+            node['children'] = build(task['id'])
+            sub_total, sub_done = count_all_descendants(node)
+            node['subtask_total'] = sub_total
+            node['subtask_done'] = sub_done
+            node['percent'] = (
+                round((sub_done / sub_total) * 100)
+                if sub_total > 0
+                else (100 if node['is_completed'] else 0)
+            )
+            tree.append(node)
+        return tree
+
+    return build(parent_id)
 
 
 def personal_visible_task_ids(user: User) -> set[int]:
@@ -243,7 +249,9 @@ def task_rows_for_tree(qs: QuerySet[Task]) -> list[dict]:
             }
         return (username or '').strip().lower() in active_usernames_by_team[key]
 
-    for t in qs.order_by('id'):
+    for t in qs.only(
+        'id', 'parent_id', 'title', 'due_date', 'assignee_username', 'is_completed', 'team_id'
+    ).order_by('id'):
         assignee = (t.assignee_username or '').strip()
         if assignee and not is_active_assignee(team_id=t.team_id, username=assignee):
             assignee = ''
@@ -497,30 +505,8 @@ def get_mindmap_collapsed_ids(
 ) -> set[int]:
     all_branch_ids = set(collect_branch_ids_with_children(tree or [])) if tree is not None else set()
 
-    if team is not None and project is None:
-        raw = team.mindmap_collapsed_task_ids
-        if raw is None:
-            # Default to expanded branches; user can collapse manually.
-            return set()
-        if not isinstance(raw, list):
-            return set()
-        out: set[int] = set()
-        for x in raw:
-            try:
-                out.add(int(x))
-            except (TypeError, ValueError):
-                continue
-        # Backward compatibility: old behavior stored "all branches collapsed" by default.
-        # Auto-heal such state to expanded unless user explicitly collapses again.
-        if all_branch_ids and out == all_branch_ids:
-            team.mindmap_collapsed_task_ids = []
-            team.save(update_fields=['mindmap_collapsed_task_ids'])
-            return set()
-        return out
-
     key = mindmap_collapse_session_key(team, project)
     if key not in request.session:
-        # Default to expanded branches; user can collapse manually.
         request.session[key] = []
         request.session.modified = True
     raw = request.session.get(key, [])
@@ -542,10 +528,6 @@ def get_mindmap_collapsed_ids(
 def set_mindmap_collapsed_ids(
     request, team: Team | None, ids: set[int], *, project=None
 ) -> None:
-    if team is not None and project is None:
-        team.mindmap_collapsed_task_ids = sorted(ids)
-        team.save(update_fields=['mindmap_collapsed_task_ids'])
-        return
     key = mindmap_collapse_session_key(team, project)
     request.session[key] = sorted(ids)
     request.session.modified = True

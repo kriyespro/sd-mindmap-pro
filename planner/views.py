@@ -209,6 +209,12 @@ def _board_queryset(user, team, project):
     return qs
 
 
+def _board_task_tree(user, team, project):
+    qs = _board_queryset(user, team, project)
+    rows = task_rows_for_tree(qs)
+    return qs, build_task_tree(rows)
+
+
 def _sync_task_completion_fields(task: Task) -> None:
     if task.is_completed:
         task.status = Task.STATUS_DONE
@@ -502,9 +508,7 @@ def _tree_partial(
 ):
     team, project = _resolve_board(request.user, team_slug, project_slug)
     effective_team = team or (project.team if project else None)
-    qs = _board_queryset(request.user, team, project)
-    rows = task_rows_for_tree(qs)
-    tree = build_task_tree(rows)
+    qs, tree = _board_task_tree(request.user, team, project)
     layout = request.session.get('task_layout', 'mindmap')
     if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
@@ -574,20 +578,17 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
     def post(self, request, task_id, team_slug=None, project_slug=None, slug=None):
         project_slug = project_slug or slug
         team, project = _resolve_board(request.user, team_slug, project_slug)
-        task = Task.objects.filter(pk=task_id).first()
+        task = Task.objects.filter(pk=task_id).only('id', 'parent_id', 'project_id', 'team_id').first()
         if task is None or not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
-        has_kids = Task.objects.filter(parent_id=task_id).exists()
-        if not has_kids:
-            return HttpResponse('No subtasks', status=400)
-        qs = _board_queryset(request.user, team, project)
-        rows = task_rows_for_tree(qs)
-        tree = build_task_tree(rows)
-        cur = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
+        _, tree = _board_task_tree(request.user, team, project)
         tid = int(task_id)
+        branch_children = collect_task_has_children(tree)
+        if not branch_children.get(tid):
+            return HttpResponse('No subtasks', status=400)
+        cur = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         if tid in cur:
             cur.discard(tid)
-            # Progressive reveal: when opening a node, keep deeper branches collapsed.
             cur.update(_direct_branch_child_ids(tree, tid))
         else:
             cur.add(tid)
@@ -601,9 +602,7 @@ class MindmapCollapseAllView(LoginRequiredMixin, View):
     def post(self, request, team_slug=None, project_slug=None, slug=None):
         project_slug = project_slug or slug
         team, project = _resolve_board(request.user, team_slug, project_slug)
-        qs = _board_queryset(request.user, team, project)
-        rows = task_rows_for_tree(qs)
-        tree = build_task_tree(rows)
+        _, tree = _board_task_tree(request.user, team, project)
         all_branch_ids = set(collect_branch_ids_with_children(tree))
         set_mindmap_collapsed_ids(request, team, all_branch_ids, project=project)
         return _tree_partial(request, team_slug, project_slug, hx_triggers=False)

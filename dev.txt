@@ -19,3 +19,4 @@
 [DONE] Phase PM-14 - Display modes on Billing: Minimal (Tree/Map + workspace sidebar), Express (+ Kanban, Projects, Gantt), Pro (all views and sidebar links); Profile.ui_mode + route guard middleware
 [DONE] Phase PM-15 - Sidebar stays expanded until manual toggle; preference saved in localStorage (no auto-collapse on nav/outside/Escape)
 [DONE] Phase PM-16 - Welcome Tour demo project auto-created on signup: tutorial tasks (mindmap/tree/kanban/gantt), milestone, checklist, comments, personal tasks, notification; redirect to project board; `seed_tutorials` backfill command
+[DONE] Phase PM-17 - Mindmap expand perf: O(n) tree build, session-only collapse state, hx-sync drop, scroll preserve, +N button always visible when collapsed

@@ -16,13 +16,13 @@
         <button type="button"
                 hx-post="{{ u.mindmap_collapse_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
                 class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
                 title="Collapse all branches">Collapse all</button>
         <button type="button"
                 hx-post="{{ u.mindmap_expand_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
                 class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
                 title="Expand all branches">Expand all</button>
     </div>
