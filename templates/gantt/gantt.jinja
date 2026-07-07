@@ -1,0 +1,366 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}{{ project.name }} · Gantt{% endblock %}
+
+{% block main %}
+<div class="flex min-h-full flex-col" id="gantt-page">
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-6 py-3 backdrop-blur-md">
+        <div class="flex items-center gap-2 min-w-0">
+            <button type="button" @click="sidebarOpen = !sidebarOpen"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <nav class="flex items-center gap-1.5 text-xs text-slate-500">
+                <a href="{{ url('gantt:project_list') }}" class="hover:text-slate-800 transition">Gantt</a>
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="font-semibold text-slate-900">{{ project.name }}</span>
+            </nav>
+            <span class="rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style="background-color: {{ project.color }};">
+                {{ gantt.tasks|length }} tasks
+            </span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- View switcher -->
+            <div class="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
+                {% for v, label in [('daily','Day'), ('weekly','Week'), ('monthly','Month'), ('quarterly','Quarter'), ('yearly','Year')] %}
+                <a href="?view={{ v }}"
+                   class="rounded px-2 py-1 transition {% if gantt_view == v %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">
+                    {{ label }}
+                </a>
+                {% endfor %}
+            </div>
+            <a href="{{ url('projects:detail', slug=project.slug) }}"
+               class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                Project →
+            </a>
+        </div>
+    </header>
+
+    <!-- Priority legend -->
+    <div class="flex items-center gap-5 border-b border-slate-100 bg-slate-50/80 px-6 py-2 text-[10px]">
+        {% for color, label in [('#ef4444','Critical'), ('#f97316','High'), ('#6366f1','Medium'), ('#94a3b8','Low')] %}
+        <span class="flex items-center gap-1.5">
+            <span class="h-3 w-6 rounded-sm" style="background:{{ color }};"></span>
+            {{ label }}
+        </span>
+        {% endfor %}
+        <span class="ml-auto text-slate-400">Drag to move · Drag right edge to resize</span>
+    </div>
+
+    {% if gantt.tasks %}
+    <!-- Gantt chart — Alpine.js controlled -->
+    <div class="flex-1 overflow-auto" id="gantt-scroll-area"
+         x-data="ganttApp()"
+         x-init="init()"
+         @mousemove.window="onMouseMove($event)"
+         @mouseup.window="onMouseUp($event)">
+
+        <div class="relative" :style="'min-width:' + (labelW + totalW) + 'px'">
+
+            <!-- ── Sticky header ── -->
+            <div class="sticky top-0 z-20 bg-white border-b border-slate-200 select-none">
+                <!-- Month row -->
+                <div class="flex" :style="'padding-left:' + labelW + 'px'">
+                    <template x-for="(m, i) in monthGroups" :key="i">
+                        <div class="shrink-0 border-l border-slate-200 px-2 py-1 overflow-hidden"
+                             :style="'width:' + m.width + 'px; min-width:' + m.width + 'px'">
+                            <span class="text-[10px] font-semibold text-slate-600 whitespace-nowrap" x-text="m.label"></span>
+                        </div>
+                    </template>
+                </div>
+                <!-- Day row -->
+                <div class="flex" :style="'padding-left:' + labelW + 'px'">
+                    <template x-for="(d, i) in dates" :key="i">
+                        <div class="shrink-0 border-l border-slate-100 text-center pb-1"
+                             :style="'width:' + colW + 'px; min-width:' + colW + 'px'"
+                             :class="d.isToday ? 'bg-blue-50' : ''">
+                            <span class="text-[9px] leading-tight"
+                                  :class="d.isWeekend ? 'text-slate-300' : (d.isMonday ? 'font-bold text-slate-700' : 'text-slate-400')"
+                                  x-text="d.label"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ── Today vertical line ── -->
+            <div class="pointer-events-none absolute top-0 bottom-0 z-10 w-0.5 bg-blue-500 opacity-70"
+                 :style="'left:' + (labelW + todayPx) + 'px'"
+                 x-show="todayPx >= 0 && todayPx <= totalW">
+                <div class="absolute -top-1 left-1/2 -translate-x-1/2 rounded bg-blue-500 px-1 py-0.5 text-[9px] font-bold text-white whitespace-nowrap">Today</div>
+            </div>
+
+            <!-- ── Task rows ── -->
+            <template x-for="task in tasks" :key="task.id">
+                <div class="group relative flex items-center border-b border-slate-100 hover:bg-slate-50/60 transition"
+                     style="height: 38px;">
+
+                    <!-- Label (sticky left) -->
+                    <div class="sticky left-0 z-10 flex items-center gap-1.5 bg-white px-3 group-hover:bg-slate-50/60 shrink-0 border-r border-slate-100"
+                         :style="'width:' + labelW + 'px; height: 38px'">
+                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="'background:' + task.color"></span>
+                        <span class="truncate text-[11px] font-medium text-slate-700" :title="task.title" x-text="task.title"></span>
+                    </div>
+
+                    <!-- Date grid + bar -->
+                    <div class="relative" :style="'width:' + totalW + 'px; height: 38px; flex-shrink:0'">
+                        <!-- Weekend shading -->
+                        <template x-for="(d, i) in dates" :key="i">
+                            <div class="absolute top-0 bottom-0 pointer-events-none"
+                                 :style="'left:' + (i * colW) + 'px; width:' + colW + 'px'"
+                                 :class="d.isWeekend ? 'bg-slate-50/80' : (d.isToday ? 'bg-blue-50/40' : '')"></div>
+                        </template>
+
+                        <!-- Progress fill behind bar -->
+                        <div class="absolute rounded pointer-events-none z-[1]"
+                             :style="{
+                               left: task.left + 'px',
+                               width: Math.max(colW, (task.width * task.progress / 100)) + 'px',
+                               top: '9px', height: '20px',
+                               background: task.color,
+                               opacity: 0.3
+                             }"></div>
+
+                        <!-- Bar -->
+                        <div class="absolute rounded shadow-sm select-none z-[2] flex items-center overflow-hidden"
+                             :class="(dragging && dragging.id === task.id) || (resizing && resizing.id === task.id) ? 'shadow-lg ring-2 ring-white' : 'cursor-grab active:cursor-grabbing'"
+                             :style="{
+                               left: task.left + 'px',
+                               width: Math.max(colW, task.width) + 'px',
+                               top: '9px', height: '20px',
+                               background: task.color,
+                               opacity: 0.88
+                             }"
+                             @mousedown.prevent="startDrag(task.id, $event)">
+
+                            <!-- Bar label -->
+                            <span class="px-1.5 text-[9px] font-semibold text-white truncate pointer-events-none leading-none"
+                                  x-text="task.progress > 0 ? task.title + ' · ' + task.progress + '%' : task.title"></span>
+
+                            <!-- Resize handle (right edge) -->
+                            <div class="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize flex items-center justify-center opacity-60 hover:opacity-100"
+                                 @mousedown.prevent.stop="startResize(task.id, $event)">
+                                <div class="h-3 w-0.5 rounded-full bg-white/80"></div>
+                                <div class="ml-0.5 h-3 w-0.5 rounded-full bg-white/80"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tooltip on hover -->
+                        <div class="pointer-events-none absolute z-20 hidden group-hover:block"
+                             :style="'left:' + (task.left + Math.max(colW, task.width) + 6) + 'px; top: 2px'">
+                            <div class="whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] shadow-lg">
+                                <p class="font-semibold text-slate-800" x-text="task.title"></p>
+                                <p class="text-slate-500" x-text="task.startLabel + ' → ' + task.endLabel"></p>
+                                <p class="text-slate-500" x-text="task.durationDays + ' days · ' + task.progress + '% done'"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Dependencies SVG overlay -->
+            <svg class="pointer-events-none absolute inset-0 z-10" :width="labelW + totalW" :height="depSvgHeight" style="position:absolute;top:0;left:0;overflow:visible;">
+                <template x-for="dep in deps" :key="dep.id">
+                    <g>
+                        <path :d="dep.path" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead)"/>
+                    </g>
+                </template>
+                <defs>
+                    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8"/>
+                    </marker>
+                </defs>
+            </svg>
+
+        </div>
+    </div>
+
+    {% else %}
+    <div class="flex flex-1 flex-col items-center justify-center gap-3 text-slate-400">
+        <svg class="h-12 w-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+        </svg>
+        <p class="text-sm font-medium">No tasks with dates in this project.</p>
+        <a href="{{ url('projects:detail', slug=project.slug) }}"
+           class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition">
+            Add tasks →
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function ganttApp() {
+    const COL_W    = {{ gantt.col_width }};
+    const LABEL_W  = 220;
+    const ROW_H    = 38;
+    const HDR_H    = 52; // two header rows
+    const MIN_DATE = new Date('{{ gantt.min_date.isoformat() }}T00:00:00');
+
+    // Raw tasks from server
+    const RAW_TASKS = [
+        {% for t in gantt.tasks %}
+        {
+            id: {{ t.id }},
+            title: {{ t.title|tojson }},
+            left: {{ t.left_px }},
+            width: {{ t.width_px }},
+            color: '{{ t.color }}',
+            progress: {{ t.progress }},
+            startLabel: '{{ t.start.strftime("%b %d") }}',
+            endLabel: '{{ t.end.strftime("%b %d") }}',
+            durationDays: {{ t.duration_days }},
+        },
+        {% endfor %}
+    ];
+
+    // Dependencies
+    const RAW_DEPS = [
+        {% for dep in dependencies %}
+        { id: {{ dep.id }}, predId: {{ dep.predecessor_id }}, succId: {{ dep.successor_id }}, type: '{{ dep.dep_type }}' },
+        {% endfor %}
+    ];
+
+    // All dates in range
+    const RAW_DATES = [
+        {% for d in gantt.dates %}
+        {
+            iso: '{{ d.isoformat() }}',
+            label: '{{ d.strftime("%d") }}',
+            isWeekend: {{ (d.weekday() in (5,6))|tojson }},
+            isMonday: {{ (d.weekday() == 0)|tojson }},
+            isToday: {{ (d == now().date())|tojson }},
+        },
+        {% endfor %}
+    ];
+
+    function dateFromOffset(offsetDays) {
+        const d = new Date(MIN_DATE);
+        d.setDate(d.getDate() + offsetDays);
+        return d.toISOString().split('T')[0];
+    }
+
+    function saveTaskDates(task) {
+        const startOffset = Math.round(task.left / COL_W);
+        const durDays     = Math.max(1, Math.round(task.width / COL_W));
+        const startIso = dateFromOffset(startOffset);
+        const endIso   = dateFromOffset(startOffset + durDays - 1);
+        const csrf = document.querySelector('meta[name=csrf-token]').content;
+        fetch(`/gantt/tasks/${task.id}/dates/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `start_date=${startIso}&due_date=${endIso}`,
+        }).then(() => {
+            task.startLabel = new Date(startIso + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+            task.endLabel   = new Date(endIso + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+            task.durationDays = durDays;
+        });
+    }
+
+    // Compute dependency SVG paths
+    function buildDepPaths(tasks) {
+        const taskMap = {};
+        tasks.forEach((t, i) => { taskMap[t.id] = { t, rowY: HDR_H + i * ROW_H + ROW_H / 2 }; });
+        return RAW_DEPS.map(dep => {
+            const pred = taskMap[dep.predId];
+            const succ = taskMap[dep.succId];
+            if (!pred || !succ) return null;
+            const x1 = LABEL_W + pred.t.left + pred.t.width;
+            const y1 = pred.rowY;
+            const x2 = LABEL_W + succ.t.left;
+            const y2 = succ.rowY;
+            const cx = (x1 + x2) / 2;
+            return {
+                id: dep.id,
+                path: `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`,
+            };
+        }).filter(Boolean);
+    }
+
+    // Month grouping for header
+    function buildMonthGroups(dates) {
+        const groups = [];
+        dates.forEach(d => {
+            const label = new Date(d.iso + 'T00:00:00').toLocaleDateString('en-US', { month:'short', year:'numeric' });
+            if (!groups.length || groups[groups.length-1].label !== label) {
+                groups.push({ label, width: COL_W });
+            } else {
+                groups[groups.length-1].width += COL_W;
+            }
+        });
+        return groups;
+    }
+
+    return {
+        colW: COL_W,
+        labelW: LABEL_W,
+        totalW: {{ gantt.total_width }},
+        tasks: RAW_TASKS.map(t => ({ ...t })),
+        dates: RAW_DATES,
+        deps: [],
+        monthGroups: [],
+        todayPx: 0,
+        depSvgHeight: 0,
+
+        dragging: null,  // { id, startX, origLeft }
+        resizing: null,  // { id, startX, origWidth }
+
+        init() {
+            this.monthGroups = buildMonthGroups(RAW_DATES);
+            this.deps = buildDepPaths(this.tasks);
+            this.depSvgHeight = HDR_H + this.tasks.length * ROW_H + 20;
+            // Today line
+            const today = new Date(); today.setHours(0,0,0,0);
+            const min = new Date(MIN_DATE); min.setHours(0,0,0,0);
+            const diffDays = Math.round((today - min) / 86400000);
+            this.todayPx = diffDays * COL_W;
+        },
+
+        startDrag(id, e) {
+            const task = this.tasks.find(t => t.id === id);
+            if (!task) return;
+            this.dragging = { id, startX: e.clientX, origLeft: task.left };
+        },
+
+        startResize(id, e) {
+            const task = this.tasks.find(t => t.id === id);
+            if (!task) return;
+            this.resizing = { id, startX: e.clientX, origWidth: task.width };
+        },
+
+        onMouseMove(e) {
+            if (this.dragging) {
+                const task = this.tasks.find(t => t.id === this.dragging.id);
+                if (!task) return;
+                const dx = e.clientX - this.dragging.startX;
+                const raw = this.dragging.origLeft + dx;
+                task.left = Math.max(0, Math.round(raw / COL_W) * COL_W);
+                this.deps = buildDepPaths(this.tasks);
+            }
+            if (this.resizing) {
+                const task = this.tasks.find(t => t.id === this.resizing.id);
+                if (!task) return;
+                const dx = e.clientX - this.resizing.startX;
+                const raw = this.resizing.origWidth + dx;
+                task.width = Math.max(COL_W, Math.round(raw / COL_W) * COL_W);
+                this.deps = buildDepPaths(this.tasks);
+            }
+        },
+
+        onMouseUp(e) {
+            if (this.dragging) {
+                const task = this.tasks.find(t => t.id === this.dragging.id);
+                if (task) saveTaskDates(task);
+                this.dragging = null;
+            }
+            if (this.resizing) {
+                const task = this.tasks.find(t => t.id === this.resizing.id);
+                if (task) saveTaskDates(task);
+                this.resizing = null;
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

@@ -14,4 +14,11 @@ urlpatterns = [
     path('', include('planner.urls')),
     path('', include('users.urls')),
     path('teams/', include('teams.urls')),
+    path('projects/', include('projects.urls', namespace='projects')),
+    path('gantt/', include('gantt.urls', namespace='gantt')),
+    path('milestones/', include('milestones.urls', namespace='milestones')),
+    path('calendar/', include('calendar_app.urls', namespace='calendar_app')),
+    path('time/', include('timetracking.urls', namespace='timetracking')),
+    path('reports/', include('reports.urls', namespace='reports')),
+    path('resources/', include('resources.urls', namespace='resources')),
 ]

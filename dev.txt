@@ -1,0 +1,15 @@
+[DONE] Phase 1 - Django 5 + Jinja2 + HTMX planner; personal vs team workspaces; sidebar; tree + mindmap views
+[DONE] Phase 2 - Team invitations; in-app notifications; team roles
+[DONE] Phase 3 (partial) - Billing app; trial users; staff dashboard at /admin/; stock admin at /sd/
+
+[DONE] Phase PM-1 - Projects app: Project + ProjectMember models; CRUD views; list/detail/archive/clone/edit templates; sidebar link
+[DONE] Phase PM-2 - Task model enhanced: priority, status, description, tags, start_date, position, estimated_hours, project FK; new models TaskComment, TaskChecklist, TaskWatcher
+[DONE] Phase PM-3 - Kanban board: layout=kanban added to BoardView; task_kanban.jinja partial; Alpine.js drag-drop; HTMX status update via TaskKanbanStatusView; kanban_status URLs
+[DONE] Phase PM-4 - Gantt Chart app: TaskDependency model (FS/FF/SS/SF); GanttView + GanttPartialView; SVG-style HTML bar chart; daily/weekly/monthly/quarterly/yearly views; sidebar link
+[DONE] Phase PM-5 - Milestones app: Milestone + MilestoneTask models; list/create/update/delete views; HTMX inline creation; all-milestones view; sidebar link
+[DONE] Phase PM-6 - Calendar app: monthly grid view; events from tasks + milestones; HTMX prev/next navigation; Alpine.js day expansion; sidebar link
+[DONE] Phase PM-7 - Time Tracking app: TimeEntry model; start/stop/manual timer; HTMX live timer widget; entry list; sidebar link
+[DONE] Phase PM-8 - Reports dashboard: KPI cards (active projects, due today, overdue, hours/week); task status + priority bar charts; project progress table; overdue tasks list; upcoming milestones; sidebar link
+
+[DONE] Phase PM-9 - Task Detail Slide Panel: HTMX-loaded right drawer; comments (add/delete); checklist (add/toggle/delete with progress bar); tabs (Details/Checklist/Comments); detail button on every task card
+[DONE] Phase PM-10 - Resource Management app: ResourceAllocation model; 4-week workload heatmap; capacity tracking (allocated vs logged hours); HTMX add/delete allocations; sidebar link

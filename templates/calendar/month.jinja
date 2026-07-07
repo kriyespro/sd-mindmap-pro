@@ -1,0 +1,56 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}Calendar · {{ month_name }}{% endblock %}
+
+{% block main %}
+<div class="flex min-h-full flex-col">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-6 py-3 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <button type="button" @click="sidebarOpen = !sidebarOpen"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <h1 class="text-sm font-semibold text-slate-900">Calendar</h1>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex items-center gap-2">
+            <button hx-get="{{ url('calendar_app:partial') }}?year={{ prev_year }}&month={{ prev_month }}"
+                    hx-target="#calendar-container"
+                    hx-swap="innerHTML"
+                    hx-push-url="?year={{ prev_year }}&month={{ prev_month }}"
+                    class="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50 transition">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span id="month-label" class="min-w-[120px] text-center text-sm font-semibold text-slate-800">{{ month_name }}</span>
+            <button hx-get="{{ url('calendar_app:partial') }}?year={{ next_year }}&month={{ next_month }}"
+                    hx-target="#calendar-container"
+                    hx-swap="innerHTML"
+                    hx-push-url="?year={{ next_year }}&month={{ next_month }}"
+                    class="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50 transition">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <a href="{{ url('calendar_app:month') }}"
+               class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+                Today
+            </a>
+        </div>
+
+        <!-- Legend -->
+        <div class="hidden items-center gap-3 lg:flex">
+            <div class="flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-sm bg-indigo-500"></span>
+                <span class="text-[10px] text-slate-600">Task</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-slate-600">◆ Milestone</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Calendar grid -->
+    <div id="calendar-container" class="flex-1 overflow-auto bg-white">
+        {% include 'calendar/_month_grid.jinja' %}
+    </div>
+</div>
+{% endblock %}

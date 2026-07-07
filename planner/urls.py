@@ -93,4 +93,21 @@ urlpatterns = [
         views.TeamMindmapUnarchiveView.as_view(),
         name='unarchive_team_mindmap',
     ),
+    path(
+        'tasks/<int:task_id>/kanban-status/',
+        views.TaskKanbanStatusView.as_view(),
+        name='kanban_status_personal',
+    ),
+    path(
+        't/<slug:team_slug>/tasks/<int:task_id>/kanban-status/',
+        views.TaskKanbanStatusView.as_view(),
+        name='kanban_status_team',
+    ),
+    # Task detail panel
+    path('tasks/<int:task_id>/detail/', views.TaskDetailModalView.as_view(), name='task_detail'),
+    path('tasks/<int:task_id>/comments/', views.TaskCommentCreateView.as_view(), name='task_comment_create'),
+    path('tasks/<int:task_id>/comments/<int:comment_id>/delete/', views.TaskCommentDeleteView.as_view(), name='task_comment_delete'),
+    path('tasks/<int:task_id>/checklist/', views.TaskChecklistCreateView.as_view(), name='task_checklist_create'),
+    path('tasks/<int:task_id>/checklist/<int:item_id>/toggle/', views.TaskChecklistToggleView.as_view(), name='task_checklist_toggle'),
+    path('tasks/<int:task_id>/checklist/<int:item_id>/delete/', views.TaskChecklistDeleteView.as_view(), name='task_checklist_delete'),
 ]

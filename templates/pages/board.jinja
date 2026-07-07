@@ -41,7 +41,17 @@
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mini' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Mini</a>
             <a href="{{ request.path }}?layout=idea"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'idea' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Idea</a>
+            <a href="{{ request.path }}?layout=kanban"
+               class="rounded px-1.5 py-0.5 transition {% if task_layout == 'kanban' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Kanban</a>
         </div>
+        <a href="{{ url('gantt:project_list') }}"
+           class="dark-topbar-pill inline-flex items-center gap-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-700 transition hover:bg-orange-100"
+           title="Gantt Charts">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+            </svg>
+            Gantt
+        </a>
         <div class="relative" x-data="{ open: false }">
             <button type="button" @click="open = !open" class="dark-topbar-pill relative rounded-md border border-transparent p-1 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -155,7 +165,9 @@
          hx-trigger="load, refreshTree from:body"
          hx-swap="innerHTML swap:0ms settle:0ms"
          class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
-        {% if task_layout in ['mindmap', 'mini', 'idea'] %}
+        {% if task_layout == 'kanban' %}
+            {% include 'partials/task_kanban.jinja' %}
+        {% elif task_layout in ['mindmap', 'mini', 'idea'] %}
             {% include 'partials/task_mindmap.jinja' %}
         {% else %}
             {% include 'partials/task_tree.jinja' %}

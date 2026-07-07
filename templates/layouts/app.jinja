@@ -304,6 +304,7 @@
         teamCreateError: '',
         parentIdForModal: '',
         sidebarOpen: true,
+        taskDetailOpen: false,
         uiReady: false,
         isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
         isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
@@ -479,6 +480,56 @@
             <p class="px-2 text-xs text-stone-600">No shared teams yet.</p>
             {% endfor %}
 
+            <p class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-teal-900/80">Projects</p>
+            <a href="{{ url('projects:list') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/projects/') and not request.path.startswith('/projects/archived') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/20 text-xs font-bold text-teal-800">P</span>
+                All Projects
+            </a>
+            <a href="{{ url('projects:archived') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/projects/archived') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-400/20 text-xs font-bold text-slate-600">🗂</span>
+                Archived
+            </a>
+            <a href="{{ url('gantt:project_list') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/gantt/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/15 text-xs font-bold text-orange-800">G</span>
+                Gantt Charts
+            </a>
+            <a href="{{ url('milestones:all') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/milestones/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-purple-500/15 text-xs font-bold text-purple-800">◆</span>
+                Milestones
+            </a>
+            <a href="{{ url('calendar_app:month') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/calendar/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/15 text-xs font-bold text-sky-800">📅</span>
+                Calendar
+            </a>
+            <a href="{{ url('timetracking:index') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/time/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-green-500/15 text-xs font-bold text-green-800">⏱</span>
+                Time Tracking
+            </a>
+            <a href="{{ url('reports:dashboard') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/reports/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/15 text-xs font-bold text-rose-800">📊</span>
+                Reports
+            </a>
+            <a href="{{ url('resources:dashboard') }}"
+               class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
+                      {% if request.path.startswith('/resources/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
+                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/15 text-xs font-bold text-violet-800">👥</span>
+                Resources
+            </a>
+
             <p class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-emerald-900/80">Account</p>
             <a href="{{ url('billing:overview') }}"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-stone-800 transition hover:bg-stone-400/30">
@@ -511,5 +562,36 @@
 </div>
 
 {% block modals %}{% endblock %}
+
+<!-- Task Detail Slide Panel -->
+<div x-cloak x-show="taskDetailOpen" @click="taskDetailOpen = false"
+     x-transition:enter="transition-opacity ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition-opacity ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]"></div>
+
+<div x-cloak x-show="taskDetailOpen"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="translate-x-full"
+     x-transition:enter-end="translate-x-0"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="translate-x-0"
+     x-transition:leave-end="translate-x-full"
+     class="fixed inset-y-0 right-0 z-50 flex w-[480px] max-w-[95vw] flex-col bg-white shadow-2xl border-l border-slate-200">
+    <div id="task-detail-content" class="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+            <p class="text-sm font-semibold text-slate-500">Task Details</p>
+            <button type="button" @click="taskDetailOpen = false"
+                    class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>

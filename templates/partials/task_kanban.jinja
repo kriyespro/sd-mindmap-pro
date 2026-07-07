@@ -1,0 +1,194 @@
+{# Kanban board — reliable HTML5 drag-drop #}
+<div id="kanban-board"
+     class="flex gap-4 overflow-x-auto pb-4 min-h-[calc(100vh-10rem)] select-none"
+     x-data="{
+        draggingId: null,
+        draggingStatus: null,
+        dragOver: null,
+
+        startDrag(id, evt) {
+            this.draggingId = id;
+            const card = document.getElementById('kcard-' + id);
+            this.draggingStatus = card ? card.dataset.status : null;
+            evt.dataTransfer.effectAllowed = 'move';
+            evt.dataTransfer.setData('text/plain', String(id));
+            // hide card ghost immediately
+            setTimeout(() => { if (card) card.style.opacity = '0.35'; }, 0);
+        },
+
+        endDrag() {
+            const card = document.getElementById('kcard-' + this.draggingId);
+            if (card) card.style.opacity = '';
+            this.draggingId = null;
+            this.draggingStatus = null;
+            this.dragOver = null;
+        },
+
+        handleDragOver(colKey, evt) {
+            evt.preventDefault();
+            evt.dataTransfer.dropEffect = 'move';
+            this.dragOver = colKey;
+        },
+
+        handleDragLeave(colKey, evt) {
+            // Only clear when truly leaving the column — not entering a child
+            if (!evt.currentTarget.contains(evt.relatedTarget)) {
+                if (this.dragOver === colKey) this.dragOver = null;
+            }
+        },
+
+        handleDrop(colKey, evt) {
+            evt.preventDefault();
+            const id   = this.draggingId;
+            const from = this.draggingStatus;
+            this.endDrag();
+            if (!id || colKey === from) return;
+            this.moveCard(id, colKey);
+        },
+
+        moveCard(id, toStatus) {
+            const urlEl = document.getElementById('kanban-url-' + id);
+            if (!urlEl) return;
+            const csrf = document.querySelector('meta[name=csrf-token]').content;
+            fetch(urlEl.dataset.url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'status=' + encodeURIComponent(toStatus)
+            }).then(r => {
+                if (r.ok || r.status === 204) {
+                    const card = document.getElementById('kcard-' + id);
+                    const col  = document.getElementById('kcol-'  + toStatus);
+                    if (card && col) {
+                        card.dataset.status = toStatus;
+                        col.appendChild(card);
+                        col.querySelectorAll('.kanban-empty').forEach(el => el.remove());
+                    }
+                }
+            });
+        }
+     }">
+
+    {% if kanban_columns %}
+    {% for col in kanban_columns %}
+    {% set col_colors = {
+        'slate':  ('bg-slate-100',  'border-slate-300',  'text-slate-700',  'bg-slate-500'),
+        'blue':   ('bg-blue-50',    'border-blue-200',   'text-blue-700',   'bg-blue-500'),
+        'purple': ('bg-purple-50',  'border-purple-200', 'text-purple-700', 'bg-purple-500'),
+        'orange': ('bg-orange-50',  'border-orange-200', 'text-orange-700', 'bg-orange-500'),
+        'green':  ('bg-green-50',   'border-green-200',  'text-green-700',  'bg-green-500'),
+    } %}
+    {% set bg, bdr, txt, dot = col_colors.get(col.color, ('bg-slate-100','border-slate-300','text-slate-700','bg-slate-500')) %}
+
+    <div class="flex w-72 shrink-0 flex-col rounded-xl border {{ bdr }} {{ bg }}"
+         :class="dragOver === '{{ col.key }}' ? 'ring-2 ring-indigo-400 ring-offset-2' : ''"
+         @dragover="handleDragOver('{{ col.key }}', $event)"
+         @dragleave="handleDragLeave('{{ col.key }}', $event)"
+         @drop="handleDrop('{{ col.key }}', $event)">
+
+        <!-- Column header -->
+        <div class="flex items-center justify-between px-3 py-2.5 border-b {{ bdr }}">
+            <div class="flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full {{ dot }}"></span>
+                <span class="text-xs font-semibold {{ txt }}">{{ col.label }}</span>
+            </div>
+            <span class="rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-bold text-slate-600 border {{ bdr }}">
+                {{ col.tasks|length }}
+            </span>
+        </div>
+
+        <!-- Cards -->
+        <div id="kcol-{{ col.key }}"
+             class="flex flex-1 flex-col gap-2 overflow-y-auto p-2 min-h-[120px]">
+
+            {% for task in col.tasks %}
+            <div id="kcard-{{ task.id }}"
+                 data-status="{{ col.key }}"
+                 draggable="true"
+                 @dragstart="startDrag({{ task.id }}, $event)"
+                 @dragend="endDrag()"
+                 class="group cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md hover:border-slate-300 active:cursor-grabbing">
+
+                <!-- URL store -->
+                <span id="kanban-url-{{ task.id }}" class="hidden" data-url="{{ u.kanban_status(task.id) }}"></span>
+
+                <!-- Priority dot + title -->
+                <div class="flex items-start gap-2">
+                    <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full
+                        {% if task.priority == 'critical' %}bg-red-500
+                        {% elif task.priority == 'high' %}bg-orange-500
+                        {% elif task.priority == 'medium' %}bg-blue-400
+                        {% else %}bg-slate-300{% endif %}"></span>
+                    <p class="flex-1 text-xs font-medium leading-snug text-slate-800 {% if task.is_completed %}line-through text-slate-400{% endif %}">
+                        {{ task.title_plain }}
+                    </p>
+                </div>
+
+                {% if task.description %}
+                <p class="mt-1.5 ml-4 line-clamp-2 text-[10px] leading-relaxed text-slate-500">
+                    {{ task.description }}</p>
+                {% endif %}
+
+                <!-- Tags -->
+                {% if task.tags_list %}
+                <div class="mt-2 ml-4 flex flex-wrap gap-1">
+                    {% for tag in task.tags_list[:3] %}
+                    <span class="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Footer -->
+                <div class="mt-2.5 ml-4 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        {% if task.due_date %}
+                        <span class="flex items-center gap-0.5 text-[10px]
+                            {% if task.due_date < now().date() and not task.is_completed %}text-red-500 font-semibold{% else %}text-slate-400{% endif %}">
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            {{ task.due_date.strftime('%b %d') }}
+                        </span>
+                        {% endif %}
+                        {% set total_check = task.checklist_items.count() %}
+                        {% if total_check > 0 %}
+                        {% set done_check = task.checklist_items.filter(is_done=True).count() %}
+                        <span class="text-[10px] text-slate-400">☑ {{ done_check }}/{{ total_check }}</span>
+                        {% endif %}
+                    </div>
+                    {% if task.assignee_username %}
+                    <div class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-700"
+                         title="{{ task.assignee_username }}">{{ task.assignee_username[0]|upper }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick-move buttons -->
+                <div class="mt-2 ml-4 hidden gap-1 group-hover:flex flex-wrap">
+                    {% for scol in kanban_columns %}
+                    {% if scol.key != col.key %}
+                    <button type="button"
+                            @click.stop="moveCard({{ task.id }}, '{{ scol.key }}')"
+                            class="rounded px-1.5 py-0.5 text-[9px] font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 transition">
+                        → {{ scol.label }}
+                    </button>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not col.tasks %}
+            <div class="kanban-empty flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 py-8 text-[10px] text-slate-400">
+                Drop here
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="flex w-full items-center justify-center text-sm text-slate-400">No tasks yet.</div>
+    {% endif %}
+</div>

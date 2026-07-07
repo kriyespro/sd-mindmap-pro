@@ -1,0 +1,43 @@
+<div id="timer-widget">
+{% if running %}
+<div class="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 shadow-sm"
+     x-data="{ elapsed: {{ (now() - running.started_at).total_seconds()|int }}, ticker: null }"
+     x-init="ticker = setInterval(() => elapsed++, 1000)"
+     @timerStopped.window="clearInterval(ticker)">
+    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 animate-pulse">
+        <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div class="flex-1 min-w-0">
+        <p class="text-sm font-mono font-bold text-green-800"
+           x-text="String(Math.floor(elapsed/3600)).padStart(2,'0') + ':' + String(Math.floor((elapsed%3600)/60)).padStart(2,'0') + ':' + String(elapsed%60).padStart(2,'0')">
+            {{ running.formatted }}
+        </p>
+        {% if running.description %}
+        <p class="text-[10px] text-green-700 truncate">{{ running.description }}</p>
+        {% endif %}
+    </div>
+    <form hx-post="{{ url('timetracking:stop') }}"
+          hx-target="#timer-widget"
+          hx-swap="outerHTML">
+        {{ csrf_input }}
+        <button type="submit"
+                class="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 transition">
+            Stop
+        </button>
+    </form>
+</div>
+{% else %}
+<form hx-post="{{ url('timetracking:start') }}"
+      hx-target="#timer-widget"
+      hx-swap="outerHTML"
+      class="flex items-center gap-2">
+    {{ csrf_input }}
+    <input type="text" name="description" placeholder="What are you working on?"
+           class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+    <button type="submit"
+            class="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition">
+        ▶ Start
+    </button>
+</form>
+{% endif %}
+</div>

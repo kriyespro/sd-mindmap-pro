@@ -1,0 +1,21 @@
+<div id="entry-{{ entry.id }}"
+     class="flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-4 py-2.5 hover:bg-slate-50 transition">
+    <div class="flex-1 min-w-0">
+        <p class="truncate text-sm text-slate-800">{{ entry.description or '(no description)' }}</p>
+        <p class="text-[10px] text-slate-400">
+            {{ entry.started_at.strftime('%b %d, %Y') }}
+            {% if entry.task %}· {{ entry.task.title_plain[:40] }}{% endif %}
+            {% if entry.project %}· {{ entry.project.name }}{% endif %}
+        </p>
+    </div>
+    <span class="shrink-0 font-mono text-sm font-semibold text-slate-700">{{ entry.formatted }}</span>
+    <form hx-post="{{ url('timetracking:delete', pk=entry.id) }}"
+          hx-target="#entry-{{ entry.id }}"
+          hx-swap="outerHTML"
+          hx-confirm="Delete this time entry?">
+        {{ csrf_input }}
+        <button type="submit" class="rounded p-1 text-slate-300 hover:text-red-400 hover:bg-red-50 transition">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </form>
+</div>

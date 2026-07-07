@@ -1,0 +1,82 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}Milestones · {{ project.name }}{% endblock %}
+
+{% block main %}
+<div class="flex min-h-full flex-col" x-data="{ createOpen: false }">
+    <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-6 py-3 backdrop-blur-md">
+        <div class="flex items-center gap-2 min-w-0">
+            <button type="button" @click="sidebarOpen = !sidebarOpen"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <nav class="flex items-center gap-1.5 text-xs text-slate-500">
+                <a href="{{ url('milestones:all') }}" class="hover:text-slate-800 transition">Milestones</a>
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <a href="{{ url('projects:detail', slug=project.slug) }}" class="hover:text-slate-800 transition">{{ project.name }}</a>
+            </nav>
+        </div>
+        {% if can_manage %}
+        <button type="button" @click="createOpen = true"
+                class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition shadow-sm">
+            + Milestone
+        </button>
+        {% endif %}
+    </header>
+
+    <div class="flex-1 p-6">
+        <!-- Stats row -->
+        {% set total = milestones|length %}
+        {% set completed = milestones|selectattr('status', 'equalto', 'completed')|list|length %}
+        {% set overdue = milestones|selectattr('is_overdue')|list|length %}
+        <div class="mb-6 grid grid-cols-3 gap-4">
+            <div class="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+                <p class="text-2xl font-bold text-slate-900">{{ total }}</p>
+                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-500">Total</p>
+            </div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center shadow-sm">
+                <p class="text-2xl font-bold text-emerald-700">{{ completed }}</p>
+                <p class="text-[10px] font-medium uppercase tracking-wider text-emerald-600">Completed</p>
+            </div>
+            <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-center shadow-sm">
+                <p class="text-2xl font-bold text-red-600">{{ overdue }}</p>
+                <p class="text-[10px] font-medium uppercase tracking-wider text-red-500">Overdue</p>
+            </div>
+        </div>
+
+        <!-- Milestone list -->
+        <div id="milestone-list" class="space-y-2">
+            {% for ms in milestones %}
+            {% include 'milestones/_milestone_row.jinja' %}
+            {% else %}
+            <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 py-12 text-center">
+                <svg class="mb-3 h-8 w-8 text-slate-300" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 12l10 10 10-10z"/></svg>
+                <p class="text-sm text-slate-500">No milestones yet.</p>
+                {% if can_manage %}
+                <button type="button" @click="createOpen = true"
+                        class="mt-3 text-xs font-medium text-indigo-600 hover:underline">Add first milestone</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Create modal -->
+    <div x-show="createOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="createOpen = false">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="createOpen = false"></div>
+        <div class="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                <h2 class="text-sm font-semibold text-slate-900">New Milestone</h2>
+                <button type="button" @click="createOpen = false"
+                        class="rounded-md p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-5">
+                {% include 'milestones/_form.jinja' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

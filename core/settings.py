@@ -56,6 +56,13 @@ INSTALLED_APPS = [
     'teams',
     'planner',
     'staff_dashboard',
+    'projects',
+    'gantt',
+    'milestones',
+    'calendar_app',
+    'timetracking',
+    'reports',
+    'resources',
 ]
 
 # ── Middleware ────────────────────────────────────────────────────────────────

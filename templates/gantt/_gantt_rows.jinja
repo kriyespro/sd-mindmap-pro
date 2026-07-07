@@ -1,0 +1,78 @@
+{# Gantt rows partial — re-rendered on view change #}
+{% if gantt.tasks %}
+<!-- Header: date labels -->
+<div class="flex" style="padding-left: 200px;">
+    {% set prev_month = '' %}
+    {% for d in gantt.dates %}
+    {% set month_label = d.strftime('%b %Y') %}
+    <div class="shrink-0 border-l border-slate-200 text-center"
+         style="width: {{ gantt.col_width }}px; min-width: {{ gantt.col_width }}px;">
+        {% if gantt.view in ('daily', 'weekly') %}
+        <div class="text-[9px] text-slate-400 leading-tight pt-0.5">
+            {% if d.weekday() == 0 %}<span class="font-semibold text-slate-600">{{ d.strftime('%d') }}</span>{% else %}{{ d.strftime('%d') }}{% endif %}
+        </div>
+        {% elif gantt.view == 'monthly' %}
+        <div class="text-[9px] text-slate-400 leading-tight pt-0.5">
+            {% if d.day == 1 %}<span class="font-semibold text-slate-600">{{ d.strftime('%b') }}</span>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Month header row -->
+<div class="flex border-b border-slate-200 bg-slate-50" style="padding-left: 200px;">
+    {% set prev_month = namespace(val='') %}
+    {% for d in gantt.dates %}
+    {% if d.strftime('%b %Y') != prev_month.val %}
+    {% set prev_month.val = d.strftime('%b %Y') %}
+    <div class="shrink-0 border-l border-slate-300 px-1 py-1"
+         style="width: {{ gantt.col_width }}px; min-width: {{ gantt.col_width }}px;">
+        <span class="text-[10px] font-semibold text-slate-600 whitespace-nowrap">{{ d.strftime('%b %Y') }}</span>
+    </div>
+    {% else %}
+    <div class="shrink-0 border-l border-slate-100"
+         style="width: {{ gantt.col_width }}px; min-width: {{ gantt.col_width }}px;"></div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<!-- Task rows -->
+{% for task in gantt.tasks %}
+<div class="group relative flex items-center border-b border-slate-100 hover:bg-slate-50 transition"
+     style="height: 40px;">
+    <!-- Task label (fixed left) -->
+    <div class="absolute left-0 flex items-center gap-1.5 px-2 z-10 bg-white group-hover:bg-slate-50"
+         style="width: 200px; height: 40px;">
+        <span class="h-2 w-2 shrink-0 rounded-full"
+              style="background-color: {{ task.color }};"></span>
+        <span class="truncate text-[11px] font-medium text-slate-800" title="{{ task.title }}">{{ task.title }}</span>
+    </div>
+    <!-- Grid + bar -->
+    <div class="relative flex" style="margin-left: 200px; height: 40px;">
+        <!-- Grid columns -->
+        {% for d in gantt.dates %}
+        <div class="shrink-0 border-l {% if d.weekday() in (5, 6) %}bg-slate-50{% else %}bg-white{% endif %} {% if d == now().date() %}bg-blue-50/60{% endif %}"
+             style="width: {{ gantt.col_width }}px; min-width: {{ gantt.col_width }}px; height: 40px;"></div>
+        {% endfor %}
+        <!-- Bar -->
+        <div class="absolute top-1/2 -translate-y-1/2 rounded cursor-ew-resize group/bar"
+             style="left: {{ task.left_px }}px; width: {{ task.width_px }}px; height: 22px; background-color: {{ task.color }}; opacity: 0.85;"
+             title="{{ task.title }} ({{ task.start.strftime('%b %d') }} – {{ task.end.strftime('%b %d') }})">
+            <div class="h-full rounded"
+                 style="width: {{ task.progress }}%; background-color: rgba(0,0,0,0.2);"></div>
+            <span class="absolute inset-0 flex items-center px-1.5 text-[9px] font-semibold text-white truncate">
+                {{ task.title[:20] }}{% if task.progress > 0 %} · {{ task.progress }}%{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Today marker overlay — injected via JS -->
+{% else %}
+<div class="flex items-center justify-center py-16 text-sm text-slate-400">
+    No tasks with dates in this project yet.
+    <a href="{{ url('projects:detail', slug=project.slug) }}" class="ml-2 text-indigo-500 hover:underline">Add tasks →</a>
+</div>
+{% endif %}

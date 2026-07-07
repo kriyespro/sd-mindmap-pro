@@ -1,0 +1,66 @@
+{# Month grid partial — re-rendered by HTMX on nav #}
+<div id="month-grid">
+    <!-- Day headers -->
+    <div class="grid grid-cols-7 border-b border-slate-200">
+        {% for name in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+        <div class="py-2 text-center text-[10px] font-semibold uppercase tracking-wider
+                    {% if loop.index >= 6 %}text-slate-400{% else %}text-slate-500{% endif %}">
+            {{ name }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Weeks -->
+    <div class="grid grid-rows-{{ weeks|length }}">
+        {% for week in weeks %}
+        <div class="grid grid-cols-7 border-b border-slate-100 last:border-0">
+            {% for day in week %}
+            {% set date_key = day.strftime('%Y-%m-%d') %}
+            {% set is_today = day == today %}
+            {% set is_cur_month = day.month == month %}
+            {% set day_events = events.get(date_key, []) %}
+
+            <div class="min-h-[100px] border-r border-slate-100 last:border-0 p-1.5
+                        {% if not is_cur_month %}bg-slate-50/50{% endif %}
+                        {% if is_today %}bg-blue-50/60{% endif %}"
+                 x-data="{ expanded: false }">
+                <!-- Day number -->
+                <div class="mb-1 flex items-center justify-between">
+                    <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium
+                                 {% if is_today %}bg-indigo-600 text-white font-bold
+                                 {% elif not is_cur_month %}text-slate-300
+                                 {% elif day.weekday() >= 5 %}text-slate-400
+                                 {% else %}text-slate-700{% endif %}">
+                        {{ day.day }}
+                    </span>
+                </div>
+
+                <!-- Events -->
+                {% for evt in day_events[:3] %}
+                <div class="mb-0.5 truncate rounded px-1 py-0.5 text-[9px] font-medium text-white leading-tight"
+                     style="background-color: {{ evt.color }};"
+                     title="{{ evt.title }}">
+                    {% if evt.type == 'milestone' %}◆ {% endif %}{{ evt.title }}
+                </div>
+                {% endfor %}
+                {% if day_events|length > 3 %}
+                <button @click="expanded = !expanded"
+                        class="text-[9px] font-medium text-indigo-500 hover:underline">
+                    +{{ day_events|length - 3 }} more
+                </button>
+                <div x-show="expanded" x-cloak
+                     class="absolute z-20 mt-1 w-48 rounded-lg border border-slate-200 bg-white p-2 shadow-xl">
+                    {% for evt in day_events[3:] %}
+                    <div class="mb-0.5 truncate rounded px-1 py-0.5 text-[9px] font-medium text-white"
+                         style="background-color: {{ evt.color }};">
+                        {% if evt.type == 'milestone' %}◆ {% endif %}{{ evt.title }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>

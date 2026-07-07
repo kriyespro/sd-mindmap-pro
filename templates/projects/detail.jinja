@@ -1,0 +1,221 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}{{ project.name }} · Projects{% endblock %}
+
+{% block main %}
+<div class="flex min-h-full flex-col" x-data="{ activeTab: 'overview', editOpen: false }">
+
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 px-6 py-3 backdrop-blur-md">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+                <button type="button" @click="sidebarOpen = !sidebarOpen"
+                        class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <!-- Breadcrumb -->
+                <nav class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <a href="{{ url('projects:list') }}" class="hover:text-slate-800 transition">Projects</a>
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    <span class="font-semibold text-slate-900 truncate">{{ project.name }}</span>
+                </nav>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                {% if can_manage %}
+                <button type="button" @click="editOpen = true"
+                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                    Edit
+                </button>
+                <form action="{{ url('projects:clone', slug=project.slug) }}" method="post" class="inline">
+                    {{ csrf_input }}
+                    <button type="submit"
+                            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                        Clone
+                    </button>
+                </form>
+                <form action="{{ url('projects:archive', slug=project.slug) }}" method="post" class="inline"
+                      onsubmit="return confirm('Archive this project?')">
+                    {{ csrf_input }}
+                    <button type="submit"
+                            class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition">
+                        Archive
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mt-3 flex items-center gap-0.5 border-b border-slate-100 -mb-3">
+            {% for tab, label in [('overview','Overview'), ('tasks','Tasks'), ('gantt','Gantt'), ('members','Members')] %}
+            <button @click="activeTab='{{ tab }}'"
+                    :class="activeTab==='{{ tab }}' ? 'border-b-2 border-indigo-600 text-indigo-700 font-semibold' : 'text-slate-500 hover:text-slate-800'"
+                    class="px-3 py-2 text-xs transition">
+                {{ label }}
+            </button>
+            {% endfor %}
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-auto p-6">
+
+        <!-- Overview Tab -->
+        <div x-show="activeTab === 'overview'" class="space-y-6">
+            <!-- Project header card -->
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                 style="border-top: 4px solid {{ project.color }};">
+                <div class="flex items-start gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-xl font-bold text-slate-900">{{ project.name }}</h2>
+                        {% if project.client_name %}
+                        <p class="mt-0.5 text-sm text-slate-500">Client: {{ project.client_name }}</p>
+                        {% endif %}
+                        {% if project.description %}
+                        <p class="mt-2 text-sm text-slate-600">{{ project.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold
+                            {% if project.status == 'active' %}bg-green-100 text-green-700
+                            {% elif project.status == 'planning' %}bg-blue-100 text-blue-700
+                            {% elif project.status == 'on_hold' %}bg-yellow-100 text-yellow-700
+                            {% elif project.status == 'completed' %}bg-emerald-100 text-emerald-700
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ project.get_status_display() }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 text-xs
+                            {% if project.health == 'on_track' %}text-green-600
+                            {% elif project.health == 'at_risk' %}text-yellow-600
+                            {% else %}text-red-600{% endif %}">
+                            <span class="h-2 w-2 rounded-full
+                                {% if project.health == 'on_track' %}bg-green-500
+                                {% elif project.health == 'at_risk' %}bg-yellow-500
+                                {% else %}bg-red-500{% endif %}"></span>
+                            {{ project.get_health_display() }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="mt-4">
+                    <div class="mb-1.5 flex items-center justify-between text-xs">
+                        <span class="text-slate-500">Overall Progress</span>
+                        <span class="font-semibold text-slate-800">{{ project.progress }}%</span>
+                    </div>
+                    <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div class="h-full rounded-full transition-all duration-500"
+                             style="width: {{ project.progress }}%; background-color: {{ project.color }};"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {% set stat_items = [
+                    ('Priority', project.get_priority_display(), project.priority_color),
+                    ('Start Date', project.start_date.strftime('%b %d, %Y') if project.start_date else '—', 'slate'),
+                    ('End Date', project.end_date.strftime('%b %d, %Y') if project.end_date else '—', 'slate'),
+                    ('Budget', '$' ~ project.budget if project.budget else '—', 'slate'),
+                ] %}
+                {% for label, value, color in stat_items %}
+                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p class="text-[10px] font-medium uppercase tracking-wider text-slate-500">{{ label }}</p>
+                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ value }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Members preview -->
+            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Team Members</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for m in members %}
+                    <div class="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                        <div class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700">
+                            {{ m.user.username[0]|upper }}
+                        </div>
+                        {{ m.user.username }}
+                        <span class="text-[10px] text-slate-400">({{ m.role }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div x-show="activeTab === 'tasks'" x-cloak>
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-slate-800">Tasks</h3>
+                    <a href="{{ url('planner:board_personal') }}"
+                       class="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+                        Open in Board →
+                    </a>
+                </div>
+                <p class="text-sm text-slate-500">Task management coming soon. Use the board view for now.</p>
+            </div>
+        </div>
+
+        <!-- Gantt Tab -->
+        <div x-show="activeTab === 'gantt'" x-cloak>
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm text-center">
+                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
+                    <svg class="h-6 w-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <p class="text-sm font-semibold text-slate-700">Gantt Chart</p>
+                <p class="mt-1 text-xs text-slate-500">Coming soon — building now.</p>
+            </div>
+        </div>
+
+        <!-- Members Tab -->
+        <div x-show="activeTab === 'members'" x-cloak>
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="border-b border-slate-100 px-5 py-3">
+                    <h3 class="text-sm font-semibold text-slate-800">Project Members</h3>
+                </div>
+                <table class="w-full text-xs">
+                    <thead class="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                        <tr>
+                            <th class="px-5 py-2 text-left">User</th>
+                            <th class="px-5 py-2 text-left">Role</th>
+                            <th class="px-5 py-2 text-left">Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for m in members %}
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="px-5 py-2.5 font-medium text-slate-800">{{ m.user.username }}</td>
+                            <td class="px-5 py-2.5">
+                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{{ m.role }}</span>
+                            </td>
+                            <td class="px-5 py-2.5 text-slate-500">{{ m.joined_at.strftime('%b %d, %Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div x-show="editOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="editOpen = false">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="editOpen = false"></div>
+        <div class="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                <h2 class="text-sm font-semibold text-slate-900">Edit Project</h2>
+                <button type="button" @click="editOpen = false"
+                        class="rounded-md p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-5 overflow-auto max-h-[80vh]">
+                {% include 'projects/_edit_form.jinja' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

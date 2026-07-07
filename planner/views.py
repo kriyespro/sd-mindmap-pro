@@ -131,6 +131,14 @@ class WorkspaceUrls:
             return reverse('planner:mindmap_expand_all_team', kwargs={'team_slug': self._slug})
         return reverse('planner:mindmap_expand_all_personal')
 
+    def kanban_status(self, task_id: int) -> str:
+        if self._slug:
+            return reverse(
+                'planner:kanban_status_team',
+                kwargs={'team_slug': self._slug, 'task_id': task_id},
+            )
+        return reverse('planner:kanban_status_personal', kwargs={'task_id': task_id})
+
 
 def workspace_urls(team: Team | None) -> WorkspaceUrls:
     return WorkspaceUrls(team)
@@ -315,7 +323,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
     def get(self, request, *args, **kwargs):
         request.session.setdefault('task_layout', 'mindmap')
         lay = request.GET.get('layout')
-        if lay in ('tree', 'mindmap', 'mini', 'idea'):
+        if lay in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
             request.session['task_layout'] = lay
             return redirect(request.path)
         return super().get(request, *args, **kwargs)
@@ -336,7 +344,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         rows = task_rows_for_tree(qs)
         task_tree = build_task_tree(rows)
         layout = self.request.session.get('task_layout', 'mindmap')
-        if layout not in ('tree', 'mindmap', 'mini', 'idea'):
+        if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
             layout = 'mindmap'
         mm_collapsed = get_mindmap_collapsed_ids(
             self.request, team, tree=task_tree
@@ -394,10 +402,15 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 .select_related('user')
                 .order_by('-is_owner', 'user__username')
             )
+        kanban_columns = None
+        if layout == 'kanban':
+            from planner.models import Task as TaskModel
+            kanban_columns = _build_kanban_columns(qs)
         ctx.update(
             {
                 'task_tree': task_tree,
                 'task_layout': layout,
+                'kanban_columns': kanban_columns,
                 'mindmap': mindmap,
                 'flowmap': flowmap,
                 'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
@@ -432,7 +445,7 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
     rows = task_rows_for_tree(qs)
     tree = build_task_tree(rows)
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap', 'mini', 'idea'):
+    if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
     u = workspace_urls(team)
     team_assignee_usernames = _active_team_usernames(team)
@@ -456,6 +469,16 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
             'u': u,
         }
         tmpl = 'partials/task_mindmap.jinja'
+    elif layout == 'kanban':
+        ctx = {
+            'task_tree': tree,
+            'task_layout': layout,
+            'kanban_columns': _build_kanban_columns(qs),
+            'current_team': team,
+            'team_assignee_usernames': team_assignee_usernames,
+            'u': u,
+        }
+        tmpl = 'partials/task_kanban.jinja'
     else:
         ctx = {
             'task_tree': tree,
@@ -870,3 +893,156 @@ class MindmapExportView(LoginRequiredMixin, View):
                 'PDF export engine unavailable. Install Cairo libs in Docker and rebuild web image.',
                 status=503,
             )
+
+
+def _build_kanban_columns(qs):
+    from planner.models import Task as TaskModel
+    columns = [
+        {'key': TaskModel.STATUS_TODO, 'label': 'To Do', 'color': 'slate'},
+        {'key': TaskModel.STATUS_IN_PROGRESS, 'label': 'In Progress', 'color': 'blue'},
+        {'key': TaskModel.STATUS_REVIEW, 'label': 'Review', 'color': 'purple'},
+        {'key': TaskModel.STATUS_TESTING, 'label': 'Testing', 'color': 'orange'},
+        {'key': TaskModel.STATUS_DONE, 'label': 'Done', 'color': 'green'},
+    ]
+    # Only root tasks (no parent) for kanban
+    root_qs = qs.filter(parent__isnull=True).order_by('position', 'id')
+    tasks_by_status = {}
+    for task in root_qs:
+        s = task.status if task.status else TaskModel.STATUS_TODO
+        tasks_by_status.setdefault(s, []).append(task)
+    for col in columns:
+        col['tasks'] = tasks_by_status.get(col['key'], [])
+    return columns
+
+
+class TaskKanbanStatusView(LoginRequiredMixin, View):
+    """HTMX POST: update task status from kanban drag-drop."""
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id, team_slug=None):
+        from planner.models import Task as TaskModel
+        team = _workspace_team(request.user, team_slug)
+        task = get_object_or_404(TaskModel, pk=task_id)
+        if not user_can_access_task(request.user, task):
+            return HttpResponse(status=403)
+        new_status = request.POST.get('status', '')
+        valid = [c[0] for c in TaskModel.STATUS_CHOICES]
+        if new_status not in valid:
+            return HttpResponse(status=400)
+        task.status = new_status
+        if new_status == TaskModel.STATUS_DONE:
+            task.is_completed = True
+        elif task.is_completed:
+            task.is_completed = False
+        task.save(update_fields=['status', 'is_completed'])
+        return HttpResponse(status=204, headers={'HX-Trigger': 'refreshKanban'})
+
+
+# ── Task Detail Panel ─────────────────────────────────────────────────────────
+
+def _task_detail_ctx(task):
+    from planner.models import TaskComment, TaskChecklist
+    comments = list(task.comments.select_related('author').order_by('created_at'))
+    checklist = list(task.checklist_items.order_by('position', 'id'))
+    done_count = sum(1 for i in checklist if i.is_done)
+    return {
+        'task': task,
+        'comments': comments,
+        'checklist': checklist,
+        'done_count': done_count,
+        'total_count': len(checklist),
+    }
+
+
+class TaskDetailModalView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def get(self, request, task_id):
+        task = get_object_or_404(Task, pk=task_id)
+        if not user_can_access_task(request.user, task):
+            return HttpResponse(status=403)
+        return render(request, 'partials/_task_detail.jinja', _task_detail_ctx(task))
+
+
+class TaskCommentCreateView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id):
+        from planner.models import TaskComment
+        task = get_object_or_404(Task, pk=task_id)
+        if not user_can_access_task(request.user, task):
+            return HttpResponse(status=403)
+        body = request.POST.get('body', '').strip()
+        if not body:
+            return HttpResponse(status=400)
+        TaskComment.objects.create(task=task, author=request.user, body=body)
+        comments = list(task.comments.select_related('author').order_by('created_at'))
+        return render(request, 'partials/_task_comments.jinja', {'task': task, 'comments': comments})
+
+
+class TaskCommentDeleteView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id, comment_id):
+        from planner.models import TaskComment
+        comment = get_object_or_404(TaskComment, pk=comment_id, task_id=task_id)
+        if comment.author != request.user and not request.user.is_staff:
+            return HttpResponse(status=403)
+        task = comment.task
+        comment.delete()
+        comments = list(task.comments.select_related('author').order_by('created_at'))
+        return render(request, 'partials/_task_comments.jinja', {'task': task, 'comments': comments})
+
+
+class TaskChecklistCreateView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id):
+        from planner.models import TaskChecklist
+        from django.db.models import Max
+        task = get_object_or_404(Task, pk=task_id)
+        if not user_can_access_task(request.user, task):
+            return HttpResponse(status=403)
+        text = request.POST.get('text', '').strip()
+        if not text:
+            return HttpResponse(status=400)
+        max_pos = task.checklist_items.aggregate(m=Max('position'))['m'] or 0
+        TaskChecklist.objects.create(task=task, text=text, position=max_pos + 1)
+        return _render_checklist(request, task)
+
+
+class TaskChecklistToggleView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id, item_id):
+        from planner.models import TaskChecklist
+        item = get_object_or_404(TaskChecklist, pk=item_id, task_id=task_id)
+        if not user_can_access_task(request.user, item.task):
+            return HttpResponse(status=403)
+        item.is_done = not item.is_done
+        item.save(update_fields=['is_done'])
+        return _render_checklist(request, item.task)
+
+
+class TaskChecklistDeleteView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request, task_id, item_id):
+        from planner.models import TaskChecklist
+        item = get_object_or_404(TaskChecklist, pk=item_id, task_id=task_id)
+        if not user_can_access_task(request.user, item.task):
+            return HttpResponse(status=403)
+        task = item.task
+        item.delete()
+        return _render_checklist(request, task)
+
+
+def _render_checklist(request, task):
+    checklist = list(task.checklist_items.order_by('position', 'id'))
+    done_count = sum(1 for i in checklist if i.is_done)
+    return render(request, 'partials/_task_checklist.jinja', {
+        'task': task,
+        'checklist': checklist,
+        'done_count': done_count,
+        'total_count': len(checklist),
+    })

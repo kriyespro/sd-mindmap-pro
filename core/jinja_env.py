@@ -1,8 +1,10 @@
 import json
+from datetime import datetime
 
 from jinja2 import Environment
 from django.templatetags.static import static
 from django.urls import reverse
+from django.utils import timezone
 from markupsafe import Markup
 
 
@@ -19,6 +21,7 @@ def environment(**options):
         {
             'static': static,
             'url': _url,
+            'now': timezone.now,
         }
     )
     env.filters['tojson'] = lambda v: Markup(json.dumps(v))

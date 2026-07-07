@@ -1,0 +1,160 @@
+{% extends 'layouts/app.jinja' %}
+{% block title %}Reports & Dashboard{% endblock %}
+
+{% block main %}
+<div class="flex min-h-full flex-col">
+    <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-6 py-3 backdrop-blur-md">
+        <button type="button" @click="sidebarOpen = !sidebarOpen"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="text-sm font-semibold text-slate-900">Dashboard & Reports</h1>
+    </header>
+
+    <div class="flex-1 overflow-auto p-6 space-y-6">
+
+        <!-- KPI row -->
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {% set kpis = [
+                ('Active Projects', stats.active_projects, 'bg-indigo-50 border-indigo-200', 'text-indigo-700'),
+                ('Due Today', stats.tasks_due_today, 'bg-amber-50 border-amber-200', 'text-amber-700'),
+                ('Overdue Tasks', stats.overdue_tasks, 'bg-red-50 border-red-200', 'text-red-700'),
+                ('Hours This Week', stats.hours_this_week, 'bg-green-50 border-green-200', 'text-green-700'),
+            ] %}
+            {% for label, value, bg, txt in kpis %}
+            <div class="rounded-xl border {{ bg }} p-5 shadow-sm">
+                <p class="text-2xl font-bold {{ txt }}">{{ value }}</p>
+                <p class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ label }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Second row: status + priority -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <!-- Tasks by status -->
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Tasks by Status</h3>
+                {% set status_colors = {
+                    'todo': '#94a3b8', 'in_progress': '#6366f1',
+                    'review': '#a855f7', 'testing': '#f97316', 'done': '#22c55e'
+                } %}
+                {% set total_tasks = tasks_by_status|sum(attribute='count') %}
+                <div class="space-y-2">
+                    {% for item in tasks_by_status %}
+                    {% set pct = (item.count / total_tasks * 100)|int if total_tasks else 0 %}
+                    <div>
+                        <div class="mb-1 flex items-center justify-between text-xs">
+                            <span class="text-slate-700">{{ item.label }}</span>
+                            <span class="font-semibold text-slate-800">{{ item.count }}</span>
+                        </div>
+                        <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div class="h-full rounded-full"
+                                 style="width: {{ pct }}%; background-color: {{ status_colors.get(item.status, '#6366f1') }};"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Tasks by priority -->
+            <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 class="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Open Tasks by Priority</h3>
+                {% set priority_colors = {
+                    'critical': '#ef4444', 'high': '#f97316', 'medium': '#6366f1', 'low': '#94a3b8'
+                } %}
+                {% set total_pri = tasks_by_priority|sum(attribute='count') %}
+                <div class="space-y-2">
+                    {% for item in tasks_by_priority %}
+                    {% set pct = (item.count / total_pri * 100)|int if total_pri else 0 %}
+                    <div>
+                        <div class="mb-1 flex items-center justify-between text-xs">
+                            <span class="text-slate-700">{{ item.label }}</span>
+                            <span class="font-semibold text-slate-800">{{ item.count }}</span>
+                        </div>
+                        <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                            <div class="h-full rounded-full"
+                                 style="width: {{ pct }}%; background-color: {{ priority_colors.get(item.priority, '#6366f1') }};"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Project progress -->
+        {% if project_progress %}
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div class="border-b border-slate-100 px-5 py-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Project Progress</h3>
+            </div>
+            <div class="divide-y divide-slate-50">
+                {% for item in project_progress %}
+                <div class="flex items-center gap-4 px-5 py-3">
+                    <div class="h-3 w-3 rounded-sm shrink-0" style="background-color: {{ item.project.color }};"></div>
+                    <a href="{{ url('projects:detail', slug=item.project.slug) }}"
+                       class="min-w-0 flex-1 text-sm font-medium text-slate-800 hover:text-indigo-600 truncate transition">
+                        {{ item.project.name }}
+                    </a>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="hidden w-32 sm:block">
+                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full rounded-full" style="width: {{ item.progress }}%; background-color: {{ item.project.color }};"></div>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-600 w-10 text-right">{{ item.progress }}%</span>
+                        <span class="text-[10px] text-slate-400">{{ item.done_tasks }}/{{ item.total_tasks }} tasks</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Bottom row: overdue + upcoming milestones -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <!-- Overdue tasks -->
+            <div class="rounded-xl border border-red-100 bg-red-50/40 shadow-sm overflow-hidden">
+                <div class="border-b border-red-100 px-5 py-3 flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-red-700 uppercase tracking-wider">Overdue Tasks</h3>
+                    <span class="text-[10px] font-bold text-red-600">{{ stats.overdue_tasks }}</span>
+                </div>
+                <div class="divide-y divide-red-50/80 max-h-64 overflow-y-auto">
+                    {% for task in overdue_tasks %}
+                    <div class="flex items-center gap-2 px-5 py-2.5">
+                        <span class="h-2 w-2 shrink-0 rounded-full bg-red-400"></span>
+                        <span class="flex-1 truncate text-xs text-slate-700">{{ task.title_plain }}</span>
+                        <span class="shrink-0 text-[10px] font-semibold text-red-500">{{ task.due_date.strftime('%b %d') }}</span>
+                    </div>
+                    {% else %}
+                    <p class="px-5 py-6 text-center text-xs text-slate-400">No overdue tasks 🎉</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Upcoming milestones -->
+            <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Upcoming Milestones</h3>
+                    <span class="text-[10px] text-slate-400">Next 30 days</span>
+                </div>
+                <div class="divide-y divide-slate-50 max-h-64 overflow-y-auto">
+                    {% for ms in upcoming_milestones %}
+                    <div class="flex items-center gap-3 px-5 py-2.5">
+                        <div class="h-4 w-4 shrink-0" style="color: {{ ms.project.color }};">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 12l10 10 10-10z"/></svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="truncate text-xs font-medium text-slate-800">{{ ms.name }}</p>
+                            <p class="text-[10px] text-slate-400">{{ ms.project.name }}</p>
+                        </div>
+                        <span class="shrink-0 text-[10px] font-semibold text-slate-600">{{ ms.due_date.strftime('%b %d') }}</span>
+                    </div>
+                    {% else %}
+                    <p class="px-5 py-6 text-center text-xs text-slate-400">No milestones in next 30 days.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
