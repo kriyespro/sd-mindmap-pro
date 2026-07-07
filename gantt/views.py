@@ -7,8 +7,10 @@ from django.views.generic import TemplateView
 from gantt.services import compute_gantt_layout, get_gantt_tasks
 from gantt.models import TaskDependency
 from planner.models import Task
+from planner.services import user_can_access_task
+from projects.forms import ProjectTaskCreateForm
 from projects.models import Project
-from projects.services import get_user_projects
+from projects.services import get_user_projects, user_can_access_project, user_can_edit_project_task
 
 
 class GanttProjectListView(LoginRequiredMixin, TemplateView):
@@ -22,6 +24,12 @@ class GanttProjectListView(LoginRequiredMixin, TemplateView):
 
 class GanttView(LoginRequiredMixin, TemplateView):
     template_name = 'gantt/gantt.jinja'
+
+    def dispatch(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, slug=kwargs['slug'])
+        if not user_can_access_project(request.user, project):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -39,6 +47,7 @@ class GanttView(LoginRequiredMixin, TemplateView):
             'gantt': layout,
             'gantt_view': view,
             'dependencies': list(deps),
+            'task_form': ProjectTaskCreateForm(),
         })
         return ctx
 
@@ -66,9 +75,11 @@ class TaskDateUpdateView(LoginRequiredMixin, View):
     """HTMX POST: update task start/end dates from Gantt drag."""
 
     def post(self, request, task_id):
-        from planner.services import user_can_access_task
         task = get_object_or_404(Task, pk=task_id)
-        if not user_can_access_task(request.user, task):
+        if task.project_id:
+            if not user_can_edit_project_task(request.user, task):
+                return HttpResponse(status=403)
+        elif not user_can_access_task(request.user, task, task.team):
             return HttpResponse(status=403)
         start = request.POST.get('start_date')
         end = request.POST.get('due_date')

@@ -16,6 +16,7 @@ from planner.models import Task
 from teams.forms import TeamInviteForm, TeamJoinLinkForm
 from teams.models import TeamInvite, TeamMembership
 from users.models import Profile
+from users.ui_mode import chrome_for_mode, get_user_ui_mode
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
@@ -160,7 +161,26 @@ class BillingView(LoginRequiredMixin, TemplateView):
                 archived_teams.append(membership)
         ctx['manageable_active_team_memberships'] = manageable_active_teams
         ctx['archived_team_memberships'] = archived_teams
+        mode = get_user_ui_mode(self.request.user)
+        ctx['ui_mode'] = mode
+        ctx['ui'] = chrome_for_mode(mode)
+        ctx['ui_mode_choices'] = Profile.UI_MODE_CHOICES
         return ctx
+
+
+class UIModeChangeView(LoginRequiredMixin, View):
+    login_url = reverse_lazy('users:login')
+
+    def post(self, request):
+        mode = (request.POST.get('ui_mode') or '').strip()
+        valid = {c[0] for c in Profile.UI_MODE_CHOICES}
+        if mode not in valid:
+            return HttpResponse('Invalid display mode', status=400)
+
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        profile.ui_mode = mode
+        profile.save(update_fields=['ui_mode'])
+        return redirect('billing:overview')
 
 
 class PlanChangeView(LoginRequiredMixin, View):

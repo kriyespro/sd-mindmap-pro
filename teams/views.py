@@ -68,7 +68,7 @@ def _add_or_invite_member(
     if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
         return (False, 'Invalid role')
     if not clean_username and not clean_email:
-        return (False, 'Enter username, or provide email + name for invite')
+        return (False, 'Enter an existing username, or use email + full name for a new member invite')
 
     target_user = None
     if clean_username:
@@ -96,10 +96,10 @@ def _add_or_invite_member(
             user=target_user,
             message=f'{actor.username} added you to "{team.name}" team.',
         )
-        return (True, f'Added @{target_user.username} to {team.name}.')
+        return (True, f'Added @{target_user.username} to {team.name}. You can assign tasks immediately.')
 
     if not clean_email:
-        return (False, 'No user with that username. Add email + name to send invite.')
+        return (False, 'No account matched that username. Use email + full name to invite a new member.')
     try:
         validate_email(clean_email)
     except ValidationError:
@@ -130,15 +130,15 @@ def _add_or_invite_member(
     accept_url = request.build_absolute_uri(
         reverse('teams:accept_invite', kwargs={'token': invite.token})
     )
+    success_message = (
+        f'Invite ready for {clean_name} ({clean_email}). '
+        f'Share this join link so they can create or log into an account and join: {accept_url}'
+    )
     Notification.objects.create(
         user=actor,
         message=f'Invite created for {clean_name} ({clean_email}) in "{team.name}". Share: {accept_url}',
     )
-    messages.info(
-        request,
-        f'No account found. Invite created for {clean_name} ({clean_email}). Share this join link: {accept_url}',
-    )
-    return (True, 'Invite created for new member email.')
+    return (True, success_message)
 
 
 class TeamCreateView(LoginRequiredMixin, View):
@@ -190,39 +190,26 @@ class TeamInviteView(LoginRequiredMixin, View):
 
         form = TeamInviteForm(request.POST)
         if not form.is_valid():
-            return HttpResponse('Enter a valid username and role', status=400)
+            return HttpResponse('Enter a valid username or email invite details', status=400)
 
-        raw_username = (form.cleaned_data.get('username') or '').strip()
-        role = form.cleaned_data['role']
-
-        existing_user = User.objects.filter(username__iexact=raw_username).first()
-        if not existing_user:
-            return HttpResponse('No user with that username', status=400)
-        if TeamMembership.objects.filter(team=team, user=existing_user, is_active=True).exists():
-            return HttpResponse('That user is already a member', status=400)
-
-        invite = TeamInvite.objects.create(
+        ok, msg = _add_or_invite_member(
+            request=request,
             team=team,
-            invited_by=request.user,
-            email='',
-            invited_username=existing_user.username,
-            role=role,
-            expires_at=timezone.now() + timedelta(days=7),
-            max_uses=1,
+            actor=request.user,
+            username=(form.cleaned_data.get('username') or '').strip(),
+            email=(form.cleaned_data.get('email') or '').strip(),
+            full_name=(form.cleaned_data.get('full_name') or '').strip(),
+            role=form.cleaned_data['role'],
         )
-        accept_url = request.build_absolute_uri(
-            reverse('teams:accept_invite', kwargs={'token': invite.token})
-        )
-        Notification.objects.create(
-            user=existing_user,
-            message=f'{request.user.username} invited you to "{team.name}". Join: {accept_url}',
-        )
+        if not ok:
+            return HttpResponse(msg, status=400)
 
         url = reverse('billing:overview')
         if request.headers.get('HX-Request'):
             resp = HttpResponse()
             resp['HX-Redirect'] = url
             return resp
+        messages.success(request, msg)
         return redirect(url)
 
 
@@ -341,10 +328,13 @@ class TeamMemberAddView(LoginRequiredMixin, View):
         if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
             return _error(f'Team member limit reached (max {seat_limit} users)')
 
-        username = (request.POST.get('username') or '').strip()
-        email = (request.POST.get('email') or '').strip()
-        full_name = (request.POST.get('full_name') or '').strip()
-        role = (request.POST.get('role') or TeamMembership.ROLE_MEMBER).strip()
+        form = TeamInviteForm(request.POST)
+        if not form.is_valid():
+            return _error('Enter a valid username or email invite details')
+        username = (form.cleaned_data.get('username') or '').strip()
+        email = (form.cleaned_data.get('email') or '').strip()
+        full_name = (form.cleaned_data.get('full_name') or '').strip()
+        role = (form.cleaned_data.get('role') or TeamMembership.ROLE_MEMBER).strip()
         ok, msg = _add_or_invite_member(
             request=request,
             team=team,
@@ -386,10 +376,13 @@ class TeamMemberAddAnyTeamView(LoginRequiredMixin, View):
         if not owner_membership:
             return _fail('Only owner can manage team members')
 
-        username = (request.POST.get('username') or '').strip()
-        email = (request.POST.get('email') or '').strip()
-        full_name = (request.POST.get('full_name') or '').strip()
-        role = (request.POST.get('role') or TeamMembership.ROLE_MEMBER).strip()
+        form = TeamInviteForm(request.POST)
+        if not form.is_valid():
+            return _fail('Enter a valid username or email invite details')
+        username = (form.cleaned_data.get('username') or '').strip()
+        email = (form.cleaned_data.get('email') or '').strip()
+        full_name = (form.cleaned_data.get('full_name') or '').strip()
+        role = (form.cleaned_data.get('role') or TeamMembership.ROLE_MEMBER).strip()
         seat_limit = _team_seat_limit(team)
         if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
             return _fail(f'Team member limit reached (max {seat_limit} users)')

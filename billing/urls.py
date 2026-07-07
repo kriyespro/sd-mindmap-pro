@@ -7,4 +7,5 @@ app_name = 'billing'
 urlpatterns = [
     path('', views.BillingView.as_view(), name='overview'),
     path('plan/change/', views.PlanChangeView.as_view(), name='plan_change'),
+    path('ui-mode/change/', views.UIModeChangeView.as_view(), name='ui_mode_change'),
 ]

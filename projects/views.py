@@ -1,20 +1,25 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.views import View
 from django.views.generic import TemplateView
 
-from projects.forms import ProjectForm
+from projects.forms import ProjectForm, ProjectTaskCreateForm
 from projects.models import Project
 from projects.services import (
     archive_project,
     clone_project,
     create_project,
+    create_project_task,
     get_archived_projects,
+    get_project_tasks,
     get_user_projects,
     unarchive_project,
+    user_can_access_project,
     user_can_manage_project,
 )
+from users.services import is_tutorial_project
 
 
 class ProjectListView(LoginRequiredMixin, TemplateView):
@@ -35,15 +40,10 @@ class ProjectCreateView(LoginRequiredMixin, View):
             team = data.pop('team', None)
             project = create_project(request.user, {**data, 'team': team})
             if request.headers.get('HX-Request'):
-                projects = get_user_projects(request.user)
-                from django.template.loader import render_to_string
-                from django.template import RequestContext
-                html = render_to_string(
-                    'projects/_project_card.jinja',
-                    {'project': project},
-                    request=request,
+                return HttpResponse(
+                    '',
+                    headers={'HX-Redirect': reverse('projects:list')},
                 )
-                return HttpResponse(html, headers={'HX-Trigger': 'projectCreated'})
             return redirect('projects:detail', slug=project.slug)
         if request.headers.get('HX-Request'):
             from django.template.loader import render_to_string
@@ -55,6 +55,12 @@ class ProjectCreateView(LoginRequiredMixin, View):
 class ProjectDetailView(LoginRequiredMixin, TemplateView):
     template_name = 'projects/detail.jinja'
 
+    def dispatch(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, slug=kwargs['slug'])
+        if not user_can_access_project(request.user, project):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         project = get_object_or_404(Project, slug=kwargs['slug'])
@@ -62,7 +68,33 @@ class ProjectDetailView(LoginRequiredMixin, TemplateView):
         ctx['can_manage'] = user_can_manage_project(self.request.user, project)
         ctx['members'] = project.members.select_related('user').all()
         ctx['form'] = ProjectForm(instance=project)
+        ctx['project_tasks'] = get_project_tasks(project)
+        ctx['task_form'] = ProjectTaskCreateForm()
+        ctx['is_tutorial_project'] = is_tutorial_project(project)
         return ctx
+
+
+class ProjectTaskCreateView(LoginRequiredMixin, View):
+    def post(self, request, slug):
+        project = get_object_or_404(Project, slug=slug)
+        if not user_can_access_project(request.user, project):
+            return HttpResponse(status=403)
+        form = ProjectTaskCreateForm(request.POST)
+        if not form.is_valid():
+            if request.headers.get('HX-Request'):
+                from django.template.loader import render_to_string
+                html = render_to_string(
+                    'projects/_project_task_form.jinja',
+                    {'task_form': form, 'project': project},
+                    request=request,
+                )
+                return HttpResponse(html, status=422)
+            return redirect('projects:detail', slug=slug)
+        create_project_task(request.user, project, form.cleaned_data)
+        if request.headers.get('HX-Request'):
+            redirect_to = request.POST.get('next') or reverse('gantt:gantt', kwargs={'slug': slug})
+            return HttpResponse('', headers={'HX-Redirect': redirect_to})
+        return redirect('gantt:gantt', slug=slug)
 
 
 class ProjectEditView(LoginRequiredMixin, View):

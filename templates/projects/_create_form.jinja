@@ -1,9 +1,14 @@
 <form hx-post="{{ url('projects:create') }}"
-      hx-target="#project-grid"
-      hx-swap="afterbegin"
-      hx-on::after-request="if(event.detail.successful) this.closest('[x-data]').__x.$data.createOpen = false"
+      hx-target="#create-form-slot"
+      hx-swap="innerHTML"
       class="space-y-4">
     {{ csrf_input }}
+
+    {% if form.non_field_errors() %}
+    <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+        {% for err in form.non_field_errors() %}{{ err }}{% endfor %}
+    </div>
+    {% endif %}
 
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="sm:col-span-2">

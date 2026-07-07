@@ -44,15 +44,31 @@ def _priority_color(priority: str) -> str:
 
 def compute_gantt_layout(tasks: list[dict], view: str = 'weekly') -> dict:
     """Compute pixel positions for Gantt bars."""
+    col_width = {'daily': 40, 'weekly': 28, 'monthly': 14, 'quarterly': 6, 'yearly': 2}.get(view, 28)
+
     if not tasks:
-        return {'tasks': [], 'dates': [], 'view': view, 'col_width': 40}
+        today = date.today()
+        min_date = today
+        max_date = today + timedelta(days=30)
+        dates = []
+        d = min_date
+        while d <= max_date:
+            dates.append(d)
+            d += timedelta(days=1)
+        return {
+            'tasks': [],
+            'dates': dates,
+            'min_date': min_date,
+            'max_date': max_date,
+            'view': view,
+            'col_width': col_width,
+            'total_width': len(dates) * col_width,
+        }
 
     all_starts = [t['start'] for t in tasks]
     all_ends = [t['end'] for t in tasks]
     min_date = min(all_starts)
     max_date = max(all_ends)
-
-    col_width = {'daily': 40, 'weekly': 28, 'monthly': 14, 'quarterly': 6, 'yearly': 2}.get(view, 28)
 
     # Generate date headers
     dates = []

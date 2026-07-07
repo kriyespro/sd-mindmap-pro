@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 
+from planner.models import Task
 from projects.models import Project, ProjectMember
 
 User = get_user_model()
@@ -63,6 +64,38 @@ def user_can_manage_project(user, project: Project) -> bool:
     return ProjectMember.objects.filter(
         project=project, user=user, role__in=[ProjectMember.ROLE_OWNER, ProjectMember.ROLE_MANAGER]
     ).exists()
+
+
+def user_can_access_project(user, project: Project) -> bool:
+    if project.owner_id == user.id:
+        return True
+    return ProjectMember.objects.filter(project=project, user=user).exists()
+
+
+def get_project_tasks(project: Project) -> QuerySet[Task]:
+    return (
+        Task.objects.filter(project=project, is_archived=False)
+        .select_related('project')
+        .order_by('position', 'id')
+    )
+
+
+def create_project_task(user, project: Project, data: dict) -> Task:
+    task = Task(
+        author=user,
+        project=project,
+        team=project.team,
+        **data,
+    )
+    task.save()
+    update_project_progress(project)
+    return task
+
+
+def user_can_edit_project_task(user, task: Task) -> bool:
+    if task.project_id is None:
+        return False
+    return user_can_access_project(user, task.project)
 
 
 def update_project_progress(project: Project) -> None:

@@ -7,7 +7,8 @@
     <!-- Top bar -->
     <header class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-6 py-3 backdrop-blur-md">
         <div class="flex items-center gap-2 min-w-0">
-            <button type="button" @click="sidebarOpen = !sidebarOpen"
+            <button type="button" @click="toggleSidebar()"
+                data-sidebar-toggle
                     class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:text-indigo-600">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
@@ -34,6 +35,14 @@
             <a href="{{ url('projects:detail', slug=project.slug) }}"
                class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
                 Project →
+            </a>
+            <a href="{{ url('projects:board', slug=project.slug) }}"
+               class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                Board
+            </a>
+            <a href="{{ url('projects:board', slug=project.slug) }}?layout=kanban"
+               class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                Kanban
             </a>
         </div>
     </header>
@@ -176,21 +185,7 @@
         </div>
     </div>
 
-    {% else %}
-    <div class="flex flex-1 flex-col items-center justify-center gap-3 text-slate-400">
-        <svg class="h-12 w-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
-        </svg>
-        <p class="text-sm font-medium">No tasks with dates in this project.</p>
-        <a href="{{ url('projects:detail', slug=project.slug) }}"
-           class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition">
-            Add tasks →
-        </a>
-    </div>
-    {% endif %}
-</div>
-
-<script>
+    <script>
 function ganttApp() {
     const COL_W    = {{ gantt.col_width }};
     const LABEL_W  = 220;
@@ -363,4 +358,23 @@ function ganttApp() {
     };
 }
 </script>
+
+    {% else %}
+    <div class="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-slate-600">
+        <svg class="h-12 w-12 opacity-30 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+        </svg>
+        <div class="text-center">
+            <p class="text-sm font-medium text-slate-700">No tasks on this project yet</p>
+            <p class="mt-1 text-xs text-slate-500">Add a task with start and end dates to see Gantt bars.</p>
+        </div>
+        <div id="project-task-form-slot" class="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            {% set next_url = url('gantt:gantt', slug=project.slug) %}
+            {% include 'projects/_project_task_form.jinja' %}
+        </div>
+        <a href="{{ url('projects:detail', slug=project.slug) }}?tab=tasks"
+           class="text-xs text-indigo-600 hover:underline">Manage tasks on project page →</a>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

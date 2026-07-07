@@ -29,6 +29,16 @@
             border-right-color: #d9cfc3 !important;
             box-shadow: inset -1px 0 0 rgba(217, 207, 195, 0.65);
         }
+        aside.sidebar-cream.sidebar-collapsed nav a,
+        aside.sidebar-cream.sidebar-collapsed .sidebar-team-row > a {
+            justify-content: center;
+            gap: 0;
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
+        }
+        aside.sidebar-cream.sidebar-collapsed .sidebar-brand {
+            justify-content: center;
+        }
         .dark aside.sidebar-cream {
             background: linear-gradient(185deg, #eae4dc 0%, #e1d9d0 55%, #d9d2c8 100%);
             color: #2e2a26;
@@ -303,16 +313,24 @@
         inviteModalOpen: false,
         teamCreateError: '',
         parentIdForModal: '',
-        sidebarOpen: true,
+        sidebarOpen: false,
         taskDetailOpen: false,
         uiReady: false,
         isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
         isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
         darkMode: false,
+        toggleSidebar() {
+          this.sidebarOpen = !this.sidebarOpen;
+          localStorage.setItem('sidebarOpen', this.sidebarOpen ? '1' : '0');
+        },
         initTheme() {
             const stored = localStorage.getItem('theme');
             this.darkMode = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
             document.documentElement.classList.toggle('dark', this.darkMode);
+            const storedSidebar = localStorage.getItem('sidebarOpen');
+            if (storedSidebar !== null) {
+              this.sidebarOpen = storedSidebar === '1';
+            }
             this.uiReady = true;
         },
         toggleTheme() {
@@ -327,36 +345,45 @@
 <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside x-cloak
-           style="width:16rem;min-width:16rem;max-width:16rem;"
-           :style="isBoardView && !sidebarOpen ? 'width:0;min-width:0;max-width:0;' : 'width:16rem;min-width:16rem;max-width:16rem;'"
+           :style="sidebarOpen ? 'width:16rem;min-width:16rem;max-width:16rem;' : 'width:3.5rem;min-width:3.5rem;max-width:3.5rem;'"
            class="sidebar-cream relative flex shrink-0 flex-col border-r border-[#d9cfc3] text-stone-800 transition-all duration-300 ease-out"
-           :class="(!uiReady ? 'transition-none ' : '') + (isBoardView && !sidebarOpen ? 'overflow-hidden border-transparent opacity-0 pointer-events-none' : '')">
-        <div class="border-b border-[#d9cfc3]/90 bg-[#f7f2ea]/95 p-3">
-            <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5">
-                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                </div>
-                <div>
-                    <p class="text-sm font-semibold tracking-tight text-stone-900">MindMap Tasks</p>
-                    <p class="text-[10px] text-stone-600">Teams & OKRs</p>
-                    <p class="text-[9px] font-bold text-emerald-800">All your data is safe and encrypted.</p>
-                </div>
-            </a>
+           :class="(!uiReady ? 'transition-none ' : '') + (!sidebarOpen ? 'sidebar-collapsed overflow-hidden' : '')">
+        <div class="border-b border-[#d9cfc3]/90 bg-[#f7f2ea]/95 p-2">
+            <div class="sidebar-brand flex min-w-0 items-center gap-2" :class="!sidebarOpen && 'flex-col gap-1'">
+                <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5" :class="!sidebarOpen && 'justify-center'" title="MindMap Tasks">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </div>
+                    <div x-show="sidebarOpen" x-cloak class="min-w-0">
+                        <p class="text-sm font-semibold tracking-tight text-stone-900">MindMap Tasks</p>
+                        <p class="text-[10px] text-stone-600">Teams & OKRs</p>
+                    </div>
+                </a>
+                <button type="button"
+                        data-sidebar-toggle
+                        @click="toggleSidebar()"
+                        class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-stone-300/80 bg-white/70 text-stone-600 transition hover:bg-white hover:text-indigo-700"
+                        :title="sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'">
+                    <svg class="h-3.5 w-3.5 transition-transform" :class="sidebarOpen ? '' : 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+            </div>
         </div>
 
         <nav class="flex-1 space-y-0.5 overflow-y-auto p-2.5">
-            <p class="mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-wider text-indigo-900/80">Workspace</p>
-            <a href="{{ url('planner:board_personal') }}"
+            <p x-show="sidebarOpen" x-cloak class="mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-wider text-indigo-900/80">Workspace</p>
+            <a href="{{ url('planner:board_personal') }}" title="Personal workspace"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if not current_team %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-stone-400/45 text-xs font-semibold text-stone-900">Me</span>
-                Personal
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-stone-400/45 text-xs font-semibold text-stone-900">Me</span>
+                <span x-show="sidebarOpen" x-cloak>Personal</span>
             </a>
 
-            <div class="px-2 pt-2.5">
+            <div x-show="sidebarOpen" x-cloak class="px-2 pt-2.5">
                 <p class="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-900/80">My tasks</p>
             </div>
             <div id="sidebar-my-tasks"
+                 x-show="sidebarOpen"
+                 x-cloak
                  class="space-y-0.5"
                  {% if sidebar_my_tasks_url is defined and sidebar_my_tasks_url %}
                  hx-get="{{ sidebar_my_tasks_url }}"
@@ -367,23 +394,28 @@
             </div>
 
             <div class="flex items-center justify-between px-2 pt-2.5">
-                <p class="text-[9px] font-semibold uppercase tracking-wider text-violet-900/80">My Team Mindmap</p>
-                <button type="button" @click="teamModalOpen = true"
-                        class="text-[10px] font-semibold text-indigo-800 hover:text-indigo-950">+ New</button>
+                <p x-show="sidebarOpen" x-cloak class="text-[9px] font-semibold uppercase tracking-wider text-violet-900/80">My Team Mindmap</p>
+                <button type="button" @click="teamModalOpen = true" title="Create team"
+                        class="text-[10px] font-semibold text-indigo-800 hover:text-indigo-950"
+                        :class="!sidebarOpen && 'mx-auto flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/15'">
+                    <span x-show="sidebarOpen" x-cloak>+ New</span>
+                    <span x-show="!sidebarOpen" x-cloak class="text-sm leading-none">+</span>
+                </button>
             </div>
 
             {% for m in my_team_memberships %}
-            <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
+            <div class="sidebar-team-row group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/50{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
+               title="{{ m.team.name }}"
                class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-bold
                     {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
                     {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
                     {% elif m.team.sidebar_color == 'green' %}bg-green-100 text-green-600
                     {% elif m.team.sidebar_color == 'purple' %}bg-purple-100 text-purple-600
                     {% else %}bg-blue-100 text-blue-600{% endif %}">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
-                <span data-team-pct="{{ m.team_id }}" class="ml-1 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold
+                <span data-team-pct="{{ m.team_id }}" x-show="sidebarOpen" x-cloak class="ml-1 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold
                     {% if m.done_pct >= 60 %}
                         border-emerald-200 bg-emerald-50 text-emerald-700
                     {% elif m.done_pct < 30 %}
@@ -393,14 +425,14 @@
                     {% else %}
                         border-slate-200 bg-slate-50 text-slate-600
                     {% endif %}">{{ m.done_pct }}%</span>
-                <span class="truncate text-[11px]">{{ m.team.name }}</span>
+                <span x-show="sidebarOpen" x-cloak class="truncate text-[11px]">{{ m.team.name }}</span>
                 {% if m.is_pinned %}
-                <span class="ml-auto text-[10px] text-amber-600">📌</span>
+                <span x-show="sidebarOpen" x-cloak class="ml-auto text-[10px] text-amber-600">📌</span>
                 {% elif m.is_owner %}
-                <span class="ml-auto shrink-0 text-[9px] text-stone-600">Owner</span>
+                <span x-show="sidebarOpen" x-cloak class="ml-auto shrink-0 text-[9px] text-stone-600">Owner</span>
                 {% endif %}
             </a>
-                <div class="flex items-center gap-1">
+                <div x-show="sidebarOpen" x-cloak class="flex items-center gap-1">
                     <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
                           onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -425,22 +457,23 @@
                 </div>
             </div>
             {% else %}
-            <p class="px-2 text-xs text-stone-600">No owned teams yet — create one.</p>
+            <p x-show="sidebarOpen" x-cloak class="px-2 text-xs text-stone-600">No owned teams yet — create one.</p>
             {% endfor %}
 
-            <p class="px-2 pt-2.5 text-[9px] font-semibold uppercase tracking-wider text-cyan-900/80">Others Team Mindmap</p>
+            <p x-show="sidebarOpen" x-cloak class="px-2 pt-2.5 text-[9px] font-semibold uppercase tracking-wider text-cyan-900/80">Others Team Mindmap</p>
             {% for m in other_team_memberships %}
-            <div class="group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
+            <div class="sidebar-team-row group flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium transition
                       {% if current_team and current_team.id == m.team.id %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/50{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
             <a href="{{ url('planner:board_team', team_slug=m.team.slug) }}"
+               title="{{ m.team.name }}"
                class="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1 py-0.5">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-bold
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-bold
                     {% if m.team.sidebar_color == 'red' %}bg-red-100 text-red-600
                     {% elif m.team.sidebar_color == 'orange' %}bg-orange-100 text-orange-600
                     {% elif m.team.sidebar_color == 'green' %}bg-green-100 text-green-600
                     {% elif m.team.sidebar_color == 'purple' %}bg-purple-100 text-purple-600
                     {% else %}bg-blue-100 text-blue-600{% endif %}">{{ (m.team.name[0] if m.team.name else '?')|upper }}</span>
-                <span data-team-pct="{{ m.team_id }}" class="ml-1 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold
+                <span data-team-pct="{{ m.team_id }}" x-show="sidebarOpen" x-cloak class="ml-1 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold
                     {% if m.done_pct >= 60 %}
                         border-emerald-200 bg-emerald-50 text-emerald-700
                     {% elif m.done_pct < 30 %}
@@ -450,9 +483,9 @@
                     {% else %}
                         border-slate-200 bg-slate-50 text-slate-600
                     {% endif %}">{{ m.done_pct }}%</span>
-                <span class="truncate text-[11px]">{{ m.team.name }}</span>
+                <span x-show="sidebarOpen" x-cloak class="truncate text-[11px]">{{ m.team.name }}</span>
             </a>
-                <div class="flex items-center gap-1">
+                <div x-show="sidebarOpen" x-cloak class="flex items-center gap-1">
                     <form action="{{ url('planner:archive_team_mindmap', team_slug=m.team.slug) }}" method="post"
                           onsubmit="return window.confirm('Archive this team mindmap for focus mode?')">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
@@ -477,74 +510,92 @@
                 </div>
             </div>
             {% else %}
-            <p class="px-2 text-xs text-stone-600">No shared teams yet.</p>
+            <p x-show="sidebarOpen" x-cloak class="px-2 text-xs text-stone-600">No shared teams yet.</p>
             {% endfor %}
 
-            <p class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-teal-900/80">Projects</p>
-            <a href="{{ url('projects:list') }}"
+            {% if ui.sidebar.projects or ui.sidebar.archived_projects or ui.sidebar.gantt or ui.sidebar.milestones or ui.sidebar.calendar or ui.sidebar.time_tracking or ui.sidebar.reports or ui.sidebar.resources %}
+            <p x-show="sidebarOpen" x-cloak class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-teal-900/80">Projects</p>
+            {% if ui.sidebar.projects %}
+            <a href="{{ url('projects:list') }}" title="All Projects"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/projects/') and not request.path.startswith('/projects/archived') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-teal-500/20 text-xs font-bold text-teal-800">P</span>
-                All Projects
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-500/20 text-xs font-bold text-teal-800">P</span>
+                <span x-show="sidebarOpen" x-cloak>All Projects</span>
             </a>
-            <a href="{{ url('projects:archived') }}"
+            {% endif %}
+            {% if ui.sidebar.archived_projects %}
+            <a href="{{ url('projects:archived') }}" title="Archived Projects"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/projects/archived') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-400/20 text-xs font-bold text-slate-600">🗂</span>
-                Archived
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-400/20 text-xs font-bold text-slate-600">🗂</span>
+                <span x-show="sidebarOpen" x-cloak>Archived</span>
             </a>
-            <a href="{{ url('gantt:project_list') }}"
+            {% endif %}
+            {% if ui.sidebar.gantt %}
+            <a href="{{ url('gantt:project_list') }}" title="Gantt Charts"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/gantt/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/15 text-xs font-bold text-orange-800">G</span>
-                Gantt Charts
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-500/15 text-xs font-bold text-orange-800">G</span>
+                <span x-show="sidebarOpen" x-cloak>Gantt Charts</span>
             </a>
-            <a href="{{ url('milestones:all') }}"
+            {% endif %}
+            {% if ui.sidebar.milestones %}
+            <a href="{{ url('milestones:all') }}" title="Milestones"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/milestones/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-purple-500/15 text-xs font-bold text-purple-800">◆</span>
-                Milestones
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15 text-xs font-bold text-purple-800">◆</span>
+                <span x-show="sidebarOpen" x-cloak>Milestones</span>
             </a>
-            <a href="{{ url('calendar_app:month') }}"
+            {% endif %}
+            {% if ui.sidebar.calendar %}
+            <a href="{{ url('calendar_app:month') }}" title="Calendar"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/calendar/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/15 text-xs font-bold text-sky-800">📅</span>
-                Calendar
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sky-500/15 text-xs font-bold text-sky-800">📅</span>
+                <span x-show="sidebarOpen" x-cloak>Calendar</span>
             </a>
-            <a href="{{ url('timetracking:index') }}"
+            {% endif %}
+            {% if ui.sidebar.time_tracking %}
+            <a href="{{ url('timetracking:index') }}" title="Time Tracking"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/time/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-green-500/15 text-xs font-bold text-green-800">⏱</span>
-                Time Tracking
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-green-500/15 text-xs font-bold text-green-800">⏱</span>
+                <span x-show="sidebarOpen" x-cloak>Time Tracking</span>
             </a>
-            <a href="{{ url('reports:dashboard') }}"
+            {% endif %}
+            {% if ui.sidebar.reports %}
+            <a href="{{ url('reports:dashboard') }}" title="Reports"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/reports/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/15 text-xs font-bold text-rose-800">📊</span>
-                Reports
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-500/15 text-xs font-bold text-rose-800">📊</span>
+                <span x-show="sidebarOpen" x-cloak>Reports</span>
             </a>
-            <a href="{{ url('resources:dashboard') }}"
+            {% endif %}
+            {% if ui.sidebar.resources %}
+            <a href="{{ url('resources:dashboard') }}" title="Resources"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition
                       {% if request.path.startswith('/resources/') %}bg-indigo-500/20 text-indigo-950 ring-1 ring-indigo-400/55{% else %}text-stone-800 hover:bg-stone-400/30{% endif %}">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-500/15 text-xs font-bold text-violet-800">👥</span>
-                Resources
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/15 text-xs font-bold text-violet-800">👥</span>
+                <span x-show="sidebarOpen" x-cloak>Resources</span>
             </a>
+            {% endif %}
+            {% endif %}
 
-            <p class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-emerald-900/80">Account</p>
-            <a href="{{ url('billing:overview') }}"
+            <p x-show="sidebarOpen" x-cloak class="mb-1.5 px-2 pt-3 text-[9px] font-semibold uppercase tracking-wider text-emerald-900/80">Account</p>
+            <a href="{{ url('billing:overview') }}" title="Billing"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-stone-800 transition hover:bg-stone-400/30">
-                <span class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600/15 text-xs font-bold text-emerald-900">$</span>
-                Billing
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-600/15 text-xs font-bold text-emerald-900">$</span>
+                <span x-show="sidebarOpen" x-cloak>Billing</span>
                 {% if account_profile and account_profile.trial_active %}
-                <span class="ml-auto rounded-full bg-amber-500/25 px-2 py-0.5 text-[9px] font-bold text-amber-900">Trial</span>
+                <span x-show="sidebarOpen" x-cloak class="ml-auto rounded-full bg-amber-500/25 px-2 py-0.5 text-[9px] font-bold text-amber-900">Trial</span>
                 {% endif %}
             </a>
         </nav>
 
-        <div class="space-y-2 border-t border-[#d9cfc3]/90 bg-[#efe8df]/90 p-3">
-            <div class="flex items-center gap-2 rounded-lg bg-white/55 px-2 py-2 ring-1 ring-stone-400/35">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-xs font-bold uppercase text-indigo-800">{{ user.username[0] }}</div>
-                <div class="min-w-0 flex-1">
+        <div class="space-y-2 border-t border-[#d9cfc3]/90 bg-[#efe8df]/90 p-2">
+            <div class="flex items-center gap-2 rounded-lg bg-white/55 px-2 py-2 ring-1 ring-stone-400/35" :class="!sidebarOpen && 'justify-center'">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-xs font-bold uppercase text-indigo-800" title="{{ user.username }}">{{ user.username[0] }}</div>
+                <div x-show="sidebarOpen" x-cloak class="min-w-0 flex-1">
                     <p class="truncate text-xs font-medium text-stone-900">{{ user.username }}</p>
                     <form action="{{ url('users:logout') }}" method="post" class="inline">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">

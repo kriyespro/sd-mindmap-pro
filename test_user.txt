@@ -13,3 +13,7 @@ Open: http://127.0.0.1:8002/
 Staff dashboard: http://127.0.0.1:8002/admin/ (metrics & links; requires is_staff)
 Django admin (default UI): http://127.0.0.1:8002/sd/ — create superuser: python manage.py createsuperuser
 Billing (in app): /billing/ — staff log payments under /sd/ → Billing → Payments.
+
+New signups get a "Welcome Tour" demo project automatically.
+Backfill for existing users: python manage.py seed_tutorials
+Migrations: python manage.py migrate users

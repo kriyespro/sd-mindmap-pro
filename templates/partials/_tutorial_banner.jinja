@@ -1,0 +1,30 @@
+{% if is_tutorial_project %}
+<div class="border-b border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3 sm:px-5">
+    <div class="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Interactive demo</p>
+            <p class="mt-0.5 text-sm font-semibold text-slate-900">Welcome Tour — explore the app in 4 quick steps</p>
+            <ol class="mt-1.5 list-inside list-decimal space-y-0.5 text-[11px] text-slate-600">
+                <li>Switch <strong>Tree · Map · Kanban</strong> tabs in the top bar</li>
+                <li>Click any task card to open <strong>details, checklist &amp; comments</strong></li>
+                <li>Open <strong>Gantt</strong> to see dated tasks and dependencies</li>
+                <li>Check a box on a card to <strong>mark it done</strong></li>
+            </ol>
+        </div>
+        <div class="flex shrink-0 flex-wrap gap-2">
+            <a href="{{ url('projects:board', slug=current_project.slug) }}?layout=kanban"
+               class="rounded-md border border-violet-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-violet-800 hover:bg-violet-50">
+                Try Kanban →
+            </a>
+            <a href="{{ url('gantt:gantt', slug=current_project.slug) }}"
+               class="rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-800 hover:bg-orange-100">
+                Open Gantt →
+            </a>
+            <a href="{{ url('projects:detail', slug=current_project.slug) }}"
+               class="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50">
+                Project overview
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}

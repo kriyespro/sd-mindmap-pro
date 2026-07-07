@@ -2,11 +2,12 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView
 from django.views.generic import TemplateView
 
 from users.forms import AppLoginForm, SignUpForm
+from users.services import get_tutorial_project, seed_tutorial_for_user
 
 
 class LandingView(TemplateView):
@@ -31,10 +32,17 @@ class SignUpView(CreateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         login(self.request, self.object)
-        messages.success(self.request, 'Welcome! Your workspace is ready.')
+        seed_tutorial_for_user(self.object)
+        tutorial = get_tutorial_project(self.object)
+        messages.success(
+            self.request,
+            'Welcome! We created a Welcome Tour project to help you explore the app.',
+        )
         next_url = (self.request.GET.get('next') or self.request.POST.get('next') or '').strip()
         if next_url:
             return redirect(next_url)
+        if tutorial:
+            return redirect('projects:board', slug=tutorial.slug)
         return response
 
     def get_context_data(self, **kwargs):

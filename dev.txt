@@ -13,3 +13,9 @@
 
 [DONE] Phase PM-9 - Task Detail Slide Panel: HTMX-loaded right drawer; comments (add/delete); checklist (add/toggle/delete with progress bar); tabs (Details/Checklist/Comments); detail button on every task card
 [DONE] Phase PM-10 - Resource Management app: ResourceAllocation model; 4-week workload heatmap; capacity tracking (allocated vs logged hours); HTMX add/delete allocations; sidebar link
+[DONE] Phase PM-11 - Unified project tasks across Board (mindmap/tree/kanban) and Gantt: /projects/<slug>/board/; shared Task.project FK; cross-links in project detail and Gantt header
+[DONE] Phase PM-12 - Team member add/invite UX improved: shared username/email/full-name form, positive join-link messaging, easier board assignee suggestions, and tests for email add/invite flows
+[DONE] Phase PM-13 - Sidebar defaults to collapsed icon rail (~3.5rem); expand/collapse toggle; labels and team actions hidden when collapsed; tooltips on nav icons
+[DONE] Phase PM-14 - Display modes on Billing: Minimal (Tree/Map + workspace sidebar), Express (+ Kanban, Projects, Gantt), Pro (all views and sidebar links); Profile.ui_mode + route guard middleware
+[DONE] Phase PM-15 - Sidebar stays expanded until manual toggle; preference saved in localStorage (no auto-collapse on nav/outside/Escape)
+[DONE] Phase PM-16 - Welcome Tour demo project auto-created on signup: tutorial tasks (mindmap/tree/kanban/gantt), milestone, checklist, comments, personal tasks, notification; redirect to project board; `seed_tutorials` backfill command

@@ -209,11 +209,22 @@ def tasks_for_workspace(user: User, team: Team | None) -> QuerySet[Task]:
     if team is not None:
         if not TeamMembership.objects.filter(team=team, user=user, is_active=True).exists():
             return Task.objects.none()
-        return Task.objects.filter(team=team, is_archived=False)
+        return Task.objects.filter(team=team, is_archived=False, project__isnull=True)
     ids = personal_visible_task_ids(user)
     if not ids:
         return Task.objects.none()
-    return Task.objects.filter(team__isnull=True, id__in=ids, is_archived=False)
+    return Task.objects.filter(team__isnull=True, project__isnull=True, id__in=ids, is_archived=False)
+
+
+def tasks_for_board(user: User, team: Team | None = None, project=None) -> QuerySet[Task]:
+    """Tasks for mindmap/tree/kanban — project board or personal/team workspace."""
+    if project is not None:
+        from projects.services import user_can_access_project
+
+        if not user_can_access_project(user, project):
+            return Task.objects.none()
+        return Task.objects.filter(project=project, is_archived=False)
+    return tasks_for_workspace(user, team)
 
 
 def task_rows_for_tree(qs: QuerySet[Task]) -> list[dict]:
@@ -256,11 +267,17 @@ def root_stats(qs: QuerySet[Task]) -> tuple[int, int]:
     return total, done
 
 
-def user_can_access_task(user: User, task: Task, team: Team | None) -> bool:
+def user_can_access_task(user: User, task: Task, team: Team | None = None) -> bool:
+    if task.project_id:
+        from projects.services import user_can_access_project
+
+        return user_can_access_project(user, task.project)
     if team is not None:
-        if task.team_id != team.id:
+        if task.team_id != team.id or task.project_id is not None:
             return False
         return TeamMembership.objects.filter(team=team, user=user, is_active=True).exists()
+    if task.team_id is not None:
+        return TeamMembership.objects.filter(team_id=task.team_id, user=user, is_active=True).exists()
     ids = personal_visible_task_ids(user)
     return task.id in ids and task.team_id is None
 
@@ -465,7 +482,9 @@ def _annotate_mindmap_sizes(
     return depth_lefts, max_w, max_h
 
 
-def mindmap_collapse_session_key(team: Team | None) -> str:
+def mindmap_collapse_session_key(team: Team | None, project=None) -> str:
+    if project is not None:
+        return f'mm_collapse_proj_{project.slug}'
     return f"mm_collapse_t_{team.slug}" if team else 'mm_collapse_p'
 
 
@@ -473,11 +492,12 @@ def get_mindmap_collapsed_ids(
     request,
     team: Team | None,
     *,
+    project=None,
     tree: list[dict] | None = None,
 ) -> set[int]:
     all_branch_ids = set(collect_branch_ids_with_children(tree or [])) if tree is not None else set()
 
-    if team is not None:
+    if team is not None and project is None:
         raw = team.mindmap_collapsed_task_ids
         if raw is None:
             # Default to expanded branches; user can collapse manually.
@@ -498,7 +518,7 @@ def get_mindmap_collapsed_ids(
             return set()
         return out
 
-    key = mindmap_collapse_session_key(team)
+    key = mindmap_collapse_session_key(team, project)
     if key not in request.session:
         # Default to expanded branches; user can collapse manually.
         request.session[key] = []
@@ -519,12 +539,14 @@ def get_mindmap_collapsed_ids(
     return out
 
 
-def set_mindmap_collapsed_ids(request, team: Team | None, ids: set[int]) -> None:
-    if team is not None:
+def set_mindmap_collapsed_ids(
+    request, team: Team | None, ids: set[int], *, project=None
+) -> None:
+    if team is not None and project is None:
         team.mindmap_collapsed_task_ids = sorted(ids)
         team.save(update_fields=['mindmap_collapsed_task_ids'])
         return
-    key = mindmap_collapse_session_key(team)
+    key = mindmap_collapse_session_key(team, project)
     request.session[key] = sorted(ids)
     request.session.modified = True
 

@@ -12,11 +12,33 @@ _INVITE_WIDGET = {
 class TeamInviteForm(forms.Form):
     username = forms.CharField(
         max_length=150,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 **_INVITE_WIDGET,
-                'placeholder': 'e.g. alex',
+                'placeholder': 'Existing username (optional)',
                 'autocomplete': 'username',
+            }
+        ),
+    )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(
+            attrs={
+                'class': 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
+                'placeholder': 'New member email (optional)',
+                'autocomplete': 'email',
+            }
+        ),
+    )
+    full_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                'class': 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
+                'placeholder': 'Full name (used with email)',
+                'autocomplete': 'name',
             }
         ),
     )

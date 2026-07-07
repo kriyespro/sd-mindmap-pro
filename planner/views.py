@@ -33,115 +33,122 @@ from planner.services import (
     workspace_root_average_percent,
     set_mindmap_collapsed_ids,
     task_rows_for_tree,
+    tasks_for_board,
     tasks_for_workspace,
     user_can_access_task,
 )
 from teams.forms import TeamCreateForm, TeamInviteForm
 from teams.models import Team, TeamMembership
 from users.models import Profile
+from users.services import is_tutorial_project
+from users.ui_mode import get_user_ui_mode, normalize_layout
 
 User = get_user_model()
 
 
 class WorkspaceUrls:
-    __slots__ = ('_slug',)
+    __slots__ = ('_team_slug', '_project_slug')
 
-    def __init__(self, team: Team | None):
-        self._slug = team.slug if team else None
+    def __init__(self, team: Team | None = None, project=None):
+        self._team_slug = team.slug if team else None
+        self._project_slug = project.slug if project else None
+
+    @property
+    def is_project(self) -> bool:
+        return self._project_slug is not None
+
+    def _reverse(self, project_name: str, team_name: str, personal_name: str, **kwargs) -> str:
+        if self._project_slug:
+            return reverse(
+                f'projects:{project_name}',
+                kwargs={'slug': self._project_slug, **kwargs},
+            )
+        if self._team_slug:
+            return reverse(f'planner:{team_name}', kwargs={'team_slug': self._team_slug, **kwargs})
+        return reverse(f'planner:{personal_name}', kwargs=kwargs)
 
     @property
     def stats(self) -> str:
-        if self._slug:
-            return reverse('planner:stats_team', kwargs={'team_slug': self._slug})
-        return reverse('planner:stats_personal')
+        return self._reverse('board_stats', 'stats_team', 'stats_personal')
 
     @property
     def tasks(self) -> str:
-        if self._slug:
-            return reverse('planner:task_create_team', kwargs={'team_slug': self._slug})
-        return reverse('planner:task_create_personal')
+        return self._reverse('board_task_create', 'task_create_team', 'task_create_personal')
 
     @property
     def tree_partial(self) -> str:
-        if self._slug:
-            return reverse('planner:task_tree_partial_team', kwargs={'team_slug': self._slug})
-        return reverse('planner:task_tree_partial_personal')
+        return self._reverse(
+            'board_task_tree_partial', 'task_tree_partial_team', 'task_tree_partial_personal'
+        )
 
     @property
     def task_import(self) -> str:
-        if self._slug:
-            return reverse('planner:task_import_team', kwargs={'team_slug': self._slug})
+        if self._project_slug:
+            return ''
+        if self._team_slug:
+            return reverse('planner:task_import_team', kwargs={'team_slug': self._team_slug})
         return reverse('planner:task_import_personal')
 
     @property
     def task_export(self) -> str:
-        if self._slug:
-            return reverse('planner:task_export_team', kwargs={'team_slug': self._slug})
+        if self._project_slug:
+            return ''
+        if self._team_slug:
+            return reverse('planner:task_export_team', kwargs={'team_slug': self._team_slug})
         return reverse('planner:task_export_personal')
 
     def toggle(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:task_toggle_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:task_toggle_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_task_toggle', 'task_toggle_team', 'task_toggle_personal', task_id=task_id
+        )
 
     def delete(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:task_delete_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:task_delete_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_task_delete', 'task_delete_team', 'task_delete_personal', task_id=task_id
+        )
 
     def title(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:task_title_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:task_title_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_task_title', 'task_title_team', 'task_title_personal', task_id=task_id
+        )
 
     def meta(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:task_meta_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:task_meta_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_task_meta', 'task_meta_team', 'task_meta_personal', task_id=task_id
+        )
 
     def mindmap_collapse(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:mindmap_collapse_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:mindmap_collapse_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_mindmap_collapse',
+            'mindmap_collapse_team',
+            'mindmap_collapse_personal',
+            task_id=task_id,
+        )
 
     @property
     def mindmap_collapse_all(self) -> str:
-        if self._slug:
-            return reverse('planner:mindmap_collapse_all_team', kwargs={'team_slug': self._slug})
-        return reverse('planner:mindmap_collapse_all_personal')
+        return self._reverse(
+            'board_mindmap_collapse_all',
+            'mindmap_collapse_all_team',
+            'mindmap_collapse_all_personal',
+        )
 
     @property
     def mindmap_expand_all(self) -> str:
-        if self._slug:
-            return reverse('planner:mindmap_expand_all_team', kwargs={'team_slug': self._slug})
-        return reverse('planner:mindmap_expand_all_personal')
+        return self._reverse(
+            'board_mindmap_expand_all',
+            'mindmap_expand_all_team',
+            'mindmap_expand_all_personal',
+        )
 
     def kanban_status(self, task_id: int) -> str:
-        if self._slug:
-            return reverse(
-                'planner:kanban_status_team',
-                kwargs={'team_slug': self._slug, 'task_id': task_id},
-            )
-        return reverse('planner:kanban_status_personal', kwargs={'task_id': task_id})
+        return self._reverse(
+            'board_kanban_status', 'kanban_status_team', 'kanban_status_personal', task_id=task_id
+        )
 
 
-def workspace_urls(team: Team | None) -> WorkspaceUrls:
-    return WorkspaceUrls(team)
+def workspace_urls(team: Team | None = None, project=None) -> WorkspaceUrls:
+    return WorkspaceUrls(team, project)
 
 
 def _set_tree_focus_expand_ids(request, ids: set[int]) -> None:
@@ -169,6 +176,51 @@ def _workspace_team(user, team_slug: str | None) -> Team | None:
     if not TeamMembership.objects.filter(team=team, user=user, is_active=True).exists():
         return None
     return team
+
+
+def _workspace_project(user, project_slug: str | None):
+    if not project_slug:
+        return None
+    from projects.models import Project
+    from projects.services import user_can_access_project
+
+    project = get_object_or_404(Project, slug=project_slug, is_archived=False)
+    if not user_can_access_project(user, project):
+        return None
+    return project
+
+
+def _resolve_board(user, team_slug: str | None = None, project_slug: str | None = None):
+    if project_slug:
+        project = _workspace_project(user, project_slug)
+        if project is None:
+            raise Http404('Project not found')
+        return None, project
+    team = _workspace_team(user, team_slug)
+    if team_slug and team is None:
+        raise Http404('Team not found')
+    return team, None
+
+
+def _board_queryset(user, team, project):
+    qs = tasks_for_board(user, team=team, project=project)
+    if normalize_workspace_completion(qs):
+        qs = tasks_for_board(user, team=team, project=project)
+    return qs
+
+
+def _sync_task_completion_fields(task: Task) -> None:
+    if task.is_completed:
+        task.status = Task.STATUS_DONE
+    elif task.status == Task.STATUS_DONE:
+        task.status = Task.STATUS_TODO
+
+
+def _maybe_update_project_progress(task: Task) -> None:
+    if task.project_id:
+        from projects.services import update_project_progress
+
+        update_project_progress(task.project)
 
 
 def _active_team_usernames(team: Team | None) -> list[str]:
@@ -308,10 +360,10 @@ def _validate_assignee_for_workspace(*, team: Team | None, assignee_username: st
         return None
     user = User.objects.filter(username__iexact=assignee).only('id', 'username').first()
     if user is None:
-        return 'Assignee username not found'
+        return 'Assignee username not found. Add or invite that member first.'
     is_member = TeamMembership.objects.filter(team=team, user=user, is_active=True).exists()
     if not is_member:
-        return 'Assignee must be a member of this team'
+        return 'Assignee must be an active member of this team'
     return None
 
 
@@ -321,10 +373,11 @@ class BoardView(LoginRequiredMixin, TemplateView):
     login_url = reverse_lazy('users:login')
 
     def get(self, request, *args, **kwargs):
-        request.session.setdefault('task_layout', 'mindmap')
+        mode = get_user_ui_mode(request.user)
+        request.session.setdefault('task_layout', normalize_layout(mode, 'mindmap'))
         lay = request.GET.get('layout')
         if lay in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
-            request.session['task_layout'] = lay
+            request.session['task_layout'] = normalize_layout(mode, lay)
             return redirect(request.path)
         return super().get(request, *args, **kwargs)
 
@@ -334,20 +387,22 @@ class BoardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
-        team = self.get_team()
-        if self.kwargs.get('team_slug') and team is None:
-            raise Http404('Team not found')
+        team, project = _resolve_board(
+            user,
+            self.kwargs.get('team_slug'),
+            self.kwargs.get('project_slug') or self.kwargs.get('slug'),
+        )
+        effective_team = team or (project.team if project else None)
 
-        qs = tasks_for_workspace(user, team)
-        if normalize_workspace_completion(qs):
-            qs = tasks_for_workspace(user, team)
+        qs = _board_queryset(user, team, project)
         rows = task_rows_for_tree(qs)
         task_tree = build_task_tree(rows)
         layout = self.request.session.get('task_layout', 'mindmap')
-        if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
-            layout = 'mindmap'
+        layout = normalize_layout(get_user_ui_mode(user), layout)
+        if self.request.session.get('task_layout') != layout:
+            self.request.session['task_layout'] = layout
         mm_collapsed = get_mindmap_collapsed_ids(
-            self.request, team, tree=task_tree
+            self.request, team, project=project, tree=task_tree
         )
         focus_task_id: int | None = None
         raw_focus_task = (self.request.GET.get('focus_task') or '').strip()
@@ -363,9 +418,11 @@ class BoardView(LoginRequiredMixin, TemplateView):
                     keep_open_ids = _task_ancestor_ids(focus_task)
                     _set_tree_focus_expand_ids(self.request, keep_open_ids | {focus_task.id})
                     all_branch_ids = set(collect_branch_ids_with_children(task_tree))
-                    set_mindmap_collapsed_ids(self.request, team, all_branch_ids - keep_open_ids)
+                    set_mindmap_collapsed_ids(
+                        self.request, team, all_branch_ids - keep_open_ids, project=project
+                    )
                     mm_collapsed = get_mindmap_collapsed_ids(
-                        self.request, team, tree=task_tree
+                        self.request, team, project=project, tree=task_tree
                     )
         branch_children = collect_task_has_children(task_tree)
         pruned_for_mm = prune_mindmap_tree(task_tree, mm_collapsed)
@@ -380,12 +437,12 @@ class BoardView(LoginRequiredMixin, TemplateView):
         )
         flowmap = compute_mindmap_layout(task_tree, flow_style='relaxed') if layout == 'flow' else None
         total_main, done_main = root_stats(qs)
-        u: WorkspaceUrls = workspace_urls(team)
+        u: WorkspaceUrls = workspace_urls(team, project)
         team_is_owner = False
         team_can_invite = False
         team_can_archive = False
         team_roster = []
-        team_assignee_usernames = _active_team_usernames(team)
+        team_assignee_usernames = _active_team_usernames(effective_team)
         if team:
             try:
                 has_team_plan = Profile.supports_team_plan(user.profile.plan)
@@ -404,7 +461,6 @@ class BoardView(LoginRequiredMixin, TemplateView):
             )
         kanban_columns = None
         if layout == 'kanban':
-            from planner.models import Task as TaskModel
             kanban_columns = _build_kanban_columns(qs)
         ctx.update(
             {
@@ -418,6 +474,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'total_main': total_main,
                 'done_main': done_main,
                 'current_team': team,
+                'current_project': project,
                 'task_create_form': TaskCreateForm(),
                 'task_import_form': TaskImportForm(),
                 'team_create_form': TeamCreateForm(),
@@ -430,27 +487,31 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'tree_focus_expand_ids': _get_tree_focus_expand_ids(self.request),
                 'focus_task_id': focus_task_id,
                 'u': u,
+                'is_tutorial_project': is_tutorial_project(project),
             }
         )
         return ctx
 
 
-def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
-    team = _workspace_team(request.user, team_slug)
-    if team_slug and team is None:
-        return HttpResponse('Not found', status=404)
-    qs = tasks_for_workspace(request.user, team)
-    if normalize_workspace_completion(qs):
-        qs = tasks_for_workspace(request.user, team)
+def _tree_partial(
+    request,
+    team_slug: str | None = None,
+    project_slug: str | None = None,
+    *,
+    hx_triggers: bool = True,
+):
+    team, project = _resolve_board(request.user, team_slug, project_slug)
+    effective_team = team or (project.team if project else None)
+    qs = _board_queryset(request.user, team, project)
     rows = task_rows_for_tree(qs)
     tree = build_task_tree(rows)
     layout = request.session.get('task_layout', 'mindmap')
     if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
-    u = workspace_urls(team)
-    team_assignee_usernames = _active_team_usernames(team)
+    u = workspace_urls(team, project)
+    team_assignee_usernames = _active_team_usernames(effective_team)
     if layout in ('mindmap', 'mini', 'idea'):
-        mm_collapsed = get_mindmap_collapsed_ids(request, team, tree=tree)
+        mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
         pruned = prune_mindmap_tree(tree, mm_collapsed)
         ctx = {
@@ -464,6 +525,7 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
             'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
             'mindmap_branch_children': branch_children,
             'current_team': team,
+            'current_project': project,
             'team_assignee_usernames': team_assignee_usernames,
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
             'u': u,
@@ -475,6 +537,7 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
             'task_layout': layout,
             'kanban_columns': _build_kanban_columns(qs),
             'current_team': team,
+            'current_project': project,
             'team_assignee_usernames': team_assignee_usernames,
             'u': u,
         }
@@ -484,6 +547,7 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
             'task_tree': tree,
             'task_layout': layout,
             'current_team': team,
+            'current_project': project,
             'team_assignee_usernames': team_assignee_usernames,
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
             'u': u,
@@ -507,20 +571,19 @@ def _tree_partial(request, team_slug: str | None, *, hx_triggers: bool = True):
 class MindmapCollapseToggleView(LoginRequiredMixin, View):
     """Toggle collapsed branch in mind map (session, per workspace)."""
 
-    def post(self, request, task_id, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def post(self, request, task_id, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = Task.objects.filter(pk=task_id).first()
         if task is None or not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
         has_kids = Task.objects.filter(parent_id=task_id).exists()
         if not has_kids:
             return HttpResponse('No subtasks', status=400)
-        qs = tasks_for_workspace(request.user, team)
+        qs = _board_queryset(request.user, team, project)
         rows = task_rows_for_tree(qs)
         tree = build_task_tree(rows)
-        cur = get_mindmap_collapsed_ids(request, team, tree=tree)
+        cur = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         tid = int(task_id)
         if tid in cur:
             cur.discard(tid)
@@ -528,41 +591,38 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
             cur.update(_direct_branch_child_ids(tree, tid))
         else:
             cur.add(tid)
-        set_mindmap_collapsed_ids(request, team, cur)
-        return _tree_partial(request, team_slug, hx_triggers=False)
+        set_mindmap_collapsed_ids(request, team, cur, project=project)
+        return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
 
 
 class MindmapCollapseAllView(LoginRequiredMixin, View):
     """Collapse all branches in the mind map."""
 
-    def post(self, request, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
-        qs = tasks_for_workspace(request.user, team)
+    def post(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
+        qs = _board_queryset(request.user, team, project)
         rows = task_rows_for_tree(qs)
         tree = build_task_tree(rows)
         all_branch_ids = set(collect_branch_ids_with_children(tree))
-        set_mindmap_collapsed_ids(request, team, all_branch_ids)
-        return _tree_partial(request, team_slug, hx_triggers=False)
+        set_mindmap_collapsed_ids(request, team, all_branch_ids, project=project)
+        return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
 
 
 class MindmapExpandAllView(LoginRequiredMixin, View):
     """Expand all branches in the mind map."""
 
-    def post(self, request, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
-        set_mindmap_collapsed_ids(request, team, set())
-        return _tree_partial(request, team_slug, hx_triggers=False)
+    def post(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
+        set_mindmap_collapsed_ids(request, team, set(), project=project)
+        return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
 
 
 class TaskCreateView(LoginRequiredMixin, View):
-    def post(self, request, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def post(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         form = TaskCreateForm(request.POST)
         if not form.is_valid():
             return HttpResponse('Invalid', status=400)
@@ -576,26 +636,32 @@ class TaskCreateView(LoginRequiredMixin, View):
             parent = Task.objects.filter(pk=pid).first()
             if parent is None or not user_can_access_task(request.user, parent, team):
                 return HttpResponse('Not found', status=404)
-            if team is None and parent.team_id is not None:
+            if project and parent.project_id != project.id:
                 return HttpResponse('Not found', status=404)
-            if team is not None and parent.team_id != team.id:
-                return HttpResponse('Not found', status=404)
+            if not project:
+                if team is None and parent.team_id is not None:
+                    return HttpResponse('Not found', status=404)
+                if team is not None and parent.team_id != team.id:
+                    return HttpResponse('Not found', status=404)
 
         task = form.save(commit=False)
+        effective_team = team or (project.team if project else None)
         assignee_error = _validate_assignee_for_workspace(
-            team=team,
+            team=effective_team,
             assignee_username=task.assignee_username,
         )
         if assignee_error:
             return HttpResponse(assignee_error, status=400)
         task.author = request.user
-        task.team = team
+        task.project = project
+        task.team = effective_team
         task.parent = parent
         task.save()
+        _maybe_update_project_progress(task)
         # New child can change parent completion status (e.g. completed parent gets a new open child).
         sync_parent_completion_from_children(task.parent)
         # Keep only the new task path expanded in mind map; collapse other branches.
-        qs = tasks_for_workspace(request.user, team)
+        qs = _board_queryset(request.user, team, project)
         rows = task_rows_for_tree(qs)
         tree = build_task_tree(rows)
         branch_ids = set(collect_branch_ids_with_children(tree))
@@ -605,14 +671,14 @@ class TaskCreateView(LoginRequiredMixin, View):
             keep_open_ids.add(cur.parent_id)
             cur = cur.parent
         _set_tree_focus_expand_ids(request, keep_open_ids | {task.id})
-        set_mindmap_collapsed_ids(request, team, branch_ids - keep_open_ids)
+        set_mindmap_collapsed_ids(request, team, branch_ids - keep_open_ids, project=project)
         notify_assignee(
             assignee_username=(task.assignee_username or '').strip(),
             actor=request.user,
             title=task.title_plain,
             old_assignee='',
         )
-        response = _tree_partial(request, team_slug)
+        response = _tree_partial(request, team_slug, project_slug)
         trigger_payload: dict[str, object] = {
             'updateStats': True,
             'taskCreated': {'taskId': task.id},
@@ -646,42 +712,46 @@ class TaskImportView(LoginRequiredMixin, View):
 
 
 class TaskToggleView(LoginRequiredMixin, View):
-    def post(self, request, task_id, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def post(self, request, task_id, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
         task.is_completed = not task.is_completed
-        task.save(update_fields=['is_completed'])
+        _sync_task_completion_fields(task)
+        task.save(update_fields=['is_completed', 'status'])
         # Keep branch behavior consistent: toggling a parent cascades to all descendants.
         sync_descendant_completion(task, task.is_completed)
         # Propagate completion consistency upward through all ancestors.
         sync_parent_completion_from_children(task.parent)
-        return _tree_partial(request, team_slug)
+        _maybe_update_project_progress(task)
+        return _tree_partial(request, team_slug, project_slug)
 
 
 class TaskDeleteView(LoginRequiredMixin, View):
-    def delete(self, request, task_id, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def delete(self, request, task_id, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
+        project_ref = task.project
         parent = task.parent
         task.delete()
         # Deleting a child can complete/reopen ancestor branches.
         sync_parent_completion_from_children(parent)
-        return _tree_partial(request, team_slug)
+        if project_ref:
+            from projects.services import update_project_progress
+
+            update_project_progress(project_ref)
+        return _tree_partial(request, team_slug, project_slug)
 
 
 class TaskRenameView(LoginRequiredMixin, View):
-    def post(self, request, task_id, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def post(self, request, task_id, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
@@ -692,14 +762,13 @@ class TaskRenameView(LoginRequiredMixin, View):
         if not task.title:
             return HttpResponse('Title required', status=400)
         task.save(update_fields=['title'])
-        return _tree_partial(request, team_slug)
+        return _tree_partial(request, team_slug, project_slug)
 
 
 class TaskMetaView(LoginRequiredMixin, View):
-    def post(self, request, task_id, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
+    def post(self, request, task_id, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
@@ -708,8 +777,9 @@ class TaskMetaView(LoginRequiredMixin, View):
             return HttpResponse('Invalid', status=400)
         old = task.assignee_username or ''
         new_assignee = (form.cleaned_data.get('assignee_username') or '').strip()
+        effective_team = team or (project.team if project else None)
         assignee_error = _validate_assignee_for_workspace(
-            team=team,
+            team=effective_team,
             assignee_username=new_assignee,
         )
         if assignee_error:
@@ -723,17 +793,14 @@ class TaskMetaView(LoginRequiredMixin, View):
             title=task.title_plain,
             old_assignee=old,
         )
-        return _tree_partial(request, team_slug)
+        return _tree_partial(request, team_slug, project_slug)
 
 
 class StatsPartialView(LoginRequiredMixin, View):
-    def get(self, request, team_slug=None):
-        team = _workspace_team(request.user, team_slug)
-        if team_slug and team is None:
-            return HttpResponse('Not found', status=404)
-        qs = tasks_for_workspace(request.user, team)
-        if normalize_workspace_completion(qs):
-            qs = tasks_for_workspace(request.user, team)
+    def get(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
+        qs = _board_queryset(request.user, team, project)
         total_main, done_main = root_stats(qs)
         return render(
             request,
@@ -758,8 +825,9 @@ class SidebarMyTasksPartialView(LoginRequiredMixin, View):
 
 
 class TaskTreePartialView(LoginRequiredMixin, View):
-    def get(self, request, team_slug=None):
-        return _tree_partial(request, team_slug)
+    def get(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        return _tree_partial(request, team_slug, project_slug)
 
 
 class NotificationReadView(LoginRequiredMixin, View):
@@ -919,11 +987,12 @@ class TaskKanbanStatusView(LoginRequiredMixin, View):
     """HTMX POST: update task status from kanban drag-drop."""
     login_url = reverse_lazy('users:login')
 
-    def post(self, request, task_id, team_slug=None):
+    def post(self, request, task_id, team_slug=None, project_slug=None):
         from planner.models import Task as TaskModel
-        team = _workspace_team(request.user, team_slug)
+
+        team, project = _resolve_board(request.user, team_slug, project_slug)
         task = get_object_or_404(TaskModel, pk=task_id)
-        if not user_can_access_task(request.user, task):
+        if not user_can_access_task(request.user, task, team):
             return HttpResponse(status=403)
         new_status = request.POST.get('status', '')
         valid = [c[0] for c in TaskModel.STATUS_CHOICES]
@@ -935,6 +1004,8 @@ class TaskKanbanStatusView(LoginRequiredMixin, View):
         elif task.is_completed:
             task.is_completed = False
         task.save(update_fields=['status', 'is_completed'])
+        sync_parent_completion_from_children(task.parent)
+        _maybe_update_project_progress(task)
         return HttpResponse(status=204, headers={'HX-Trigger': 'refreshKanban'})
 
 

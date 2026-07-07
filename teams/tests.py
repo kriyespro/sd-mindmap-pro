@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from teams.models import Team, TeamMembership
+from teams.models import Team, TeamInvite, TeamMembership
 
 User = get_user_model()
 
@@ -139,3 +139,59 @@ class TeamCreateViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn('Upgrade to Team plan', response.content.decode())
         self.assertFalse(Team.objects.filter(name='Admin Team').exists())
+
+
+class TeamMemberAddFlowTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='owner2',
+            email='owner2@example.com',
+            password='pass1234',
+        )
+        owner_profile = self.owner.profile
+        owner_profile.plan = owner_profile.PLAN_TEAM
+        owner_profile.save(update_fields=['plan'])
+        self.team = Team.objects.create(name='Growth', created_by=self.owner)
+        TeamMembership.objects.create(team=self.team, user=self.owner, is_owner=True)
+        self.client.force_login(self.owner)
+
+    def test_existing_user_email_gets_added_immediately(self):
+        existing_user = User.objects.create_user(
+            username='alex',
+            email='alex@example.com',
+            password='pass1234',
+        )
+
+        response = self.client.post(
+            reverse('teams:member_add', kwargs={'team_slug': self.team.slug}),
+            {
+                'email': existing_user.email,
+                'role': TeamMembership.ROLE_MEMBER,
+                'next': reverse('planner:board_team', kwargs={'team_slug': self.team.slug}),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            TeamMembership.objects.filter(team=self.team, user=existing_user, is_active=True).exists()
+        )
+        self.assertContains(response, 'You can assign tasks immediately')
+
+    def test_new_email_creates_invite_with_positive_message(self):
+        response = self.client.post(
+            reverse('teams:member_add', kwargs={'team_slug': self.team.slug}),
+            {
+                'email': 'kriyes.pro@gmail.com',
+                'full_name': 'Adam Jones',
+                'role': TeamMembership.ROLE_MEMBER,
+                'next': reverse('planner:board_team', kwargs={'team_slug': self.team.slug}),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        invite = TeamInvite.objects.get(team=self.team, email='kriyes.pro@gmail.com')
+        self.assertTrue(invite.is_usable)
+        self.assertContains(response, 'Invite ready for Adam Jones')
+        self.assertNotContains(response, 'No account found')

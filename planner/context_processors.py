@@ -9,14 +9,19 @@ from planner.models import Notification
 from planner.models import Task
 from planner.services import tasks_for_workspace, workspace_root_average_percent
 from teams.models import TeamMembership
+from users.ui_mode import get_user_ui_mode, normalize_layout
 
 
 def workspace_chrome(request: Any) -> dict[str, Any]:
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
         return {}
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap', 'mini', 'idea'):
+    if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
+    mode = get_user_ui_mode(request.user)
+    layout = normalize_layout(mode, layout)
+    if request.session.get('task_layout') != layout:
+        request.session['task_layout'] = layout
     team_tasks = Task.objects.filter(team_id=OuterRef('team_id'))
     active_tasks = team_tasks.filter(is_archived=False)
     memberships = list(

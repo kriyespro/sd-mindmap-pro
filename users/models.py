@@ -16,6 +16,15 @@ class Profile(models.Model):
         (PLAN_TEAM_20, 'Team Pro (up to 20 users)'),
     )
 
+    UI_MODE_MINIMAL = 'minimal'
+    UI_MODE_EXPRESS = 'express'
+    UI_MODE_PRO = 'pro'
+    UI_MODE_CHOICES = (
+        (UI_MODE_MINIMAL, 'Minimal'),
+        (UI_MODE_EXPRESS, 'Express'),
+        (UI_MODE_PRO, 'Pro'),
+    )
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -35,6 +44,16 @@ class Profile(models.Model):
         null=True,
         blank=True,
         help_text='Last day of 7-day trial (inclusive).',
+    )
+    ui_mode = models.CharField(
+        max_length=20,
+        choices=UI_MODE_CHOICES,
+        default=UI_MODE_PRO,
+        help_text='Controls which board views and sidebar links are shown.',
+    )
+    tutorial_seeded = models.BooleanField(
+        default=False,
+        help_text='True after the welcome tour demo project has been created.',
     )
 
     class Meta:

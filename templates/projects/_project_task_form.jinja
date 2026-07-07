@@ -1,0 +1,41 @@
+<form hx-post="{{ url('projects:task_create', slug=project.slug) }}"
+      hx-target="#project-task-form-slot"
+      hx-swap="innerHTML"
+      class="space-y-3 text-left">
+    {{ csrf_input }}
+    <input type="hidden" name="next" value="{{ next_url|default('') }}">
+
+    <div>
+        <label class="mb-1 block text-xs font-medium text-slate-700">Task title *</label>
+        {{ task_form.title }}
+        {% if task_form.title.errors %}
+        <p class="mt-1 text-xs text-rose-600">{{ task_form.title.errors|join(', ') }}</p>
+        {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="mb-1 block text-xs font-medium text-slate-700">Start date</label>
+            {{ task_form.start_date }}
+        </div>
+        <div>
+            <label class="mb-1 block text-xs font-medium text-slate-700">End date</label>
+            {{ task_form.due_date }}
+        </div>
+        <div>
+            <label class="mb-1 block text-xs font-medium text-slate-700">Priority</label>
+            {{ task_form.priority }}
+        </div>
+        <div>
+            <label class="mb-1 block text-xs font-medium text-slate-700">Status</label>
+            {{ task_form.status }}
+        </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-1">
+        <button type="submit"
+                class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition">
+            Add task
+        </button>
+    </div>
+</form>
