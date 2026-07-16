@@ -55,3 +55,4 @@
 [DONE] Phase PM-36 - Mission Control upgrade: conversion/ARPU/WoW KPIs, cash sparkline, unpaid-plan + dormant alerts, customer dossier with pay+grant, trial extend, people filter chips
 [DONE] Phase PM-37 - Mission Control cream compact UI: IBM Plex, narrow rail, dense KPIs/tables, teal/ink accents on cream paper
 [DONE] Phase PM-38 - Fix Attention panel overlap: dedicated CSS grid, truncate rows, 2-col layout, min-width:0
+[DONE] Phase PM-39 - Pulse KPIs as one-liner chips (cash/MRR/convert/growth/trials/accounts/ops)

@@ -133,6 +133,52 @@
             .mc-main-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
         }
         .mc-main-grid > * { min-width: 0; }
+        .mc-pulse-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        .mc-pulse-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--mc-muted);
+            margin-right: 0.15rem;
+        }
+        .mc-pulse-chip {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.28rem;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            border: 1px solid var(--mc-line);
+            background: var(--mc-paper);
+            border-radius: 0.25rem;
+            padding: 0.2rem 0.45rem;
+            color: var(--mc-ink);
+        }
+        .mc-pulse-chip b { font-weight: 700; }
+        .mc-pulse-chip i {
+            font-style: normal;
+            color: var(--mc-muted);
+            font-size: 10px;
+        }
+        .mc-pulse-chip.money {
+            border-color: #b7d4c6;
+            background: #f0f7f3;
+            color: var(--mc-money);
+        }
+        .mc-pulse-chip.money i { color: #3d7a5f; }
+        .mc-pulse-chip.warn {
+            border-color: #e2cfa3;
+            background: var(--mc-warn-soft);
+            color: var(--mc-warn);
+        }
+        .mc-pulse-chip.warn i { color: #8a6a2e; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
