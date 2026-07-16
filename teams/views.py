@@ -65,10 +65,17 @@ def _add_or_invite_member(
     clean_email = (email or '').strip().lower()
     clean_name = (full_name or '').strip()
 
+    # Single-field UX: "who" may arrive as username OR email in username/email slots.
+    if clean_username and '@' in clean_username and not clean_email:
+        clean_email = clean_username.lower()
+        clean_username = ''
+    if clean_email and not clean_name:
+        clean_name = clean_email.split('@', 1)[0] or 'Member'
+
     if role not in {TeamMembership.ROLE_ADMIN, TeamMembership.ROLE_MEMBER}:
         return (False, 'Invalid role')
     if not clean_username and not clean_email:
-        return (False, 'Enter an existing username, or use email + full name for a new member invite')
+        return (False, 'Enter a username or email')
 
     target_user = None
     if clean_username:
@@ -96,16 +103,14 @@ def _add_or_invite_member(
             user=target_user,
             message=f'{actor.username} added you to "{team.name}" team.',
         )
-        return (True, f'Added @{target_user.username} to {team.name}. You can assign tasks immediately.')
+        return (True, f'Added @{target_user.username}. You can assign them tasks now.')
 
     if not clean_email:
-        return (False, 'No account matched that username. Use email + full name to invite a new member.')
+        return (False, 'No account with that username. Try their email to send a join invite.')
     try:
         validate_email(clean_email)
     except ValidationError:
         return (False, 'Enter a valid email address')
-    if not clean_name:
-        return (False, 'Enter full name for new member invite')
 
     seat_limit = _team_seat_limit(team)
     usable_invite = TeamInvite.objects.filter(
@@ -116,7 +121,10 @@ def _add_or_invite_member(
         expires_at__gt=timezone.now(),
     ).first()
     if usable_invite:
-        return (False, 'Active invite already exists for this email')
+        accept_url = request.build_absolute_uri(
+            reverse('teams:accept_invite', kwargs={'token': usable_invite.token})
+        )
+        return (False, f'Invite already active for this email. Share: {accept_url}')
 
     invite = TeamInvite.objects.create(
         team=team,
@@ -130,15 +138,14 @@ def _add_or_invite_member(
     accept_url = request.build_absolute_uri(
         reverse('teams:accept_invite', kwargs={'token': invite.token})
     )
-    success_message = (
-        f'Invite ready for {clean_name} ({clean_email}). '
-        f'Share this join link so they can create or log into an account and join: {accept_url}'
-    )
     Notification.objects.create(
         user=actor,
         message=f'Invite created for {clean_name} ({clean_email}) in "{team.name}". Share: {accept_url}',
     )
-    return (True, success_message)
+    return (
+        True,
+        f'Invite ready for {clean_name}. Share this link: {accept_url}',
+    )
 
 
 class TeamCreateView(LoginRequiredMixin, View):
@@ -190,7 +197,7 @@ class TeamInviteView(LoginRequiredMixin, View):
 
         form = TeamInviteForm(request.POST)
         if not form.is_valid():
-            return HttpResponse('Enter a valid username or email invite details', status=400)
+            return HttpResponse('Enter a username or email', status=400)
 
         ok, msg = _add_or_invite_member(
             request=request,
@@ -330,7 +337,7 @@ class TeamMemberAddView(LoginRequiredMixin, View):
 
         form = TeamInviteForm(request.POST)
         if not form.is_valid():
-            return _error('Enter a valid username or email invite details')
+            return _error('Enter a username or email')
         username = (form.cleaned_data.get('username') or '').strip()
         email = (form.cleaned_data.get('email') or '').strip()
         full_name = (form.cleaned_data.get('full_name') or '').strip()
@@ -370,15 +377,15 @@ class TeamMemberAddAnyTeamView(LoginRequiredMixin, View):
         team = Team.objects.filter(slug=team_slug).first()
         if not team:
             return _fail('Team not found')
-        owner_membership = TeamMembership.objects.filter(
-            team=team, user=request.user, is_owner=True, is_active=True
+        membership = TeamMembership.objects.filter(
+            team=team, user=request.user, is_active=True
         ).first()
-        if not owner_membership:
-            return _fail('Only owner can manage team members')
+        if not membership or not membership.can_manage_invites:
+            return _fail('Only owner/admin can manage team members')
 
         form = TeamInviteForm(request.POST)
         if not form.is_valid():
-            return _fail('Enter a valid username or email invite details')
+            return _fail('Enter a username or email')
         username = (form.cleaned_data.get('username') or '').strip()
         email = (form.cleaned_data.get('email') or '').strip()
         full_name = (form.cleaned_data.get('full_name') or '').strip()

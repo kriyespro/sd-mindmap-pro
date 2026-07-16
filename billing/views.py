@@ -133,6 +133,9 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['owner_team_seat_left'] = max(owner_team_seat_limit - owner_team_member_count, 0)
         ctx['owner_team_members'] = owner_team_members
         ctx['owner_team_invites'] = owner_team_invites
+        ctx['pending_email_invites'] = [
+            inv for inv in owner_team_invites if inv.is_usable and inv.email
+        ]
         ctx['team_invite_form'] = TeamInviteForm()
         ctx['team_join_link_form'] = TeamJoinLinkForm()
         ctx['team_member_role_choices'] = TeamMembership.ROLE_CHOICES

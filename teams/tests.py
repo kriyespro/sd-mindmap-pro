@@ -176,14 +176,33 @@ class TeamMemberAddFlowTests(TestCase):
         self.assertTrue(
             TeamMembership.objects.filter(team=self.team, user=existing_user, is_active=True).exists()
         )
-        self.assertContains(response, 'You can assign tasks immediately')
+        self.assertContains(response, 'You can assign them tasks now')
+
+    def test_who_username_adds_immediately(self):
+        existing_user = User.objects.create_user(
+            username='sam',
+            email='sam@example.com',
+            password='pass1234',
+        )
+        response = self.client.post(
+            reverse('teams:member_add', kwargs={'team_slug': self.team.slug}),
+            {
+                'who': 'sam',
+                'role': TeamMembership.ROLE_MEMBER,
+                'next': reverse('planner:board_team', kwargs={'team_slug': self.team.slug}),
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            TeamMembership.objects.filter(team=self.team, user=existing_user, is_active=True).exists()
+        )
 
     def test_new_email_creates_invite_with_positive_message(self):
         response = self.client.post(
             reverse('teams:member_add', kwargs={'team_slug': self.team.slug}),
             {
-                'email': 'kriyes.pro@gmail.com',
-                'full_name': 'Adam Jones',
+                'who': 'kriyes.pro@gmail.com',
                 'role': TeamMembership.ROLE_MEMBER,
                 'next': reverse('planner:board_team', kwargs={'team_slug': self.team.slug}),
             },
@@ -193,5 +212,5 @@ class TeamMemberAddFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         invite = TeamInvite.objects.get(team=self.team, email='kriyes.pro@gmail.com')
         self.assertTrue(invite.is_usable)
-        self.assertContains(response, 'Invite ready for Adam Jones')
+        self.assertContains(response, 'Invite ready for kriyes.pro')
         self.assertNotContains(response, 'No account found')

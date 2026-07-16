@@ -212,159 +212,130 @@
         </div>
 
         <div class="space-y-3 lg:col-span-5">
-            <section class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                <h2 class="text-sm font-semibold text-slate-800">Team access</h2>
-        {% if owner_team %}
-        <p class="mt-1 text-xs text-slate-600">Team <span class="font-semibold text-slate-800">{{ owner_team.name }}</span> · Seats <span class="font-semibold">{{ owner_team_member_count }}/{{ owner_team_seat_limit }}</span> ({{ owner_team_seat_left }} left)</p>
-        {% if owner_team_seat_left == 0 %}
-        <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
-            Free seats are full. Upgrade capacity before inviting more members.
-        </div>
-        {% endif %}
-        <div class="team-control-panel mt-2 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5">
-            <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold text-slate-700">Team member control</p>
-                {% if billing_is_owner %}
-                <span class="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Owner controls enabled</span>
+            <section class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm" x-data="{ copied: false }">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <h2 class="text-sm font-semibold text-slate-800">Team access</h2>
+                        {% if owner_team %}
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            <span class="font-medium text-slate-700">{{ owner_team.name }}</span>
+                            · {{ owner_team_member_count }}/{{ owner_team_seat_limit }} seats
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if owner_team %}
+                {% if owner_team_seat_left == 0 %}
+                <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+                    Seats full — free a seat or upgrade before adding more people.
+                </div>
                 {% endif %}
-            </div>
-            {% if billing_is_owner %}
-            <form action="{{ url('teams:member_add_any') }}" method="post" class="mt-2 grid gap-2 md:grid-cols-2">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <select name="team_slug"
-                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                    {% for owned_team in owned_teams %}
-                    <option value="{{ owned_team.slug }}" {% if owned_team.id == owner_team.id %}selected{% endif %}>{{ owned_team.name }}</option>
-                    {% endfor %}
-                </select>
-                {{ team_invite_form.username }}
-                {{ team_invite_form.email }}
-                {{ team_invite_form.full_name }}
-                <select name="role"
-                        class="rounded-lg border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                    {% for role_value, role_label in team_member_role_choices %}
-                    <option value="{{ role_value }}" {% if role_value == 'member' %}selected{% endif %}>{{ role_label }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700">Assign</button>
-            </form>
-            <p class="team-control-hint mt-1 text-[10px] text-slate-500">Existing users are added immediately. New email invites get a join link that you can share.</p>
-            {% endif %}
-            {% if owner_team_members %}
-            <div class="mt-2 overflow-x-auto">
-                <table class="team-members-table min-w-full text-left text-[11px] text-slate-600">
-                    <thead class="bg-white text-[10px] uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th class="px-2 py-1.5">User</th>
-                            <th class="px-2 py-1.5">Team</th>
-                            <th class="px-2 py-1.5">Active</th>
-                            <th class="px-2 py-1.5">Role</th>
-                            {% if billing_is_owner %}<th class="px-2 py-1.5 text-right">Action</th>{% endif %}
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200">
-                        {% for member in owner_team_members %}
-                        <tr>
-                            <td class="px-2 py-1.5">
-                                <p class="font-medium text-slate-800">@{{ member.user.username }}</p>
-                                <p class="text-[10px] text-slate-500">{{ member.user.email or '— no email —' }}</p>
-                            </td>
-                            <td class="px-2 py-1.5">{{ owner_team.name }}</td>
-                            <td class="px-2 py-1.5">
-                                {% if member.is_active %}
-                                <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">Yes</span>
-                                {% else %}
-                                <span class="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">No</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-2 py-1.5">
-                                {% if member.is_owner %}Owner{% elif member.role == 'admin' %}Admin{% else %}Member{% endif %}
-                            </td>
-                            {% if billing_is_owner %}
-                            <td class="px-2 py-1.5 text-right">
-                                {% if not member.is_owner %}
-                                <form action="{{ url('teams:member_status', team_slug=owner_team.slug, membership_id=member.id) }}" method="post">
-                                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                                    <input type="hidden" name="is_active" value="{{ 'false' if member.is_active else 'true' }}">
-                                    {% if member.is_active %}
-                                    <button type="submit" class="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700 hover:bg-amber-100">Deactivate</button>
-                                    {% else %}
-                                    <button type="submit" class="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">Activate</button>
-                                    {% endif %}
-                                </form>
-                                {% else %}
-                                <span class="text-[10px] text-slate-400">—</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-                        </tr>
+
+                {% if billing_can_invite and owner_team_seat_left > 0 %}
+                <form action="{{ url('teams:member_add_any') }}" method="post" class="mt-3 space-y-2">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    {% if owned_teams|length > 1 %}
+                    <select name="team_slug"
+                            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                        {% for owned_team in owned_teams %}
+                        <option value="{{ owned_team.slug }}" {% if owned_team.id == owner_team.id %}selected{% endif %}>{{ owned_team.name }}</option>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <p class="team-control-note mt-1 text-[10px] text-slate-500">Deactivate removes team access only. User account/dashboard stays intact and can be reactivated later.</p>
-            {% else %}
-            <p class="mt-1 text-[11px] text-slate-500">No members loaded.</p>
-            {% endif %}
-        </div>
-        {% if billing_can_invite %}
-        <div class="team-join-panel mt-2 rounded-lg border border-violet-100 bg-violet-50/50 p-2.5">
-            <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold text-violet-900">Team join link</p>
-                {% if team_join_url %}
-                <a href="{{ team_join_url }}" target="_blank" rel="noopener" class="text-[11px] font-medium text-violet-700 hover:underline">Open</a>
+                    </select>
+                    {% else %}
+                    <input type="hidden" name="team_slug" value="{{ owner_team.slug }}">
+                    {% endif %}
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                        <div class="min-w-0 flex-1">
+                            {{ team_invite_form.who }}
+                        </div>
+                        <div class="sm:w-28">
+                            {{ team_invite_form.role }}
+                        </div>
+                        <button type="submit"
+                                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 sm:shrink-0">
+                            Add
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">
+                        Username → added now (assign tasks right away). Email → invite link to share.
+                    </p>
+                </form>
+                {% elif billing_can_invite %}
+                <p class="mt-2 text-xs text-slate-500">No free seats — deactivate someone or upgrade to add more.</p>
                 {% endif %}
-            </div>
-            {% if team_join_url %}
-            <p class="mt-1 break-all rounded bg-white px-2 py-1.5 text-[11px] text-slate-700">{{ team_join_url }}</p>
-            {% else %}
-            <p class="mt-1 text-[11px] text-slate-600">No active link yet. Generate one below.</p>
-            {% endif %}
-        </div>
-        <div class="mt-2 grid gap-2 md:grid-cols-2">
-            <form action="{{ url('teams:invite', team_slug=owner_team.slug) }}" method="post" class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-2.5">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <h3 class="text-xs font-semibold text-slate-700">Invite by username</h3>
-                <p class="mt-0.5 text-[10px] text-slate-500">They log in as that user and open the link you send (or their notification).</p>
-                <label class="mt-1.5 block text-[11px] text-slate-500">Username</label>
-                {{ team_invite_form.username }}
-                <label class="mt-1.5 block text-[11px] text-slate-500">Role</label>
-                {{ team_invite_form.role }}
-                <button type="submit" class="mt-2 rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700">
-                    Send invite
-                </button>
-            </form>
-            <form action="{{ url('teams:invite_link', team_slug=owner_team.slug) }}" method="post" class="rounded-lg border border-violet-100 bg-violet-50/40 p-2.5">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <h3 class="text-xs font-semibold text-slate-700">Generate join link</h3>
-                <label class="mt-1.5 block text-[11px] text-slate-500">Role for joiners</label>
-                {{ team_join_link_form.role }}
-                <button type="submit" class="mt-2 rounded-lg bg-violet-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-violet-700">
-                    Generate link
-                </button>
-            </form>
-        </div>
-        {% if owner_team_invites %}
-        <h3 class="team-invite-note mt-2 text-xs font-semibold text-slate-700">Recent invites</h3>
-        <ul class="recent-invites-list mt-1.5 divide-y divide-slate-100 text-xs">
-            {% for inv in owner_team_invites %}
-            <li class="flex items-center justify-between gap-2 py-1.5 text-slate-600">
-                <span class="truncate">
-                    {% if inv.invited_username %}@{{ inv.invited_username }}{% elif inv.email %}{{ inv.email }}{% else %}Public join link{% endif %}
-                    · {% if inv.role == 'admin' %}Admin{% else %}Member{% endif %}
-                </span>
-                <span class="rounded px-2 py-0.5 text-[10px] {% if inv.is_revoked %}bg-rose-100 text-rose-700{% elif inv.is_usable %}bg-emerald-100 text-emerald-700{% else %}bg-slate-200 text-slate-700{% endif %}">
-                    {% if inv.is_revoked %}revoked{% elif inv.is_usable %}active{% else %}expired/used{% endif %}
-                </span>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        {% endif %}
-        {% else %}
-        <p class="mt-1.5 text-sm text-slate-500">Create a team first, then billing owner can invite users and generate join links here.</p>
-        {% endif %}
+
+                <ul class="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-100">
+                    {% for member in owner_team_members %}
+                    <li class="flex items-center justify-between gap-2 px-2.5 py-2 {% if not member.is_active %}opacity-50{% endif %}">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-medium text-slate-800">@{{ member.user.username }}</p>
+                            <p class="truncate text-[11px] text-slate-500">
+                                {% if member.is_owner %}Owner{% elif member.role == 'admin' %}Admin{% else %}Member{% endif %}
+                                {% if not member.is_active %} · off{% endif %}
+                                {% if member.user.email %} · {{ member.user.email }}{% endif %}
+                            </p>
+                        </div>
+                        {% if billing_is_owner and not member.is_owner %}
+                        <form action="{{ url('teams:member_status', team_slug=owner_team.slug, membership_id=member.id) }}" method="post" class="shrink-0">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            <input type="hidden" name="is_active" value="{{ 'false' if member.is_active else 'true' }}">
+                            {% if member.is_active %}
+                            <button type="submit" class="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50">Remove</button>
+                            {% else %}
+                            <button type="submit" class="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100">Restore</button>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+                    </li>
+                    {% else %}
+                    <li class="px-2.5 py-3 text-xs text-slate-500">No members yet.</li>
+                    {% endfor %}
+                </ul>
+
+                {% if billing_can_invite %}
+                <div class="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 p-2.5">
+                    <p class="text-xs font-semibold text-slate-700">Share join link</p>
+                    <p class="mt-0.5 text-[11px] text-slate-500">Anyone with the link can join (while seats last).</p>
+                    {% if team_join_url %}
+                    <div class="mt-2 flex gap-2">
+                        <input type="text" readonly value="{{ team_join_url }}"
+                               class="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-700"
+                               id="team-join-url-input">
+                        <button type="button"
+                                class="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                @click="navigator.clipboard.writeText(document.getElementById('team-join-url-input').value); copied = true; setTimeout(() => copied = false, 1500)"
+                                x-text="copied ? 'Copied' : 'Copy'"></button>
+                    </div>
+                    {% endif %}
+                    <form action="{{ url('teams:invite_link', team_slug=owner_team.slug) }}" method="post" class="mt-2 flex items-center gap-2">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <input type="hidden" name="role" value="member">
+                        <button type="submit" class="rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-900">
+                            {% if team_join_url %}Refresh link{% else %}Create link{% endif %}
+                        </button>
+                    </form>
+                </div>
+
+                {% if pending_email_invites %}
+                <div class="mt-3">
+                    <p class="text-xs font-semibold text-slate-700">Waiting to join</p>
+                    <ul class="mt-1 space-y-1">
+                        {% for inv in pending_email_invites[:5] %}
+                        <li class="flex items-center justify-between gap-2 rounded border border-slate-100 px-2 py-1.5 text-[11px] text-slate-600">
+                            <span class="truncate">{{ inv.email }}</span>
+                            <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">pending</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endif %}
+
+                {% else %}
+                <p class="mt-2 text-sm text-slate-500">Create a team first, then add people here with a username or email.</p>
+                {% endif %}
             </section>
             <section class="archived-mindmap-panel rounded-lg border border-amber-200 bg-amber-50/70 p-3 shadow-sm">
                 <h2 class="text-sm font-semibold text-amber-900">Active team mindmaps</h2>
