@@ -4,37 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}Operations{% endblock %} · DCPMind</title>
+    <title>{% block title %}Mission Control{% endblock %} · DCPMind</title>
+    <link rel="stylesheet" href="{{ static('css/tailwind.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="{{ static('css/tailwind.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: Inter, system-ui, sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
-                },
-            },
-        };
+        document.addEventListener('DOMContentLoaded', function () {
+            document.body.addEventListener('htmx:configRequest', function (e) {
+                var meta = document.querySelector('meta[name=csrf-token]');
+                if (meta && meta.content) e.detail.headers['X-CSRFToken'] = meta.content;
+            });
+        });
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: Inter, system-ui, sans-serif; }</style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
 <div class="flex min-h-screen">
-    <aside class="flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900/80">
+    <aside class="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900/90">
         <div class="border-b border-slate-800 p-4">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">DCPMind</p>
-            <p class="text-sm font-bold text-white">Control</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Dream Conversion Process</p>
+            <p class="text-sm font-bold text-white">Mission Control</p>
+            <p class="mt-0.5 text-[10px] text-slate-500">CEO ops · staff only</p>
         </div>
         <nav class="flex flex-1 flex-col gap-0.5 p-2">
             <a href="{{ url('staff_dashboard:dashboard') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-white bg-slate-800 ring-1 ring-slate-700">Dashboard</a>
+               class="rounded-lg px-3 py-2 text-sm font-medium transition {% if nav_active == 'dashboard' %}bg-slate-800 text-white ring-1 ring-slate-700{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                Command center
+            </a>
+            <a href="{{ url('staff_dashboard:users') }}"
+               class="rounded-lg px-3 py-2 text-sm font-medium transition {% if nav_active == 'users' %}bg-slate-800 text-white ring-1 ring-slate-700{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                People &amp; plans
+            </a>
+            <div class="my-2 border-t border-slate-800"></div>
+            <a href="{{ url('admin:billing_payment_add') }}"
+               class="rounded-lg px-3 py-2 text-sm font-medium text-emerald-400/90 transition hover:bg-slate-800 hover:text-emerald-300">
+                + Record payment
+            </a>
             <a href="{{ url('admin:index') }}" target="_blank" rel="noopener"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">Classic admin (/sd/) ↗</a>
+               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">
+                Classic admin (/sd/) ↗
+            </a>
             <a href="{{ url('planner:board_personal') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">App home</a>
+               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">
+                Open product
+            </a>
         </nav>
         <div class="border-t border-slate-800 p-3 text-xs text-slate-500">
             <p class="truncate font-medium text-slate-400">{{ user.username }}</p>
@@ -45,6 +64,13 @@
         </div>
     </aside>
     <div class="min-w-0 flex-1 overflow-auto">
+        {% if messages %}
+        <div class="border-b border-amber-900/40 bg-amber-950/40 px-6 py-2 text-xs text-amber-200">
+            {% for message in messages %}
+            <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% block main %}{% endblock %}
     </div>
 </div>
