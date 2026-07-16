@@ -332,6 +332,7 @@
         inviteModalOpen: false,
         teamCreateError: '',
         parentIdForModal: '',
+        taskStarter: '',
         sidebarOpen: false,
         taskDetailOpen: false,
         uiReady: false,
@@ -389,6 +390,36 @@
         </div>
 
         <nav class="flex-1 space-y-0.5 overflow-y-auto p-2.5">
+            <div x-show="sidebarOpen"
+                 x-cloak
+                 x-data="{
+                     open: localStorage.getItem('encryptionNoticeDismissed') !== '1',
+                     dismiss() {
+                         this.open = false;
+                         localStorage.setItem('encryptionNoticeDismissed', '1');
+                     }
+                 }">
+                <div x-show="open" x-cloak
+                     class="mb-2 rounded-lg border border-emerald-700/20 bg-emerald-50/90 px-2.5 py-2 shadow-sm shadow-emerald-900/5">
+                    <div class="flex items-start gap-2">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-600/15 text-emerald-800" aria-hidden="true">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-900">Encrypted tasks</p>
+                            <p class="mt-0.5 text-[10px] leading-snug text-emerald-950/80">Your task titles are encrypted at rest for privacy.</p>
+                        </div>
+                        <button type="button"
+                                @click="dismiss()"
+                                class="shrink-0 rounded p-0.5 text-emerald-800/70 transition hover:bg-emerald-600/10 hover:text-emerald-950"
+                                title="Dismiss"
+                                aria-label="Dismiss encryption notice">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <p x-show="sidebarOpen" x-cloak class="mb-1.5 px-2 text-[9px] font-semibold uppercase tracking-wider text-indigo-900/80">Workspace</p>
             <a href="{{ url('planner:board_personal') }}" title="Personal workspace"
                class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition

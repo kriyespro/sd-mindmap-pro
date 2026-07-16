@@ -20,3 +20,5 @@
 [DONE] Phase PM-15 - Sidebar stays expanded until manual toggle; preference saved in localStorage (no auto-collapse on nav/outside/Escape)
 [DONE] Phase PM-16 - Welcome Tour demo project auto-created on signup: tutorial tasks (mindmap/tree/kanban/gantt), milestone, checklist, comments, personal tasks, notification; redirect to project board; `seed_tutorials` backfill command
 [DONE] Phase PM-17 - Mindmap expand perf: O(n) tree build, session-only collapse state, hx-sync drop, scroll preserve, +N button always visible when collapsed
+[DONE] Phase PM-18 - Sidebar encryption announcement: “Your task titles are encrypted at rest”; dismissible via localStorage
+[DONE] Phase PM-19 - New root task “99D starter”: 1×99D → 3×33D → 9×11D (create_99d_template + modal option)

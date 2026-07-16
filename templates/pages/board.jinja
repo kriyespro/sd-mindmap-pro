@@ -265,13 +265,37 @@
         </div>
         <form hx-post="{{ u.tasks }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
               hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-              @htmx:after-request="if(event.detail.successful){ addModalOpen=false; $el.reset(); }">
+              @htmx:after-request="if(event.detail.successful){ addModalOpen=false; taskStarter=''; $el.reset(); }">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
             <input type="hidden" name="parent_id" x-model="parentIdForModal">
             <div class="space-y-3">
+                <div x-show="!parentIdForModal" x-cloak>
+                    <p class="mb-1.5 text-[11px] font-medium text-slate-600">Starter layout</p>
+                    <div class="grid gap-2">
+                        <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 transition hover:border-slate-300"
+                               :class="taskStarter === '' && 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200'">
+                            <input type="radio" name="template" value="" class="mt-0.5" x-model="taskStarter"
+                                   @change="const t=$el.closest('form').querySelector('[name=title]'); if(t && t.value==='99D') t.value='';">
+                            <span>
+                                <span class="block text-xs font-semibold text-slate-800">Blank root</span>
+                                <span class="block text-[10px] text-slate-500">One empty top-level task</span>
+                            </span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 transition hover:border-slate-300"
+                               :class="taskStarter === '99d' && 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200'">
+                            <input type="radio" name="template" value="99d" class="mt-0.5" x-model="taskStarter"
+                                   @change="const t=$el.closest('form').querySelector('[name=title]'); if(t && !t.value.trim()) t.value='99D';">
+                            <span>
+                                <span class="block text-xs font-semibold text-slate-800">99D starter</span>
+                                <span class="block text-[10px] leading-snug text-slate-500">1×99D → 3×33D → each with 3×11D (13 tasks)</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
                 <div>
-                    <label class="mb-1 block text-[11px] font-medium text-slate-600">Title <span class="text-rose-500">*</span></label>
+                    <label class="mb-1 block text-[11px] font-medium text-slate-600">Title <span class="text-rose-500" x-show="taskStarter !== '99d' || parentIdForModal">*</span></label>
                     {{ task_create_form.title }}
+                    <p x-show="taskStarter === '99d' && !parentIdForModal" x-cloak class="mt-1 text-[10px] text-slate-500">Leave blank to use “99D”. Subtasks are always 33D / 11D.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>

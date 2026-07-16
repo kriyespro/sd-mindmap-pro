@@ -33,15 +33,67 @@ def _create_task(
     parent: Task | None,
     due_date: date | None = None,
     assignee_username: str = '',
+    project=None,
+    position: int = 0,
 ) -> Task:
     return Task.objects.create(
         author=author,
         team=team,
+        project=project,
         parent=parent,
         title=title.strip(),
         due_date=due_date,
         assignee_username=(assignee_username or '').strip(),
+        position=position,
     )
+
+
+def create_99d_template(
+    *,
+    author: User,
+    team: Team | None = None,
+    project=None,
+    due_date: date | None = None,
+    assignee_username: str = '',
+    root_title: str = '99D',
+) -> Task:
+    """
+    Create the 99D OKR starter tree:
+      99D
+        ├─ 33D → 11D, 11D, 11D
+        ├─ 33D → 11D, 11D, 11D
+        └─ 33D → 11D, 11D, 11D
+    """
+    title = (root_title or '').strip() or '99D'
+    root = _create_task(
+        author=author,
+        team=team,
+        project=project,
+        title=title,
+        parent=None,
+        due_date=due_date,
+        assignee_username=assignee_username,
+        position=0,
+    )
+    for i in range(3):
+        mid = _create_task(
+            author=author,
+            team=team,
+            project=project,
+            title='33D',
+            parent=root,
+            position=i,
+        )
+        for j in range(3):
+            _create_task(
+                author=author,
+                team=team,
+                project=project,
+                title='11D',
+                parent=mid,
+                position=j,
+            )
+    return root
 
 
 def import_tasks_from_upload(*, uploaded_file, author: User, team: Team | None) -> int:

@@ -22,6 +22,7 @@ from planner.services import (
     collect_branch_ids_with_children,
     collect_task_has_children,
     compute_mindmap_layout,
+    create_99d_template,
     get_mindmap_collapsed_ids,
     import_tasks_from_upload,
     normalize_workspace_completion,
@@ -623,6 +624,64 @@ class TaskCreateView(LoginRequiredMixin, View):
         project_slug = project_slug or slug
         team, project = _resolve_board(request.user, team_slug, project_slug)
         form = TaskCreateForm(request.POST)
+        template = (request.POST.get('template') or '').strip().lower()
+        use_99d = template == '99d' and not (request.POST.get('parent_id') or '').strip()
+
+        if use_99d:
+            # Title optional for template — default root label is 99D.
+            title = (request.POST.get('title') or '').strip() or '99D'
+            due_raw = (request.POST.get('due_date') or '').strip()
+            due_date = None
+            if due_raw:
+                from datetime import datetime
+                try:
+                    due_date = datetime.strptime(due_raw, '%Y-%m-%d').date()
+                except ValueError:
+                    return HttpResponse('Invalid date', status=400)
+            assignee_username = (request.POST.get('assignee_username') or '').strip()
+            effective_team = team or (project.team if project else None)
+            assignee_error = _validate_assignee_for_workspace(
+                team=effective_team,
+                assignee_username=assignee_username,
+            )
+            if assignee_error:
+                return HttpResponse(assignee_error, status=400)
+            task = create_99d_template(
+                author=request.user,
+                team=effective_team,
+                project=project,
+                due_date=due_date,
+                assignee_username=assignee_username,
+                root_title=title,
+            )
+            _maybe_update_project_progress(task)
+            qs = _board_queryset(request.user, team, project)
+            rows = task_rows_for_tree(qs)
+            tree = build_task_tree(rows)
+            branch_ids = set(collect_branch_ids_with_children(tree))
+            # Keep 99D + its 33D branches expanded so the starter tree is visible.
+            keep_open_ids = {task.id} | set(
+                Task.objects.filter(parent_id=task.id).values_list('id', flat=True)
+            )
+            _set_tree_focus_expand_ids(request, keep_open_ids)
+            set_mindmap_collapsed_ids(request, team, branch_ids - keep_open_ids, project=project)
+            notify_assignee(
+                assignee_username=assignee_username,
+                actor=request.user,
+                title=task.title_plain,
+                old_assignee='',
+            )
+            response = _tree_partial(request, team_slug, project_slug)
+            trigger_payload: dict[str, object] = {
+                'updateStats': True,
+                'taskCreated': {'taskId': task.id},
+            }
+            if team is not None:
+                pct = workspace_root_average_percent(qs)
+                trigger_payload['sidebarTeamPct'] = {'teamId': team.id, 'pct': pct}
+            response['HX-Trigger'] = json.dumps(trigger_payload)
+            return response
+
         if not form.is_valid():
             return HttpResponse('Invalid', status=400)
         parent_id = request.POST.get('parent_id') or None
