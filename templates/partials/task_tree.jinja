@@ -37,9 +37,10 @@
      class="group relative {% if layout_mode == 'idea' %}overflow-visible z-[1] hover:z-[30]{% else %}overflow-visible{% endif %} rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md {% if layout_mode == 'tree' %}min-w-[230px] max-w-[290px] hover:-translate-y-0.5{% else %}w-full{% endif %} {% if layout_mode == 'mini' %}max-h-[30px] hover:max-h-[180px] overflow-hidden ring-1 ring-indigo-100/70 hover:ring-indigo-200{% endif %} {% if layout_mode == 'idea' %}max-h-[28px] rounded-lg border-slate-200/95 shadow-none hover:shadow-lg hover:ring-1 hover:ring-slate-300/80{% endif %}"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
     <div class="{% if layout_mode in ['mindmap', 'mini'] %}h-[2px]{% elif layout_mode == 'idea' %}h-0{% else %}h-[3px]{% endif %}" style="background:{{ bar }}"></div>
-    <div class="{% if layout_mode == 'mindmap' %}space-y-0.5 px-2 py-1{% elif layout_mode == 'mini' %}space-y-0.5 px-1.5 py-0.5{% elif layout_mode == 'idea' %}space-y-0.5 px-2 py-0.5{% else %}space-y-1 px-2.5 py-1.5{% endif %}">
-        <div class="flex min-w-0 items-center gap-1.5">
-            <span class="inline-flex shrink-0 select-none items-center rounded-md border px-2 py-0.5 text-[9px] font-extrabold tracking-wide {% if layout_mode in ['mindmap', 'mini'] %}scale-95{% endif %} {% if layout_mode in ['mini', 'idea'] %}hidden group-hover:inline-flex{% endif %}"
+    <div class="{% if layout_mode == 'mindmap' %}space-y-1 px-2 py-1{% elif layout_mode == 'mini' %}space-y-0.5 px-1.5 py-0.5{% elif layout_mode == 'idea' %}space-y-0.5 px-2 py-0.5{% else %}space-y-1.5 px-2.5 py-1.5{% endif %}">
+        {# Top: badge + title only — max room for the name #}
+        <div class="flex min-w-0 items-start gap-1.5">
+            <span class="mt-0.5 inline-flex shrink-0 select-none items-center rounded-md border px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide {% if layout_mode in ['mini', 'idea'] %}hidden group-hover:inline-flex{% endif %}"
                   style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
             <div class="min-w-0 flex-1">
                 {% set _title = (task.title or '')|trim %}
@@ -64,80 +65,19 @@
                            @change="$el.form.requestSubmit()">
                 </form>
             </div>
-            <button type="button"
-                    hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                    class="flex shrink-0 items-center justify-center transition active:scale-90 {% if layout_mode in ['mini', 'idea'] %}h-2.5 w-2.5 rounded-full border-0{% else %}h-3.5 w-3.5 rounded border{% endif %}
-                           {% if task.is_completed %}
-                               {% if layout_mode in ['mini', 'idea'] %}bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]{% else %}border-emerald-500 bg-emerald-500 text-white{% endif %}
-                           {% else %}
-                               {% if layout_mode in ['mini', 'idea'] %}bg-slate-300 group-hover:bg-indigo-400{% else %}border-slate-300 text-transparent hover:border-indigo-400{% endif %}
-                           {% endif %}">
-                {% if layout_mode not in ['mini', 'idea'] %}
-                <svg class="h-2 w-2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                {% endif %}
-            </button>
-            <button type="button"
-                    @click="taskDetailOpen = true"
-                    hx-get="{{ url('planner:task_detail', task_id=task.id) }}"
-                    hx-target="#task-detail-content"
-                    hx-swap="innerHTML"
-                    data-hx-no-task-focus
-                    class="relative z-10 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-slate-300 opacity-0 transition hover:bg-indigo-50 hover:text-indigo-600 group-hover:opacity-100"
-                    title="Open task details">
-                <svg class="pointer-events-none h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </button>
-            <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                    hx-confirm="Delete this task and all subtasks?"
-                    class="relative z-10 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100">
-                <svg class="pointer-events-none h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
-            </button>
-            {# Always-visible add — especially for 11D where the meta row often clips "+" #}
-            <button type="button"
-                    @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
-                    title="{% if depth >= 2 %}Add subtask under 11D{% else %}Add subtask{% endif %}"
-                    class="relative z-20 flex shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 font-extrabold text-indigo-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-100
-                           {% if layout_mode in ['mini', 'idea'] %}h-4 min-w-[1rem] px-0.5 text-[10px] opacity-0 group-hover:opacity-100{% else %}h-5 min-w-[1.25rem] px-1 text-[11px]{% endif %}">
-                +
-            </button>
-            {% if layout_mode in ['mindmap', 'mini'] and _branch %}
-            <button type="button"
-                    data-hx-no-task-focus
-                    hx-post="{{ u.mindmap_collapse(task.id) }}"
-                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:drop"
-                    hx-indicator="this"
-                    hx-disabled-elt="this"
-                    class="mm-branch-btn relative z-20 flex {% if task.id in _mc %}min-w-[1.5rem] opacity-100{% else %}h-6 w-6{% endif %} shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-1 text-[11px] font-bold leading-none text-slate-600 shadow-md ring-1 ring-slate-200/80 transition hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-70 {% if layout_mode == 'mini' and task.id not in _mc %}opacity-0 group-hover:opacity-100{% endif %}"
-                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
-                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
-            </button>
-            {% endif %}
-            {% if layout_mode == 'idea' and _branch %}
-            <button type="button"
-                    data-hx-no-task-focus
-                    hx-post="{{ u.mindmap_collapse(task.id) }}"
-                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:drop"
-                    hx-indicator="this"
-                    hx-disabled-elt="this"
-                    class="mm-branch-btn relative z-20 flex h-4 {% if task.id in _mc %}min-w-[1rem] px-0.5 opacity-100{% else %}w-4{% endif %} shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold leading-none text-slate-600 transition hover:bg-slate-300 disabled:cursor-wait disabled:opacity-60 {% if task.id not in _mc %}opacity-0 group-hover:opacity-100{% endif %}"
-                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
-                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
-            </button>
-            {% endif %}
         </div>
-        <div class="{% if layout_mode == 'idea' %}absolute left-1/2 top-[calc(100%-1px)] z-40 min-w-full w-max max-w-[320px] -translate-x-1/2 rounded-xl border border-slate-200/90 bg-white/95 px-1.5 py-1 shadow-[0_10px_24px_rgba(15,23,42,0.16)] backdrop-blur-[1px] flex items-center flex-nowrap overflow-x-auto no-scrollbar{% elif layout_mode == 'mindmap' %}flex min-w-0 flex-nowrap items-center{% else %}flex min-w-0 flex-wrap items-center{% endif %} {% if layout_mode in ['mindmap', 'mini', 'idea'] %}gap-0.5{% else %}gap-1{% endif %} {% if layout_mode == 'mini' %}max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100{% elif layout_mode == 'idea' %}pointer-events-none opacity-0 translate-y-1 scale-[0.96] transition-all duration-180 ease-out [transition-delay:120ms] group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:[transition-delay:0ms]{% endif %}">
+
+        {# Bottom: date · assign · done · delete · + · branch #}
+        <div class="{% if layout_mode == 'idea' %}absolute left-1/2 top-[calc(100%-1px)] z-40 min-w-full w-max max-w-[320px] -translate-x-1/2 rounded-xl border border-slate-200/90 bg-white/95 px-1.5 py-1 shadow-[0_10px_24px_rgba(15,23,42,0.16)] backdrop-blur-[1px] flex items-center flex-nowrap overflow-x-auto no-scrollbar{% else %}flex min-w-0 flex-nowrap items-center{% endif %} gap-1 {% if layout_mode == 'mini' %}max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100{% elif layout_mode == 'idea' %}pointer-events-none opacity-0 translate-y-1 scale-[0.96] transition-all duration-180 ease-out [transition-delay:120ms] group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:[transition-delay:0ms]{% endif %}">
             <div class="shrink-0">
                 <button type="button" x-show="!editingDue"
                         @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
-                        class="inline-flex items-center gap-0.5 rounded border {% if layout_mode == 'idea' %}px-1 py-0.5 text-[9px]{% else %}px-1.5 py-0.5 text-[10px]{% endif %} font-semibold whitespace-nowrap
+                        class="inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap
                                {% if task.due_state == 'overdue' %}border-rose-200 bg-rose-50 text-rose-700
                                {% elif task.due_state == 'today' %}border-amber-200 bg-amber-50 text-amber-800
                                {% elif task.due_state == 'upcoming' %}border-indigo-200 bg-indigo-50 text-indigo-700
                                {% else %}border-slate-200 bg-slate-50 text-slate-400{% endif %}">
-                    <svg class="h-2 w-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <svg class="h-2.5 w-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     {{ task.due_date or 'Date' }}
                 </button>
                 <form x-show="editingDue" x-cloak
@@ -146,20 +86,21 @@
                       @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
-                           class="rounded border border-slate-200 px-1 py-0.5 text-[10px] font-medium w-[104px]"
+                           class="w-[104px] rounded border border-slate-200 px-1 py-0.5 text-[10px] font-medium"
                            @change="$el.form.requestSubmit()">
                     <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
                 </form>
             </div>
-            <div class="min-w-0 shrink-0">
+
+            <div class="min-w-0 shrink">
                 <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                       hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                      class="inline-flex items-center">
+                      class="inline-flex max-w-full items-center">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
                     <select name="assignee_username"
                             title="Assign task"
-                            class="max-w-[96px] truncate rounded border border-slate-200 bg-slate-50 py-0.5 pl-1 pr-0.5 text-[10px] font-semibold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 focus:border-indigo-500 focus:outline-none"
+                            class="max-w-[88px] truncate rounded border border-slate-200 bg-slate-50 py-0.5 pl-1 pr-0.5 text-[10px] font-semibold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 focus:border-indigo-500 focus:outline-none"
                             onchange="this.form.requestSubmit()">
                         <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
                         {% if team_assignee_usernames %}
@@ -174,18 +115,70 @@
                     </select>
                 </form>
             </div>
-            <div class="flex min-w-0 {% if layout_mode == 'idea' %}w-[68px] shrink-0{% elif layout_mode == 'mindmap' %}min-w-0 flex-1{% else %}flex-1{% endif %} items-center gap-1">
-                <div class="h-[3px] min-w-[24px] flex-1 overflow-hidden rounded-full bg-slate-200">
-                    <div class="h-full rounded-full transition-all duration-500" style="width:{{ task.percent }}%;background:{% if task.percent==100 %}#10b981{% else %}{{ bar }}{% endif %}"></div>
-                </div>
-                <span class="shrink-0 text-[10px] font-extrabold tabular-nums {% if task.percent == 100 %}text-emerald-600{% else %}text-slate-700{% endif %}">{{ task.percent }}%</span>
-            </div>
-            <button type="button" @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
-                    title="{% if depth >= 2 %}Add subtask under 11D{% else %}Add subtask{% endif %}"
-                    class="shrink-0 whitespace-nowrap rounded-md border border-indigo-200 bg-indigo-50 font-extrabold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-800
-                           {% if layout_mode == 'mindmap' %}inline-flex h-5 items-center gap-0.5 px-1.5 py-0 text-[10px]{% elif layout_mode == 'idea' %}px-1 py-0.5 text-[10px]{% else %}px-1.5 py-0.5 text-[11px]{% endif %}">
-                {% if layout_mode == 'idea' %}+{% elif layout_mode == 'mindmap' %}+ Sub{% else %}+ Child{% endif %}
+
+            <span class="ml-auto shrink-0 text-[10px] font-extrabold tabular-nums {% if task.percent == 100 %}text-emerald-600{% else %}text-slate-500{% endif %}" title="Progress">{{ task.percent }}%</span>
+
+            <button type="button"
+                    hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                    title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition active:scale-90
+                           {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-slate-300 text-transparent hover:border-indigo-400{% endif %}">
+                <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
             </button>
+
+            <button type="button"
+                    @click="taskDetailOpen = true"
+                    hx-get="{{ url('planner:task_detail', task_id=task.id) }}"
+                    hx-target="#task-detail-content"
+                    hx-swap="innerHTML"
+                    data-hx-no-task-focus
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                    title="Open task details">
+                <svg class="pointer-events-none h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </button>
+
+            <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                    hx-confirm="Delete this task and all subtasks?"
+                    title="Delete"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-rose-50 hover:text-rose-600">
+                <svg class="pointer-events-none h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
+            </button>
+
+            <button type="button"
+                    @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
+                    title="Add subtask"
+                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 text-[13px] font-extrabold leading-none text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100">
+                +
+            </button>
+
+            {% if layout_mode in ['mindmap', 'mini'] and _branch %}
+            <button type="button"
+                    data-hx-no-task-focus
+                    hx-post="{{ u.mindmap_collapse(task.id) }}"
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop"
+                    hx-indicator="this"
+                    hx-disabled-elt="this"
+                    class="mm-branch-btn relative z-20 flex h-5 {% if task.id in _mc %}min-w-[1.35rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-bold leading-none text-slate-600 transition hover:bg-white hover:text-indigo-600 disabled:cursor-wait disabled:opacity-70"
+                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+            </button>
+            {% endif %}
+            {% if layout_mode == 'idea' and _branch %}
+            <button type="button"
+                    data-hx-no-task-focus
+                    hx-post="{{ u.mindmap_collapse(task.id) }}"
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop"
+                    hx-indicator="this"
+                    hx-disabled-elt="this"
+                    class="mm-branch-btn relative z-20 flex h-4 {% if task.id in _mc %}min-w-[1rem] px-0.5{% else %}w-4{% endif %} shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold leading-none text-slate-600 transition hover:bg-slate-300 disabled:cursor-wait disabled:opacity-60"
+                    title="{% if task.id in _mc %}Expand {{ _branch }} subtask{{ 's' if _branch != 1 else '' }}{% else %}Hide subtasks{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+            </button>
+            {% endif %}
             {% if layout_mode == 'tree' and task.children %}
             <button type="button" @click="collapsed = !collapsed"
                     class="shrink-0 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 hover:text-slate-800">
