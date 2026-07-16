@@ -1,0 +1,166 @@
+{% extends 'layouts/staff_shell.jinja' %}
+{% block title %}@{{ target.username }}{% endblock %}
+
+{% block main %}
+<div class="border-b border-slate-800 bg-slate-900/50 px-6 py-5 sm:px-8">
+    <a href="{{ url('staff_dashboard:users') }}" class="text-[11px] font-semibold text-indigo-400 hover:underline">← People</a>
+    <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-white">@{{ target.username }}{% if target.is_staff %} <span class="text-sm text-indigo-400">staff</span>{% endif %}</h1>
+            <p class="mt-1 text-sm text-slate-400">{{ target.email or 'No email' }} · joined {{ target.date_joined.strftime('%Y-%m-%d') }}</p>
+            <p class="mt-1 text-[11px] text-slate-500">
+                Last login {{ target.last_login.strftime('%Y-%m-%d %H:%M') if target.last_login else 'never' }}
+                · {% if target.is_active %}<span class="text-emerald-400">active</span>{% else %}<span class="text-rose-400">deactivated</span>{% endif %}
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+            <span class="rounded-lg bg-slate-800 px-3 py-1.5 font-semibold text-white">{{ profile.plan }}</span>
+            {% if profile.trial_active %}
+            <span class="rounded-lg bg-amber-950/60 px-3 py-1.5 font-semibold text-amber-300">trial → {{ profile.trial_ends }}</span>
+            {% elif profile.is_trial %}
+            <span class="rounded-lg bg-slate-800 px-3 py-1.5 text-slate-400">trial flag off</span>
+            {% endif %}
+            <span class="rounded-lg bg-emerald-950/40 px-3 py-1.5 font-semibold text-emerald-300">{{ pay_total }} collected</span>
+        </div>
+    </div>
+</div>
+
+<div class="grid gap-6 p-6 sm:p-8 lg:grid-cols-12">
+    <!-- Convert -->
+    <section class="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-5 lg:col-span-5">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Convert · pay + grant</h2>
+        <p class="mt-1 text-[11px] text-slate-500">Customer paid offline? Log cash and set plan in one step.</p>
+        <form action="{{ url('staff_dashboard:user_convert', user_id=target.id) }}" method="post" class="mt-4 space-y-3">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <div class="grid grid-cols-3 gap-2">
+                <div class="col-span-2">
+                    <label class="text-[10px] font-semibold uppercase text-slate-500">Amount</label>
+                    <input name="amount" type="number" step="0.01" min="0.01" required
+                           value="{{ plan_price[profile.plan] if profile.plan in plan_price else plan_price.team }}"
+                           class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-semibold uppercase text-slate-500">Currency</label>
+                    <input name="currency" value="INR" maxlength="8"
+                           class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-semibold uppercase text-slate-500">Plan to grant</label>
+                <select name="plan" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                    {% set grant_default = profile.plan if profile.plan != 'solo' else 'team' %}
+                    {% for value, label in plan_choices %}
+                    <option value="{{ value }}" {% if value == grant_default %}selected{% endif %}>{{ label }} · ₹{{ plan_price[value] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-[10px] font-semibold uppercase text-slate-500">Note</label>
+                <input name="description" placeholder="UPI / bank ref…"
+                       class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none">
+            </div>
+            <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500">
+                Record payment + set plan
+            </button>
+        </form>
+    </section>
+
+    <!-- Controls -->
+    <section class="space-y-4 lg:col-span-7">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Quick controls</h2>
+            <div class="mt-4 flex flex-wrap gap-3">
+                <form action="{{ url('staff_dashboard:user_plan', user_id=target.id) }}" method="post" class="inline-flex items-center gap-2">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <select name="plan" class="rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white">
+                        {% for value, label in plan_choices %}
+                        <option value="{{ value }}" {% if profile.plan == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500">Set plan only</button>
+                </form>
+                <form action="{{ url('staff_dashboard:user_trial', user_id=target.id) }}" method="post" class="inline-flex items-center gap-2">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="hidden" name="action" value="extend">
+                    <input type="hidden" name="days" value="7">
+                    <button type="submit" class="rounded-lg border border-amber-800 bg-amber-950/40 px-3 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-900/50">+7 days trial</button>
+                </form>
+                <form action="{{ url('staff_dashboard:user_trial', user_id=target.id) }}" method="post">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="hidden" name="action" value="end">
+                    <button type="submit" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800">End trial</button>
+                </form>
+                {% if not target.is_superuser %}
+                <form action="{{ url('staff_dashboard:user_active', user_id=target.id) }}" method="post">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <input type="hidden" name="is_active" value="{{ 'false' if target.is_active else 'true' }}">
+                    <button type="submit" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold {% if target.is_active %}text-rose-300{% else %}text-emerald-300{% endif %} hover:bg-slate-800">
+                        {% if target.is_active %}Deactivate{% else %}Reactivate{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">Teams</p>
+                <p class="mt-0.5 text-lg font-bold text-white">{{ memberships|length }}</p>
+                <p class="text-[10px] text-slate-500">seat limit {{ seat_limit }}</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">Assigned tasks</p>
+                <p class="mt-0.5 text-lg font-bold text-white">{{ task_count }}</p>
+            </div>
+            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+                <p class="text-[10px] uppercase tracking-wide text-slate-500">Owned projects</p>
+                <p class="mt-0.5 text-lg font-bold text-white">{{ project_count }}</p>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Teams</h2>
+            <ul class="mt-3 space-y-2">
+                {% for m in memberships %}
+                <li class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs">
+                    <span class="font-medium text-white">{{ m.team.name }}</span>
+                    <span class="text-slate-500">{% if m.is_owner %}owner{% else %}member{% endif %}</span>
+                </li>
+                {% else %}
+                <li class="text-xs text-slate-500">No team memberships.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 lg:col-span-12">
+        <div class="border-b border-slate-800 px-4 py-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Payment history</h2>
+        </div>
+        <table class="w-full text-left text-sm">
+            <thead class="text-[10px] uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th class="px-4 py-2">When</th>
+                    <th class="px-4 py-2">Amount</th>
+                    <th class="px-4 py-2">Note</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+                {% for p in payments %}
+                <tr class="text-slate-300">
+                    <td class="px-4 py-2.5 font-mono text-[11px] text-slate-500">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="px-4 py-2.5 font-semibold tabular-nums text-emerald-400">{{ p.currency }} {{ p.amount }}</td>
+                    <td class="px-4 py-2.5 text-xs text-slate-400">{{ p.description or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500">No payments yet — use Convert above after they pay.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}

@@ -1,8 +1,10 @@
 {% for u in users_list %}
 <tr class="text-slate-300 {% if not u.is_active %}opacity-50{% endif %}">
     <td class="px-4 py-3">
-        <p class="font-medium text-white">@{{ u.username }}{% if u.is_staff %} <span class="text-[10px] text-indigo-400">staff</span>{% endif %}</p>
-        <p class="text-[10px] text-slate-500">{{ u.email or '— no email —' }}</p>
+        <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="block hover:opacity-90">
+            <p class="font-medium text-white">@{{ u.username }}{% if u.is_staff %} <span class="text-[10px] text-indigo-400">staff</span>{% endif %}</p>
+            <p class="text-[10px] text-slate-500">{{ u.email or '— no email —' }}</p>
+        </a>
     </td>
     <td class="px-4 py-3 text-xs">
         {% if u.profile %}
@@ -12,15 +14,22 @@
         {% elif u.profile.is_trial %}
         <span class="ml-1 text-slate-500">trial off</span>
         {% endif %}
+        {% if u.profile.plan in ['team', 'team_20'] and u.payment_count == 0 %}
+        <span class="ml-1 text-rose-400">no $</span>
+        {% endif %}
         {% else %}
         <span class="text-slate-500">no profile</span>
         {% endif %}
     </td>
     <td class="px-4 py-3 tabular-nums text-xs">{{ u.team_count }}</td>
     <td class="px-4 py-3 tabular-nums text-xs">{{ u.payment_count }}</td>
-    <td class="px-4 py-3 font-mono text-[11px] text-slate-500">{{ u.date_joined.strftime('%Y-%m-%d') }}</td>
+    <td class="px-4 py-3 font-mono text-[11px] text-slate-500">
+        {{ u.last_login.strftime('%Y-%m-%d') if u.last_login else '—' }}
+    </td>
     <td class="px-4 py-3">
         <div class="flex flex-wrap items-center justify-end gap-1.5">
+            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
+               class="rounded bg-slate-800 px-2 py-1 text-[10px] font-bold text-indigo-300 hover:bg-slate-700">Open</a>
             <form action="{{ url('staff_dashboard:user_plan', user_id=u.id) }}" method="post" class="inline-flex items-center gap-1">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 <input type="hidden" name="next" value="{{ request.get_full_path() }}">
@@ -31,13 +40,6 @@
                 </select>
                 <button type="submit" class="rounded bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-indigo-500">Set</button>
             </form>
-            {% if u.profile and u.profile.is_trial %}
-            <form action="{{ url('staff_dashboard:user_trial', user_id=u.id) }}" method="post">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input type="hidden" name="next" value="{{ request.get_full_path() }}">
-                <button type="submit" class="rounded border border-amber-800 bg-amber-950/40 px-2 py-1 text-[10px] font-semibold text-amber-300 hover:bg-amber-900/50">End trial</button>
-            </form>
-            {% endif %}
             {% if not u.is_superuser %}
             <form action="{{ url('staff_dashboard:user_active', user_id=u.id) }}" method="post">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">

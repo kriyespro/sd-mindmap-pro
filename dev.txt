@@ -52,3 +52,4 @@
   Test: added billing PlanChangeView upgrade-blocked/downgrade-allowed tests; fixed stale landing-page copy assertion (pre-existing failure from PM-33 rebrand, unrelated to this pass).
   Deferred (not applied, needs migration review): missing db_index on Task.is_archived/assignee_username/status/due_date, ResourceAllocation.start_date/end_date, Milestone.due_date — flagged for a future migration, not created yet per CLAUDE.md migration-safety rule.
 [DONE] Phase PM-35 - CEO Mission Control at /admin/: command center KPIs (cash/MRR/growth/trials), attention queue, people & plans with HTMX search + staff plan grant
+[DONE] Phase PM-36 - Mission Control upgrade: conversion/ARPU/WoW KPIs, cash sparkline, unpaid-plan + dormant alerts, customer dossier with pay+grant, trial extend, people filter chips

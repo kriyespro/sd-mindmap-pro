@@ -8,11 +8,15 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from staff_dashboard.services import (
+    FILTER_CHOICES,
     ceo_snapshot,
     end_user_trial,
+    extend_user_trial,
+    grant_after_payment,
     search_users,
     set_user_active,
     set_user_plan,
+    user_dossier,
 )
 from users.models import Profile
 
@@ -28,6 +32,16 @@ def _safe_next(request, fallback_name: str = 'staff_dashboard:users') -> str:
     ):
         return next_url
     return reverse(fallback_name)
+
+
+def _money_ctx(snap: dict) -> dict:
+    return {
+        **snap,
+        'payment_total_display': f'{snap["revenue_total"]:.2f}',
+        'revenue_month_display': f'{snap["revenue_month"]:.2f}',
+        'revenue_week_display': f'{snap["revenue_week"]:.2f}',
+        'arpu_month_display': f'{snap["arpu_month"]:.2f}',
+    }
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -59,11 +73,7 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        snap = ceo_snapshot()
-        ctx.update(snap)
-        ctx['payment_total_display'] = f'{snap["revenue_total"]:.2f}'
-        ctx['revenue_month_display'] = f'{snap["revenue_month"]:.2f}'
-        ctx['revenue_week_display'] = f'{snap["revenue_week"]:.2f}'
+        ctx.update(_money_ctx(ceo_snapshot()))
         ctx['nav_active'] = 'dashboard'
         return ctx
 
@@ -77,9 +87,12 @@ class StaffUsersView(StaffRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         q = (self.request.GET.get('q') or '').strip()
         plan = (self.request.GET.get('plan') or '').strip()
+        filter_key = (self.request.GET.get('filter') or '').strip()
         ctx['q'] = q
         ctx['plan_filter'] = plan
-        ctx['users_list'] = search_users(q=q, plan=plan)
+        ctx['filter_key'] = filter_key
+        ctx['filter_choices'] = FILTER_CHOICES
+        ctx['users_list'] = search_users(q=q, plan=plan, filter_key=filter_key)
         ctx['plan_choices'] = Profile.PLAN_CHOICES
         ctx['nav_active'] = 'users'
         return ctx
@@ -91,14 +104,28 @@ class StaffUsersPartialView(StaffRequiredMixin, View):
     def get(self, request):
         q = (request.GET.get('q') or '').strip()
         plan = (request.GET.get('plan') or '').strip()
+        filter_key = (request.GET.get('filter') or '').strip()
         return render(
             request,
             'partials/_staff_user_rows.jinja',
             {
-                'users_list': search_users(q=q, plan=plan),
+                'users_list': search_users(q=q, plan=plan, filter_key=filter_key),
                 'plan_choices': Profile.PLAN_CHOICES,
             },
         )
+
+
+class StaffUserDetailView(StaffRequiredMixin, TemplateView):
+    """Customer dossier — convert, extend trial, inspect."""
+
+    template_name = 'pages/staff_user_detail.jinja'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        target = get_object_or_404(User, pk=self.kwargs['user_id'])
+        ctx.update(user_dossier(target))
+        ctx['nav_active'] = 'users'
+        return ctx
 
 
 class StaffUserPlanView(StaffRequiredMixin, View):
@@ -112,20 +139,26 @@ class StaffUserPlanView(StaffRequiredMixin, View):
             messages.error(request, msg)
         else:
             messages.success(request, msg)
-        next_url = _safe_next(request)
-        return redirect(next_url)
+        return redirect(_safe_next(request))
 
 
 class StaffUserTrialView(StaffRequiredMixin, View):
     def post(self, request, user_id):
         target = get_object_or_404(User, pk=user_id)
-        ok, msg = end_user_trial(actor=request.user, user=target)
+        action = (request.POST.get('action') or 'end').strip().lower()
+        if action == 'extend':
+            try:
+                days = int(request.POST.get('days') or 7)
+            except (TypeError, ValueError):
+                days = 7
+            ok, msg = extend_user_trial(actor=request.user, user=target, days=days)
+        else:
+            ok, msg = end_user_trial(actor=request.user, user=target)
         if not ok:
             messages.error(request, msg)
         else:
             messages.success(request, msg)
-        next_url = _safe_next(request)
-        return redirect(next_url)
+        return redirect(_safe_next(request))
 
 
 class StaffUserActiveView(StaffRequiredMixin, View):
@@ -138,22 +171,43 @@ class StaffUserActiveView(StaffRequiredMixin, View):
             messages.error(request, msg)
         else:
             messages.success(request, msg)
-        next_url = _safe_next(request)
-        return redirect(next_url)
+        return redirect(_safe_next(request))
+
+
+class StaffUserConvertView(StaffRequiredMixin, View):
+    """One-shot: record payment + grant plan."""
+
+    def post(self, request, user_id):
+        target = get_object_or_404(User, pk=user_id)
+        ok, msg = grant_after_payment(
+            actor=request.user,
+            user=target,
+            plan=(request.POST.get('plan') or '').strip(),
+            amount=(request.POST.get('amount') or '').strip(),
+            currency=(request.POST.get('currency') or 'INR').strip(),
+            description=(request.POST.get('description') or '').strip(),
+        )
+        if not ok:
+            messages.error(request, msg)
+        else:
+            messages.success(request, msg)
+        detail = reverse('staff_dashboard:user_detail', kwargs={'user_id': user_id})
+        next_url = (request.POST.get('next') or '').strip()
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(detail)
 
 
 class StaffStatsPartialView(StaffRequiredMixin, View):
     """HTMX refresh for KPI strip."""
 
     def get(self, request):
-        snap = ceo_snapshot()
         return render(
             request,
             'partials/_staff_kpi_strip.jinja',
-            {
-                **snap,
-                'payment_total_display': f'{snap["revenue_total"]:.2f}',
-                'revenue_month_display': f'{snap["revenue_month"]:.2f}',
-                'revenue_week_display': f'{snap["revenue_week"]:.2f}',
-            },
+            _money_ctx(ceo_snapshot()),
         )
