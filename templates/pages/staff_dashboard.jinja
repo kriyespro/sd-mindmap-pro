@@ -18,8 +18,8 @@
 
     <div id="ceo-kpi-strip">{% include 'partials/_staff_kpi_strip.jinja' %}</div>
 
-    <div class="grid gap-3 lg:grid-cols-12">
-        <section class="mc-card p-3 lg:col-span-4">
+    <div class="mc-main-grid">
+        <section class="mc-card p-3">
             <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Plans · MRR ₹{{ mrr_inr }}</h2>
             {% set total_plans = (plan_counts.solo or 0) + (plan_counts.team or 0) + (plan_counts.team_20 or 0) %}
             {% if total_plans == 0 %}{% set total_plans = 1 %}{% endif %}
@@ -46,9 +46,9 @@
                     <div class="mc-bar-track"><div class="h-full rounded-full bg-stone-600" style="width:{{ (plan_counts.team_20 / total_plans * 100)|round|int }}%"></div></div>
                 </div>
             </div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-                <div>
-                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Signups 14d</p>
+            <div class="mc-sparks">
+                <div class="mc-spark-col">
+                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Signups · 14d</p>
                     <div class="mt-1 flex h-10 items-end gap-px">
                         {% for s in sparkline %}
                         {% set h = ((s.count / spark_max) * 100)|round|int %}
@@ -56,8 +56,8 @@
                         {% endfor %}
                     </div>
                 </div>
-                <div>
-                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Cash 14d</p>
+                <div class="mc-spark-col">
+                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Cash · 14d</p>
                     <div class="mt-1 flex h-10 items-end gap-px">
                         {% for s in cash_spark %}
                         {% set h = ((s.count / cash_spark_max) * 100)|round|int %}
@@ -68,7 +68,7 @@
             </div>
         </section>
 
-        <section class="mc-card p-3 lg:col-span-8" style="border-color: #e2cfa3; background: var(--mc-warn-soft)">
+        <section class="mc-card p-3" style="border-color: #e2cfa3; background: var(--mc-warn-soft)">
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-warn)">Attention</h2>
                 <div class="flex gap-1.5">
@@ -76,20 +76,18 @@
                     <a href="{{ url('staff_dashboard:users') }}" class="mc-btn mc-btn-ghost">People</a>
                 </div>
             </div>
-            <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <div>
-                    <div class="mb-1 flex justify-between">
+            <div class="mc-attn mt-2">
+                <div class="mc-attn-col">
+                    <div class="mc-attn-head">
                         <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Trial ≤3d</p>
                         <a href="{{ url('staff_dashboard:users') }}?filter=trial_soon" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="space-y-1">
+                    <ul class="mc-attn-list">
                         {% for p in trials_ending_soon[:5] %}
                         <li>
-                            <a href="{{ url('staff_dashboard:user_detail', user_id=p.user.id) }}"
-                               class="flex justify-between rounded border px-2 py-1 text-[11px] hover:opacity-90"
-                               style="border-color: var(--mc-line); background: var(--mc-paper)">
-                                <span class="font-medium">@{{ p.user.username }}</span>
-                                <span class="tabular-nums" style="color: var(--mc-warn)">{{ p.trial_ends }}</span>
+                            <a href="{{ url('staff_dashboard:user_detail', user_id=p.user.id) }}" class="mc-attn-row">
+                                <span class="mc-attn-name">@{{ p.user.username }}</span>
+                                <span class="mc-attn-meta" style="color: var(--mc-warn)">{{ p.trial_ends }}</span>
                             </a>
                         </li>
                         {% else %}
@@ -97,19 +95,17 @@
                         {% endfor %}
                     </ul>
                 </div>
-                <div>
-                    <div class="mb-1 flex justify-between">
+                <div class="mc-attn-col">
+                    <div class="mc-attn-head">
                         <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Paid · no $</p>
                         <a href="{{ url('staff_dashboard:users') }}?filter=unpaid" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="space-y-1">
+                    <ul class="mc-attn-list">
                         {% for u in unpaid_paid[:5] %}
                         <li>
-                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
-                               class="block rounded border px-2 py-1 text-[11px]"
-                               style="border-color: #e0b8b2; background: var(--mc-danger-soft)">
-                                <span class="font-medium">@{{ u.username }}</span>
-                                <span style="color: var(--mc-danger)"> · {{ u.profile.plan }}</span>
+                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="mc-attn-row danger">
+                                <span class="mc-attn-name">@{{ u.username }}</span>
+                                <span class="mc-attn-meta" style="color: var(--mc-danger)">{{ u.profile.plan }}</span>
                             </a>
                         </li>
                         {% else %}
@@ -117,35 +113,34 @@
                         {% endfor %}
                     </ul>
                 </div>
-                <div>
-                    <p class="mb-1 text-[10px] font-semibold" style="color: var(--mc-muted)">Near seat cap</p>
-                    <ul class="space-y-1">
+                <div class="mc-attn-col">
+                    <div class="mc-attn-head">
+                        <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Near seat cap</p>
+                    </div>
+                    <ul class="mc-attn-list">
                         {% for row in attention_seats[:5] %}
-                        <li class="rounded border px-2 py-1 text-[11px]" style="border-color: var(--mc-line); background: var(--mc-paper)">
-                            <p class="font-medium truncate">{{ row.team.name }}</p>
-                            <p style="color: var(--mc-muted)">
-                                <a href="{{ url('staff_dashboard:user_detail', user_id=row.owner.id) }}" class="mc-link">@{{ row.owner.username }}</a>
-                                · {{ row.filled }}/{{ row.limit }}
-                            </p>
+                        <li>
+                            <a href="{{ url('staff_dashboard:user_detail', user_id=row.owner.id) }}" class="mc-attn-row">
+                                <span class="mc-attn-name">{{ row.team.name }} · @{{ row.owner.username }}</span>
+                                <span class="mc-attn-meta">{{ row.filled }}/{{ row.limit }}</span>
+                            </a>
                         </li>
                         {% else %}
                         <li class="text-[11px]" style="color: var(--mc-muted)">None</li>
                         {% endfor %}
                     </ul>
                 </div>
-                <div>
-                    <div class="mb-1 flex justify-between">
+                <div class="mc-attn-col">
+                    <div class="mc-attn-head">
                         <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Dormant 14d</p>
                         <a href="{{ url('staff_dashboard:users') }}?filter=dormant" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="space-y-1">
+                    <ul class="mc-attn-list">
                         {% for u in dormant_users[:5] %}
                         <li>
-                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
-                               class="flex justify-between rounded border px-2 py-1 text-[11px]"
-                               style="border-color: var(--mc-line); background: var(--mc-paper)">
-                                <span class="font-medium">@{{ u.username }}</span>
-                                <span style="color: var(--mc-muted)">{{ u.last_login.strftime('%b %d') if u.last_login else '—' }}</span>
+                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="mc-attn-row">
+                                <span class="mc-attn-name">@{{ u.username }}</span>
+                                <span class="mc-attn-meta">{{ u.last_login.strftime('%b %d') if u.last_login else '—' }}</span>
                             </a>
                         </li>
                         {% else %}

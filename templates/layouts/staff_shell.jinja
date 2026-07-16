@@ -56,6 +56,83 @@
         .mc-link:hover { text-decoration: underline; }
         .mc-bar-track { background: #e8e1d4; height: 0.35rem; border-radius: 999px; overflow: hidden; }
         .mc-msg { background: var(--mc-warn-soft); border-bottom: 1px solid #e2cfa3; color: var(--mc-warn); }
+        .mc-attn {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            .mc-attn { grid-template-columns: 1fr 1fr; }
+        }
+        .mc-attn-col {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .mc-attn-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin: 0;
+        }
+        .mc-attn-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .mc-attn-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            min-width: 0;
+            border: 1px solid var(--mc-line);
+            background: var(--mc-paper);
+            border-radius: 0.25rem;
+            padding: 0.3rem 0.45rem;
+            font-size: 11px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .mc-attn-row:hover { opacity: 0.92; }
+        .mc-attn-row.danger {
+            border-color: #e0b8b2;
+            background: var(--mc-danger-soft);
+        }
+        .mc-attn-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+        .mc-attn-meta {
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+            color: var(--mc-muted);
+        }
+        .mc-sparks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            min-width: 0;
+        }
+        .mc-spark-col { min-width: 0; }
+        .mc-main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        @media (min-width: 1024px) {
+            .mc-main-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+        }
+        .mc-main-grid > * { min-width: 0; }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
