@@ -2,6 +2,6 @@
 
 from django.contrib import admin
 
-admin.site.site_header = 'nTarque admin'
-admin.site.site_title = 'nTarque'
+admin.site.site_header = 'DCPMind admin'
+admin.site.site_title = 'DCPMind'
 admin.site.index_title = 'Operations'

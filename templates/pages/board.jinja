@@ -1,5 +1,5 @@
 {% extends 'layouts/app.jinja' %}
-{% block title %}{% if current_project %}{{ current_project.name }} · Board{% elif current_team %}{{ current_team.name }} · MindMap{% else %}Personal · MindMap{% endif %}{% endblock %}
+{% block title %}{% if current_project %}{{ current_project.name }} · Board{% elif current_team %}{{ current_team.name }} · DCPMind{% else %}Personal · DCPMind{% endif %}{% endblock %}
 
 {% block main %}
 <header class="dark-topbar sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur-md">

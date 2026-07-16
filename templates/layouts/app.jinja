@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}MindMap Tasks{% endblock %}</title>
+    <title>{% block title %}DCPMind{% endblock %}</title>
     <link rel="dns-prefetch" href="https://unpkg.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -370,13 +370,13 @@
            :class="(!uiReady ? 'transition-none ' : '') + (!sidebarOpen ? 'sidebar-collapsed overflow-hidden' : '')">
         <div class="border-b border-[#d9cfc3]/90 bg-[#f7f2ea]/95 p-2">
             <div class="sidebar-brand flex min-w-0 items-center gap-2" :class="!sidebarOpen && 'flex-col gap-1'">
-                <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5" :class="!sidebarOpen && 'justify-center'" title="MindMap Tasks">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5" :class="!sidebarOpen && 'justify-center'" title="DCPMind — Dream Conversion Process">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-slate-800 text-[10px] font-black tracking-tight text-white shadow-md shadow-teal-800/20">
+                        DCP
                     </div>
                     <div x-show="sidebarOpen" x-cloak class="min-w-0">
-                        <p class="text-sm font-semibold tracking-tight text-stone-900">MindMap Tasks</p>
-                        <p class="text-[10px] text-stone-600">Teams & OKRs</p>
+                        <p class="text-sm font-semibold tracking-tight text-stone-900">DCPMind</p>
+                        <p class="text-[10px] text-stone-600">Dream Conversion · Mind Tool</p>
                     </div>
                 </a>
                 <button type="button"

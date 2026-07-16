@@ -1,5 +1,5 @@
 """
-Django settings — MindMap Tasks (Jinja2 + HTMX).
+Django settings — DCPMind / Dream Conversion Process (Jinja2 + HTMX).
 Reads secrets and env-specific values from environment variables.
 """
 
