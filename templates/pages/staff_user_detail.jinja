@@ -2,103 +2,89 @@
 {% block title %}@{{ target.username }}{% endblock %}
 
 {% block main %}
-<div class="border-b border-slate-800 bg-slate-900/50 px-6 py-5 sm:px-8">
-    <a href="{{ url('staff_dashboard:users') }}" class="text-[11px] font-semibold text-indigo-400 hover:underline">← People</a>
-    <div class="mt-2 flex flex-wrap items-start justify-between gap-4">
+<div class="border-b px-4 py-2" style="border-color: var(--mc-line); background: var(--mc-paper)">
+    <a href="{{ url('staff_dashboard:users') }}" class="mc-link text-[10px]">← People</a>
+    <div class="mt-1 flex flex-wrap items-start justify-between gap-2">
         <div>
-            <h1 class="text-xl font-bold text-white">@{{ target.username }}{% if target.is_staff %} <span class="text-sm text-indigo-400">staff</span>{% endif %}</h1>
-            <p class="mt-1 text-sm text-slate-400">{{ target.email or 'No email' }} · joined {{ target.date_joined.strftime('%Y-%m-%d') }}</p>
-            <p class="mt-1 text-[11px] text-slate-500">
-                Last login {{ target.last_login.strftime('%Y-%m-%d %H:%M') if target.last_login else 'never' }}
-                · {% if target.is_active %}<span class="text-emerald-400">active</span>{% else %}<span class="text-rose-400">deactivated</span>{% endif %}
-            </p>
+            <h1 class="text-sm font-bold">@{{ target.username }}{% if target.is_staff %} <span class="text-[10px]" style="color: var(--mc-accent)">staff</span>{% endif %}</h1>
+            <p class="text-[11px]" style="color: var(--mc-muted)">{{ target.email or 'No email' }} · {{ target.date_joined.strftime('%Y-%m-%d') }} · login {{ target.last_login.strftime('%Y-%m-%d') if target.last_login else 'never' }}</p>
         </div>
-        <div class="flex flex-wrap gap-2 text-xs">
-            <span class="rounded-lg bg-slate-800 px-3 py-1.5 font-semibold text-white">{{ profile.plan }}</span>
-            {% if profile.trial_active %}
-            <span class="rounded-lg bg-amber-950/60 px-3 py-1.5 font-semibold text-amber-300">trial → {{ profile.trial_ends }}</span>
-            {% elif profile.is_trial %}
-            <span class="rounded-lg bg-slate-800 px-3 py-1.5 text-slate-400">trial flag off</span>
-            {% endif %}
-            <span class="rounded-lg bg-emerald-950/40 px-3 py-1.5 font-semibold text-emerald-300">{{ pay_total }} collected</span>
+        <div class="flex flex-wrap gap-1 text-[10px] font-semibold">
+            <span class="mc-chip mc-chip-on">{{ profile.plan }}</span>
+            {% if profile.trial_active %}<span class="mc-chip" style="background: var(--mc-warn-soft); border-color: #e2cfa3; color: var(--mc-warn)">trial → {{ profile.trial_ends }}</span>{% endif %}
+            <span class="mc-chip" style="background: #eef6f1; border-color: #b7d4c6; color: var(--mc-money)">{{ pay_total }} $</span>
+            {% if target.is_active %}<span class="mc-chip">active</span>{% else %}<span class="mc-chip" style="color: var(--mc-danger)">off</span>{% endif %}
         </div>
     </div>
 </div>
 
-<div class="grid gap-6 p-6 sm:p-8 lg:grid-cols-12">
-    <!-- Convert -->
-    <section class="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-5 lg:col-span-5">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Convert · pay + grant</h2>
-        <p class="mt-1 text-[11px] text-slate-500">Customer paid offline? Log cash and set plan in one step.</p>
-        <form action="{{ url('staff_dashboard:user_convert', user_id=target.id) }}" method="post" class="mt-4 space-y-3">
+<div class="grid gap-3 p-3 lg:grid-cols-12">
+    <section class="mc-card p-3 lg:col-span-5" style="border-color: #b7d4c6; background: #f0f7f3">
+        <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-money)">Convert · pay + grant</h2>
+        <form action="{{ url('staff_dashboard:user_convert', user_id=target.id) }}" method="post" class="mt-2 space-y-1.5">
             <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-3 gap-1.5">
                 <div class="col-span-2">
-                    <label class="text-[10px] font-semibold uppercase text-slate-500">Amount</label>
+                    <label class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Amount</label>
                     <input name="amount" type="number" step="0.01" min="0.01" required
                            value="{{ plan_price[profile.plan] if profile.plan in plan_price else plan_price.team }}"
-                           class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                           class="mc-input mt-0.5 w-full">
                 </div>
                 <div>
-                    <label class="text-[10px] font-semibold uppercase text-slate-500">Currency</label>
-                    <input name="currency" value="INR" maxlength="8"
-                           class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                    <label class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Cur</label>
+                    <input name="currency" value="INR" maxlength="8" class="mc-input mt-0.5 w-full">
                 </div>
             </div>
             <div>
-                <label class="text-[10px] font-semibold uppercase text-slate-500">Plan to grant</label>
-                <select name="plan" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none">
-                    {% set grant_default = profile.plan if profile.plan != 'solo' else 'team' %}
+                <label class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Plan</label>
+                {% set grant_default = profile.plan if profile.plan != 'solo' else 'team' %}
+                <select name="plan" class="mc-input mt-0.5 w-full">
                     {% for value, label in plan_choices %}
                     <option value="{{ value }}" {% if value == grant_default %}selected{% endif %}>{{ label }} · ₹{{ plan_price[value] }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-semibold uppercase text-slate-500">Note</label>
-                <input name="description" placeholder="UPI / bank ref…"
-                       class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none">
+                <label class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Note</label>
+                <input name="description" placeholder="UPI / bank ref…" class="mc-input mt-0.5 w-full">
             </div>
-            <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white hover:bg-emerald-500">
-                Record payment + set plan
-            </button>
+            <button type="submit" class="mc-btn mc-btn-money w-full !py-2 text-[12px]">Record payment + set plan</button>
         </form>
     </section>
 
-    <!-- Controls -->
-    <section class="space-y-4 lg:col-span-7">
-        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Quick controls</h2>
-            <div class="mt-4 flex flex-wrap gap-3">
-                <form action="{{ url('staff_dashboard:user_plan', user_id=target.id) }}" method="post" class="inline-flex items-center gap-2">
+    <section class="space-y-2 lg:col-span-7">
+        <div class="mc-card p-3">
+            <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Controls</h2>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+                <form action="{{ url('staff_dashboard:user_plan', user_id=target.id) }}" method="post" class="inline-flex items-center gap-1">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="next" value="{{ request.path }}">
-                    <select name="plan" class="rounded-lg border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-white">
+                    <select name="plan" class="mc-input">
                         {% for value, label in plan_choices %}
                         <option value="{{ value }}" {% if profile.plan == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-500">Set plan only</button>
+                    <button type="submit" class="mc-btn mc-btn-primary">Set plan</button>
                 </form>
-                <form action="{{ url('staff_dashboard:user_trial', user_id=target.id) }}" method="post" class="inline-flex items-center gap-2">
+                <form action="{{ url('staff_dashboard:user_trial', user_id=target.id) }}" method="post">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="next" value="{{ request.path }}">
                     <input type="hidden" name="action" value="extend">
                     <input type="hidden" name="days" value="7">
-                    <button type="submit" class="rounded-lg border border-amber-800 bg-amber-950/40 px-3 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-900/50">+7 days trial</button>
+                    <button type="submit" class="mc-btn mc-btn-ghost" style="color: var(--mc-warn)">+7d trial</button>
                 </form>
                 <form action="{{ url('staff_dashboard:user_trial', user_id=target.id) }}" method="post">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="next" value="{{ request.path }}">
                     <input type="hidden" name="action" value="end">
-                    <button type="submit" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800">End trial</button>
+                    <button type="submit" class="mc-btn mc-btn-ghost">End trial</button>
                 </form>
                 {% if not target.is_superuser %}
                 <form action="{{ url('staff_dashboard:user_active', user_id=target.id) }}" method="post">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <input type="hidden" name="next" value="{{ request.path }}">
                     <input type="hidden" name="is_active" value="{{ 'false' if target.is_active else 'true' }}">
-                    <button type="submit" class="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold {% if target.is_active %}text-rose-300{% else %}text-emerald-300{% endif %} hover:bg-slate-800">
+                    <button type="submit" class="mc-btn mc-btn-ghost" style="color: {% if target.is_active %}var(--mc-danger){% else %}var(--mc-money){% endif %}">
                         {% if target.is_active %}Deactivate{% else %}Reactivate{% endif %}
                     </button>
                 </form>
@@ -106,58 +92,57 @@
             </div>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-3">
-            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
-                <p class="text-[10px] uppercase tracking-wide text-slate-500">Teams</p>
-                <p class="mt-0.5 text-lg font-bold text-white">{{ memberships|length }}</p>
-                <p class="text-[10px] text-slate-500">seat limit {{ seat_limit }}</p>
+        <div class="grid grid-cols-3 gap-1.5">
+            <div class="mc-kpi !py-1.5">
+                <p class="text-[9px] uppercase" style="color: var(--mc-muted)">Teams</p>
+                <p class="text-sm font-bold">{{ memberships|length }} <span class="text-[10px] font-normal" style="color: var(--mc-muted)">/ {{ seat_limit }} seats</span></p>
             </div>
-            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
-                <p class="text-[10px] uppercase tracking-wide text-slate-500">Assigned tasks</p>
-                <p class="mt-0.5 text-lg font-bold text-white">{{ task_count }}</p>
+            <div class="mc-kpi !py-1.5">
+                <p class="text-[9px] uppercase" style="color: var(--mc-muted)">Tasks</p>
+                <p class="text-sm font-bold">{{ task_count }}</p>
             </div>
-            <div class="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
-                <p class="text-[10px] uppercase tracking-wide text-slate-500">Owned projects</p>
-                <p class="mt-0.5 text-lg font-bold text-white">{{ project_count }}</p>
+            <div class="mc-kpi !py-1.5">
+                <p class="text-[9px] uppercase" style="color: var(--mc-muted)">Projects</p>
+                <p class="text-sm font-bold">{{ project_count }}</p>
             </div>
         </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Teams</h2>
-            <ul class="mt-3 space-y-2">
+        <div class="mc-card p-3">
+            <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Teams</h2>
+            <ul class="mt-1.5 space-y-1">
                 {% for m in memberships %}
-                <li class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs">
-                    <span class="font-medium text-white">{{ m.team.name }}</span>
-                    <span class="text-slate-500">{% if m.is_owner %}owner{% else %}member{% endif %}</span>
+                <li class="flex justify-between rounded border px-2 py-1 text-[11px]" style="border-color: var(--mc-line); background: #fff">
+                    <span class="font-medium">{{ m.team.name }}</span>
+                    <span style="color: var(--mc-muted)">{% if m.is_owner %}owner{% else %}member{% endif %}</span>
                 </li>
                 {% else %}
-                <li class="text-xs text-slate-500">No team memberships.</li>
+                <li class="text-[11px]" style="color: var(--mc-muted)">None</li>
                 {% endfor %}
             </ul>
         </div>
     </section>
 
-    <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40 lg:col-span-12">
-        <div class="border-b border-slate-800 px-4 py-3">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Payment history</h2>
+    <section class="mc-card overflow-hidden lg:col-span-12">
+        <div class="border-b px-2.5 py-1.5" style="border-color: var(--mc-line)">
+            <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Payments</h2>
         </div>
-        <table class="w-full text-left text-sm">
-            <thead class="text-[10px] uppercase tracking-wide text-slate-500">
+        <table class="mc-table w-full text-left text-[12px]">
+            <thead>
                 <tr>
-                    <th class="px-4 py-2">When</th>
-                    <th class="px-4 py-2">Amount</th>
-                    <th class="px-4 py-2">Note</th>
+                    <th class="px-2.5 py-1">When</th>
+                    <th class="px-2.5 py-1">Amount</th>
+                    <th class="px-2.5 py-1">Note</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-800">
+            <tbody>
                 {% for p in payments %}
-                <tr class="text-slate-300">
-                    <td class="px-4 py-2.5 font-mono text-[11px] text-slate-500">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td class="px-4 py-2.5 font-semibold tabular-nums text-emerald-400">{{ p.currency }} {{ p.amount }}</td>
-                    <td class="px-4 py-2.5 text-xs text-slate-400">{{ p.description or '—' }}</td>
+                <tr class="border-t" style="border-color: var(--mc-line)">
+                    <td class="px-2.5 py-1 font-mono text-[10px]" style="color: var(--mc-muted)">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="px-2.5 py-1 font-semibold tabular-nums" style="color: var(--mc-money)">{{ p.currency }} {{ p.amount }}</td>
+                    <td class="px-2.5 py-1 text-[11px]" style="color: var(--mc-muted)">{{ p.description or '—' }}</td>
                 </tr>
                 {% else %}
-                <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500">No payments yet — use Convert above after they pay.</td></tr>
+                <tr><td colspan="3" class="px-2.5 py-4 text-center text-[11px]" style="color: var(--mc-muted)">No payments — convert above</td></tr>
                 {% endfor %}
             </tbody>
         </table>

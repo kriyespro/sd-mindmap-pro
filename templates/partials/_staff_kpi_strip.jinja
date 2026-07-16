@@ -1,59 +1,61 @@
-{# CEO KPI strip — also HTMX-refreshed #}
+{# Compact cream KPI strip #}
 <section>
-    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Executive pulse</h2>
-    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/30 p-4 ring-1 ring-emerald-500/10">
-            <p class="text-[11px] font-medium text-emerald-400/80">Cash collected</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-emerald-300">${{ payment_total_display }}</p>
-            <p class="mt-1 text-[11px] text-slate-500">Mo ${{ revenue_month_display }} · Wk ${{ revenue_week_display }}</p>
+    <div class="mb-1.5 flex items-baseline justify-between">
+        <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Pulse</h2>
+    </div>
+    <div class="grid grid-cols-2 gap-1.5 md:grid-cols-3 xl:grid-cols-6">
+        <div class="mc-kpi mc-kpi-money">
+            <p class="text-[10px] font-medium" style="color: var(--mc-money)">Cash</p>
+            <p class="text-lg font-bold leading-tight tabular-nums" style="color: var(--mc-money)">${{ payment_total_display }}</p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">Mo ${{ revenue_month_display }} · Wk ${{ revenue_week_display }}</p>
         </div>
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <p class="text-[11px] font-medium text-slate-500">Est. MRR</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-white">₹{{ mrr_inr }}</p>
-            <p class="mt-1 text-[11px] text-slate-500">{{ paid_users }} paid · ARPU ${{ arpu_month_display }}/mo</p>
+        <div class="mc-kpi">
+            <p class="text-[10px] font-medium" style="color: var(--mc-muted)">MRR</p>
+            <p class="text-lg font-bold leading-tight tabular-nums">₹{{ mrr_inr }}</p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">{{ paid_users }} paid · ARPU ${{ arpu_month_display }}</p>
         </div>
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <p class="text-[11px] font-medium text-slate-500">Trial → paid</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-fuchsia-300">{{ conversion_pct }}%</p>
-            <p class="mt-1 text-[11px] text-slate-500">{{ paid_users }} paid / {{ paid_users + trials_active }} pipeline</p>
+        <div class="mc-kpi">
+            <p class="text-[10px] font-medium" style="color: var(--mc-muted)">Convert</p>
+            <p class="text-lg font-bold leading-tight tabular-nums" style="color: var(--mc-accent)">{{ conversion_pct }}%</p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">{{ paid_users }}/{{ paid_users + trials_active }} pipeline</p>
         </div>
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <p class="text-[11px] font-medium text-slate-500">Growth</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-indigo-300">+{{ signups_today }} <span class="text-base text-slate-500">today</span></p>
-            <p class="mt-1 text-[11px] text-slate-500">
+        <div class="mc-kpi">
+            <p class="text-[10px] font-medium" style="color: var(--mc-muted)">Growth</p>
+            <p class="text-lg font-bold leading-tight tabular-nums">+{{ signups_today }} <span class="text-xs font-medium" style="color: var(--mc-muted)">today</span></p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">
                 Wk {{ signups_week }}
-                <span class="{% if signups_wow > 0 %}text-emerald-400{% elif signups_wow < 0 %}text-rose-400{% else %}text-slate-500{% endif %}">
-                    ({% if signups_wow > 0 %}+{% endif %}{{ signups_wow }} WoW)
+                <span style="color: {% if signups_wow > 0 %}var(--mc-money){% elif signups_wow < 0 %}var(--mc-danger){% else %}var(--mc-muted){% endif %}">
+                    ({% if signups_wow > 0 %}+{% endif %}{{ signups_wow }})
                 </span>
             </p>
         </div>
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <p class="text-[11px] font-medium text-slate-500">Active trials</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-amber-300">{{ trials_active }}</p>
-            <p class="mt-1 text-[11px] text-slate-500">{{ trials_expired_flag }} expired flag · {{ open_invites }} invites</p>
+        <div class="mc-kpi mc-kpi-warn">
+            <p class="text-[10px] font-medium" style="color: var(--mc-warn)">Trials</p>
+            <p class="text-lg font-bold leading-tight tabular-nums" style="color: var(--mc-warn)">{{ trials_active }}</p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">{{ trials_expired_flag }} expired · {{ open_invites }} invites</p>
         </div>
-        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <p class="text-[11px] font-medium text-slate-500">Accounts</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-white">{{ user_count }}</p>
-            <p class="mt-1 text-[11px] text-slate-500">{{ user_total }} total · {{ staff_count }} staff</p>
+        <div class="mc-kpi">
+            <p class="text-[10px] font-medium" style="color: var(--mc-muted)">Accounts</p>
+            <p class="text-lg font-bold leading-tight tabular-nums">{{ user_count }}</p>
+            <p class="text-[10px]" style="color: var(--mc-muted)">{{ user_total }} tot · {{ staff_count }} staff</p>
         </div>
     </div>
-    <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3">
-            <p class="text-[10px] uppercase tracking-wide text-slate-500">Teams / seats</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-white">{{ teams_total }} <span class="text-sm text-slate-500">/</span> {{ seats_filled }}</p>
+    <div class="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div class="mc-kpi !py-1.5">
+            <p class="text-[9px] uppercase tracking-wide" style="color: var(--mc-muted)">Teams / seats</p>
+            <p class="text-sm font-bold tabular-nums">{{ teams_total }} / {{ seats_filled }}</p>
         </div>
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3">
-            <p class="text-[10px] uppercase tracking-wide text-slate-500">Open / done tasks</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-white">{{ tasks_open }} <span class="text-sm text-slate-500">/</span> {{ tasks_done }}</p>
+        <div class="mc-kpi !py-1.5">
+            <p class="text-[9px] uppercase tracking-wide" style="color: var(--mc-muted)">Open / done</p>
+            <p class="text-sm font-bold tabular-nums">{{ tasks_open }} / {{ tasks_done }}</p>
         </div>
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3">
-            <p class="text-[10px] uppercase tracking-wide text-slate-500">Active projects</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-white">{{ projects_active }}</p>
+        <div class="mc-kpi !py-1.5">
+            <p class="text-[9px] uppercase tracking-wide" style="color: var(--mc-muted)">Projects</p>
+            <p class="text-sm font-bold tabular-nums">{{ projects_active }}</p>
         </div>
-        <div class="rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3">
-            <p class="text-[10px] uppercase tracking-wide text-slate-500">Activity (7d notices)</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-white">{{ activity_week }}</p>
+        <div class="mc-kpi !py-1.5">
+            <p class="text-[9px] uppercase tracking-wide" style="color: var(--mc-muted)">Activity 7d</p>
+            <p class="text-sm font-bold tabular-nums">{{ activity_week }}</p>
         </div>
     </div>
 </section>

@@ -1,51 +1,42 @@
 {% for u in users_list %}
-<tr class="text-slate-300 {% if not u.is_active %}opacity-50{% endif %}">
-    <td class="px-4 py-3">
-        <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="block hover:opacity-90">
-            <p class="font-medium text-white">@{{ u.username }}{% if u.is_staff %} <span class="text-[10px] text-indigo-400">staff</span>{% endif %}</p>
-            <p class="text-[10px] text-slate-500">{{ u.email or '— no email —' }}</p>
+<tr class="border-t {% if not u.is_active %}opacity-50{% endif %}" style="border-color: var(--mc-line)">
+    <td class="px-2.5 py-1.5">
+        <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="block">
+            <p class="font-medium leading-tight" style="color: var(--mc-ink)">@{{ u.username }}{% if u.is_staff %} <span class="text-[9px]" style="color: var(--mc-accent)">staff</span>{% endif %}</p>
+            <p class="text-[10px] truncate max-w-[10rem]" style="color: var(--mc-muted)">{{ u.email or '—' }}</p>
         </a>
     </td>
-    <td class="px-4 py-3 text-xs">
+    <td class="px-2.5 py-1.5 text-[11px]">
         {% if u.profile %}
-        <span class="rounded bg-slate-800 px-1.5 py-0.5 font-semibold text-slate-200">{{ u.profile.plan }}</span>
-        {% if u.profile.trial_active %}
-        <span class="ml-1 text-amber-400">trial → {{ u.profile.trial_ends }}</span>
-        {% elif u.profile.is_trial %}
-        <span class="ml-1 text-slate-500">trial off</span>
-        {% endif %}
-        {% if u.profile.plan in ['team', 'team_20'] and u.payment_count == 0 %}
-        <span class="ml-1 text-rose-400">no $</span>
-        {% endif %}
-        {% else %}
-        <span class="text-slate-500">no profile</span>
-        {% endif %}
+        <span class="font-semibold">{{ u.profile.plan }}</span>
+        {% if u.profile.trial_active %}<span style="color: var(--mc-warn)"> →{{ u.profile.trial_ends }}</span>{% endif %}
+        {% if u.profile.plan in ['team', 'team_20'] and u.payment_count == 0 %}<span style="color: var(--mc-danger)"> ·no$</span>{% endif %}
+        {% else %}—{% endif %}
     </td>
-    <td class="px-4 py-3 tabular-nums text-xs">{{ u.team_count }}</td>
-    <td class="px-4 py-3 tabular-nums text-xs">{{ u.payment_count }}</td>
-    <td class="px-4 py-3 font-mono text-[11px] text-slate-500">
-        {{ u.last_login.strftime('%Y-%m-%d') if u.last_login else '—' }}
+    <td class="px-2.5 py-1.5 tabular-nums text-[11px]">{{ u.team_count }}</td>
+    <td class="px-2.5 py-1.5 tabular-nums text-[11px]">{{ u.payment_count }}</td>
+    <td class="px-2.5 py-1.5 font-mono text-[10px]" style="color: var(--mc-muted)">
+        {{ u.last_login.strftime('%m/%d') if u.last_login else '—' }}
     </td>
-    <td class="px-4 py-3">
-        <div class="flex flex-wrap items-center justify-end gap-1.5">
-            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
-               class="rounded bg-slate-800 px-2 py-1 text-[10px] font-bold text-indigo-300 hover:bg-slate-700">Open</a>
-            <form action="{{ url('staff_dashboard:user_plan', user_id=u.id) }}" method="post" class="inline-flex items-center gap-1">
+    <td class="px-2.5 py-1.5">
+        <div class="flex flex-wrap items-center justify-end gap-1">
+            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="mc-btn mc-btn-ghost">Open</a>
+            <form action="{{ url('staff_dashboard:user_plan', user_id=u.id) }}" method="post" class="inline-flex items-center gap-0.5">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 <input type="hidden" name="next" value="{{ request.get_full_path() }}">
-                <select name="plan" class="rounded border border-slate-700 bg-slate-950 px-1.5 py-1 text-[10px] text-slate-200">
+                <select name="plan" class="mc-input !py-0.5 !text-[10px]">
                     {% for value, label in plan_choices %}
                     <option value="{{ value }}" {% if u.profile and u.profile.plan == value %}selected{% endif %}>{{ value }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="rounded bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-indigo-500">Set</button>
+                <button type="submit" class="mc-btn mc-btn-primary">Set</button>
             </form>
             {% if not u.is_superuser %}
             <form action="{{ url('staff_dashboard:user_active', user_id=u.id) }}" method="post">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 <input type="hidden" name="next" value="{{ request.get_full_path() }}">
                 <input type="hidden" name="is_active" value="{{ 'false' if u.is_active else 'true' }}">
-                <button type="submit" class="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold {% if u.is_active %}text-rose-300 hover:bg-rose-950/40{% else %}text-emerald-300 hover:bg-emerald-950/40{% endif %}">
+                <button type="submit" class="mc-btn mc-btn-ghost" style="color: {% if u.is_active %}var(--mc-danger){% else %}var(--mc-money){% endif %}">
                     {% if u.is_active %}Off{% else %}On{% endif %}
                 </button>
             </form>
@@ -55,6 +46,6 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="6" class="px-4 py-10 text-center text-slate-500">No users match.</td>
+    <td colspan="6" class="px-2.5 py-6 text-center text-[11px]" style="color: var(--mc-muted)">No matches</td>
 </tr>
 {% endfor %}

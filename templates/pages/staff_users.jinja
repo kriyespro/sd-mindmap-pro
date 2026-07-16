@@ -1,60 +1,53 @@
 {% extends 'layouts/staff_shell.jinja' %}
-{% block title %}People & plans{% endblock %}
+{% block title %}People{% endblock %}
 
 {% block main %}
-<div class="border-b border-slate-800 bg-slate-900/50 px-6 py-5 sm:px-8">
-    <h1 class="text-xl font-bold text-white">People &amp; plans</h1>
-    <p class="mt-1 text-sm text-slate-400">Find customers, open a dossier, convert after payment, extend trials.</p>
+<div class="border-b px-4 py-2" style="border-color: var(--mc-line); background: var(--mc-paper)">
+    <h1 class="text-sm font-bold">People</h1>
+    <p class="text-[11px]" style="color: var(--mc-muted)">Search · filter · open dossier · convert</p>
 </div>
 
-<div class="p-6 sm:p-8">
-    <div class="mb-4 flex flex-wrap gap-2">
+<div class="p-3">
+    <div class="mb-2 flex flex-wrap gap-1">
         {% for value, label in filter_choices %}
         <a href="{{ url('staff_dashboard:users') }}?filter={{ value }}{% if q %}&q={{ q }}{% endif %}{% if plan_filter %}&plan={{ plan_filter }}{% endif %}"
-           class="rounded-lg px-3 py-1.5 text-xs font-semibold transition
-                  {% if filter_key == value %}bg-indigo-600 text-white{% else %}border border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:text-white{% endif %}">
-            {{ label }}
-        </a>
+           class="mc-chip {% if filter_key == value %}mc-chip-on{% endif %}">{{ label }}</a>
         {% endfor %}
     </div>
 
-    <form class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center"
+    <form class="mb-2 flex flex-wrap items-center gap-1.5"
           hx-get="{{ url('staff_dashboard:users_partial') }}"
           hx-target="#staff-user-rows"
           hx-trigger="keyup changed delay:300ms from:#user-q, change from:#user-plan"
           hx-indicator="#user-search-busy">
         <input type="hidden" name="filter" value="{{ filter_key }}">
-        <input id="user-q" type="search" name="q" value="{{ q }}"
-               placeholder="Search username, email…"
-               class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none sm:max-w-xs"
-               autocomplete="off">
-        <select id="user-plan" name="plan"
-                class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none">
+        <input id="user-q" type="search" name="q" value="{{ q }}" placeholder="Search…"
+               class="mc-input w-full sm:max-w-[14rem]" autocomplete="off">
+        <select id="user-plan" name="plan" class="mc-input">
             <option value="">All plans</option>
             {% for value, label in plan_choices %}
             <option value="{{ value }}" {% if plan_filter == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <span id="user-search-busy" class="htmx-indicator text-[11px] text-slate-500">Searching…</span>
+        <span id="user-search-busy" class="htmx-indicator text-[10px]" style="color: var(--mc-muted)">…</span>
     </form>
 
-    <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-        <table class="w-full text-left text-sm">
-            <thead class="border-b border-slate-800 bg-slate-900/80 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+    <div class="mc-card overflow-hidden">
+        <table class="mc-table w-full text-left text-[12px]">
+            <thead style="background: #efe9dc">
                 <tr>
-                    <th class="px-4 py-3">User</th>
-                    <th class="px-4 py-3">Plan / trial</th>
-                    <th class="px-4 py-3">Teams</th>
-                    <th class="px-4 py-3">Pay</th>
-                    <th class="px-4 py-3">Last login</th>
-                    <th class="px-4 py-3 text-right">Actions</th>
+                    <th class="px-2.5 py-1.5">User</th>
+                    <th class="px-2.5 py-1.5">Plan</th>
+                    <th class="px-2.5 py-1.5">Tm</th>
+                    <th class="px-2.5 py-1.5">$</th>
+                    <th class="px-2.5 py-1.5">Login</th>
+                    <th class="px-2.5 py-1.5 text-right">Act</th>
                 </tr>
             </thead>
-            <tbody id="staff-user-rows" class="divide-y divide-slate-800">
+            <tbody id="staff-user-rows">
                 {% include 'partials/_staff_user_rows.jinja' %}
             </tbody>
         </table>
     </div>
-    <p class="mt-3 text-[11px] text-slate-500">Open a dossier to record payment + grant plan in one step.</p>
 </div>
 {% endblock %}

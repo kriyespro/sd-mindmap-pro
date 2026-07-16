@@ -10,10 +10,52 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Inter, system-ui, sans-serif; }
+        :root {
+            --mc-cream: #f3efe6;
+            --mc-paper: #faf7f0;
+            --mc-ink: #1c2421;
+            --mc-muted: #5c675f;
+            --mc-line: #d9d2c4;
+            --mc-accent: #0d5c4d;
+            --mc-accent-soft: #e2efe9;
+            --mc-warn: #8a5a12;
+            --mc-warn-soft: #f5ebd4;
+            --mc-danger: #8b3a32;
+            --mc-danger-soft: #f3e4e1;
+            --mc-money: #146b4a;
+        }
+        body { font-family: "IBM Plex Sans", system-ui, sans-serif; background: var(--mc-cream); color: var(--mc-ink); }
         [x-cloak] { display: none !important; }
+        .mc-shell { background:
+            radial-gradient(ellipse 80% 50% at 0% 0%, rgba(13,92,77,.06), transparent 50%),
+            linear-gradient(180deg, #f7f3ea 0%, var(--mc-cream) 40%, #efe9dc 100%); }
+        .mc-aside { background: var(--mc-paper); border-color: var(--mc-line); }
+        .mc-nav-a { color: var(--mc-muted); }
+        .mc-nav-a:hover { background: #efe9dc; color: var(--mc-ink); }
+        .mc-nav-on { background: var(--mc-accent-soft); color: var(--mc-accent); font-weight: 600; }
+        .mc-card { background: var(--mc-paper); border: 1px solid var(--mc-line); border-radius: 0.5rem; }
+        .mc-kpi { background: var(--mc-paper); border: 1px solid var(--mc-line); border-radius: 0.375rem; padding: 0.5rem 0.65rem; }
+        .mc-kpi-money { border-color: #b7d4c6; background: #f0f7f3; }
+        .mc-kpi-warn { border-color: #e2cfa3; background: var(--mc-warn-soft); }
+        .mc-btn { border-radius: 0.375rem; font-size: 0.6875rem; font-weight: 600; padding: 0.3rem 0.55rem; }
+        .mc-btn-primary { background: var(--mc-accent); color: #fff; }
+        .mc-btn-primary:hover { background: #0a4a3e; }
+        .mc-btn-ghost { border: 1px solid var(--mc-line); background: var(--mc-paper); color: var(--mc-ink); }
+        .mc-btn-ghost:hover { background: #efe9dc; }
+        .mc-btn-money { background: var(--mc-money); color: #fff; }
+        .mc-btn-money:hover { background: #0f573c; }
+        .mc-input { border: 1px solid var(--mc-line); background: #fff; color: var(--mc-ink); border-radius: 0.375rem; font-size: 0.75rem; padding: 0.35rem 0.5rem; }
+        .mc-input:focus { outline: none; border-color: var(--mc-accent); box-shadow: 0 0 0 2px rgba(13,92,77,.15); }
+        .mc-chip { border: 1px solid var(--mc-line); background: var(--mc-paper); color: var(--mc-muted); border-radius: 0.375rem; font-size: 0.6875rem; font-weight: 600; padding: 0.25rem 0.5rem; }
+        .mc-chip-on { background: var(--mc-accent); border-color: var(--mc-accent); color: #fff; }
+        .mc-table th { color: var(--mc-muted); font-size: 0.625rem; letter-spacing: .04em; text-transform: uppercase; }
+        .mc-table td { border-color: var(--mc-line); }
+        .mc-link { color: var(--mc-accent); font-weight: 600; }
+        .mc-link:hover { text-decoration: underline; }
+        .mc-bar-track { background: #e8e1d4; height: 0.35rem; border-radius: 999px; overflow: hidden; }
+        .mc-msg { background: var(--mc-warn-soft); border-bottom: 1px solid #e2cfa3; color: var(--mc-warn); }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -24,51 +66,35 @@
         });
     </script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+<body class="mc-shell min-h-screen antialiased">
 <div class="flex min-h-screen">
-    <aside class="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900/90">
-        <div class="border-b border-slate-800 p-4">
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">Dream Conversion Process</p>
-            <p class="text-sm font-bold text-white">Mission Control</p>
-            <p class="mt-0.5 text-[10px] text-slate-500">CEO ops · staff only</p>
+    <aside class="mc-aside flex w-44 shrink-0 flex-col border-r">
+        <div class="border-b px-3 py-2.5" style="border-color: var(--mc-line)">
+            <p class="text-[9px] font-semibold uppercase tracking-[0.14em]" style="color: var(--mc-accent)">DCPMind</p>
+            <p class="text-[13px] font-bold leading-tight" style="color: var(--mc-ink)">Mission Control</p>
         </div>
-        <nav class="flex flex-1 flex-col gap-0.5 p-2">
+        <nav class="flex flex-1 flex-col gap-0.5 p-1.5 text-[12px]">
             <a href="{{ url('staff_dashboard:dashboard') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium transition {% if nav_active == 'dashboard' %}bg-slate-800 text-white ring-1 ring-slate-700{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
-                Command center
-            </a>
+               class="mc-nav-a rounded px-2 py-1.5 {% if nav_active == 'dashboard' %}mc-nav-on{% endif %}">Command</a>
             <a href="{{ url('staff_dashboard:users') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium transition {% if nav_active == 'users' %}bg-slate-800 text-white ring-1 ring-slate-700{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
-                People &amp; plans
-            </a>
-            <div class="my-2 border-t border-slate-800"></div>
-            <a href="{{ url('admin:billing_payment_add') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-emerald-400/90 transition hover:bg-slate-800 hover:text-emerald-300">
-                + Record payment
-            </a>
-            <a href="{{ url('admin:index') }}" target="_blank" rel="noopener"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">
-                Classic admin (/sd/) ↗
-            </a>
-            <a href="{{ url('planner:board_personal') }}"
-               class="rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white">
-                Open product
-            </a>
+               class="mc-nav-a rounded px-2 py-1.5 {% if nav_active == 'users' %}mc-nav-on{% endif %}">People</a>
+            <div class="my-1.5 border-t" style="border-color: var(--mc-line)"></div>
+            <a href="{{ url('admin:billing_payment_add') }}" class="mc-nav-a rounded px-2 py-1.5" style="color: var(--mc-money)">+ Payment</a>
+            <a href="{{ url('admin:index') }}" target="_blank" rel="noopener" class="mc-nav-a rounded px-2 py-1.5">/sd/ admin ↗</a>
+            <a href="{{ url('planner:board_personal') }}" class="mc-nav-a rounded px-2 py-1.5">Product</a>
         </nav>
-        <div class="border-t border-slate-800 p-3 text-xs text-slate-500">
-            <p class="truncate font-medium text-slate-400">{{ user.username }}</p>
-            <form action="{{ url('users:logout') }}" method="post" class="mt-2">
+        <div class="border-t px-2.5 py-2 text-[11px]" style="border-color: var(--mc-line); color: var(--mc-muted)">
+            <p class="truncate font-medium" style="color: var(--mc-ink)">{{ user.username }}</p>
+            <form action="{{ url('users:logout') }}" method="post" class="mt-1">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <button type="submit" class="text-rose-400 hover:underline">Log out</button>
+                <button type="submit" class="hover:underline" style="color: var(--mc-danger)">Log out</button>
             </form>
         </div>
     </aside>
     <div class="min-w-0 flex-1 overflow-auto">
         {% if messages %}
-        <div class="border-b border-amber-900/40 bg-amber-950/40 px-6 py-2 text-xs text-amber-200">
-            {% for message in messages %}
-            <p>{{ message }}</p>
-            {% endfor %}
+        <div class="mc-msg px-4 py-1.5 text-[11px]">
+            {% for message in messages %}<p>{{ message }}</p>{% endfor %}
         </div>
         {% endif %}
         {% block main %}{% endblock %}

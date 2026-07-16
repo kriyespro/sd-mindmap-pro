@@ -1,235 +1,219 @@
 {% extends 'layouts/staff_shell.jinja' %}
-{% block title %}Command center{% endblock %}
+{% block title %}Command{% endblock %}
 
 {% block main %}
-<div class="border-b border-slate-800 bg-slate-900/50 px-6 py-5 sm:px-8">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <div>
-            <h1 class="text-xl font-bold text-white">Command center</h1>
-            <p class="mt-1 text-sm text-slate-400">Money, conversion, growth, and who needs a call today.</p>
-        </div>
-        <p class="text-[11px] text-slate-500">Updated {{ as_of.strftime('%H:%M') }} · auto-refresh 60s</p>
+<div class="flex items-center justify-between border-b px-4 py-2" style="border-color: var(--mc-line); background: var(--mc-paper)">
+    <div>
+        <h1 class="text-sm font-bold" style="color: var(--mc-ink)">Command</h1>
+        <p class="text-[11px]" style="color: var(--mc-muted)">Cash · convert · who needs you</p>
     </div>
+    <p class="text-[10px]" style="color: var(--mc-muted)">{{ as_of.strftime('%H:%M') }} · 60s</p>
 </div>
 
-<div class="space-y-8 p-6 sm:p-8"
+<div class="space-y-3 p-3"
      hx-get="{{ url('staff_dashboard:stats') }}"
      hx-trigger="every 60s"
      hx-target="#ceo-kpi-strip"
      hx-swap="innerHTML">
 
-    <div id="ceo-kpi-strip">
-        {% include 'partials/_staff_kpi_strip.jinja' %}
-    </div>
+    <div id="ceo-kpi-strip">{% include 'partials/_staff_kpi_strip.jinja' %}</div>
 
-    <div class="grid gap-6 lg:grid-cols-12">
-        <section class="rounded-xl border border-slate-800 bg-slate-900/50 p-5 lg:col-span-5">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Plan mix · MRR ₹{{ mrr_inr }}</h2>
-            <div class="mt-4 space-y-3">
-                {% set total_plans = (plan_counts.solo or 0) + (plan_counts.team or 0) + (plan_counts.team_20 or 0) %}
-                {% if total_plans == 0 %}{% set total_plans = 1 %}{% endif %}
+    <div class="grid gap-3 lg:grid-cols-12">
+        <section class="mc-card p-3 lg:col-span-4">
+            <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Plans · MRR ₹{{ mrr_inr }}</h2>
+            {% set total_plans = (plan_counts.solo or 0) + (plan_counts.team or 0) + (plan_counts.team_20 or 0) %}
+            {% if total_plans == 0 %}{% set total_plans = 1 %}{% endif %}
+            <div class="mt-2 space-y-1.5">
                 <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                        <span class="text-slate-400">Starter · ₹{{ plan_price.solo }}</span>
-                        <span class="font-semibold tabular-nums text-white">{{ plan_counts.solo }}</span>
+                    <div class="mb-0.5 flex justify-between text-[11px]">
+                        <span style="color: var(--mc-muted)">Starter ₹{{ plan_price.solo }}</span>
+                        <span class="font-semibold tabular-nums">{{ plan_counts.solo }}</span>
                     </div>
-                    <div class="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div class="h-full rounded-full bg-slate-400" style="width:{{ (plan_counts.solo / total_plans * 100)|round|int }}%"></div>
-                    </div>
+                    <div class="mc-bar-track"><div class="h-full rounded-full bg-stone-400" style="width:{{ (plan_counts.solo / total_plans * 100)|round|int }}%"></div></div>
                 </div>
                 <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                        <span class="text-slate-400">Team · ₹{{ plan_price.team }}</span>
-                        <span class="font-semibold tabular-nums text-indigo-300">{{ plan_counts.team }}</span>
+                    <div class="mb-0.5 flex justify-between text-[11px]">
+                        <span style="color: var(--mc-muted)">Team ₹{{ plan_price.team }}</span>
+                        <span class="font-semibold tabular-nums" style="color: var(--mc-accent)">{{ plan_counts.team }}</span>
                     </div>
-                    <div class="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div class="h-full rounded-full bg-indigo-500" style="width:{{ (plan_counts.team / total_plans * 100)|round|int }}%"></div>
-                    </div>
+                    <div class="mc-bar-track"><div class="h-full rounded-full" style="width:{{ (plan_counts.team / total_plans * 100)|round|int }}%; background: var(--mc-accent)"></div></div>
                 </div>
                 <div>
-                    <div class="mb-1 flex justify-between text-xs">
-                        <span class="text-slate-400">Pro · ₹{{ plan_price.team_20 }}</span>
-                        <span class="font-semibold tabular-nums text-fuchsia-300">{{ plan_counts.team_20 }}</span>
+                    <div class="mb-0.5 flex justify-between text-[11px]">
+                        <span style="color: var(--mc-muted)">Pro ₹{{ plan_price.team_20 }}</span>
+                        <span class="font-semibold tabular-nums">{{ plan_counts.team_20 }}</span>
                     </div>
-                    <div class="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div class="h-full rounded-full bg-fuchsia-500" style="width:{{ (plan_counts.team_20 / total_plans * 100)|round|int }}%"></div>
-                    </div>
+                    <div class="mc-bar-track"><div class="h-full rounded-full bg-stone-600" style="width:{{ (plan_counts.team_20 / total_plans * 100)|round|int }}%"></div></div>
                 </div>
             </div>
-            <p class="mt-4 text-[11px] text-slate-500">MRR = seats on plan × list price (manual billing).</p>
-
-            <div class="mt-6 grid gap-4 sm:grid-cols-2">
+            <div class="mt-3 grid grid-cols-2 gap-2">
                 <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Signups · 14d</h3>
-                    <div class="mt-3 flex h-14 items-end gap-1">
+                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Signups 14d</p>
+                    <div class="mt-1 flex h-10 items-end gap-px">
                         {% for s in sparkline %}
                         {% set h = ((s.count / spark_max) * 100)|round|int %}
-                        <div class="flex-1 rounded-t bg-indigo-500/80" style="height:{{ h if h >= 8 else (4 if s.count == 0 else 8) }}%" title="{{ s.date.isoformat() }}: {{ s.count }}"></div>
+                        <div class="flex-1 rounded-t" style="height:{{ h if h >= 8 else (3 if s.count == 0 else 8) }}%; background: var(--mc-accent); opacity:.85" title="{{ s.date.isoformat() }}: {{ s.count }}"></div>
                         {% endfor %}
                     </div>
                 </div>
                 <div>
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Cash · 14d</h3>
-                    <div class="mt-3 flex h-14 items-end gap-1">
+                    <p class="text-[9px] font-semibold uppercase" style="color: var(--mc-muted)">Cash 14d</p>
+                    <div class="mt-1 flex h-10 items-end gap-px">
                         {% for s in cash_spark %}
                         {% set h = ((s.count / cash_spark_max) * 100)|round|int %}
-                        <div class="flex-1 rounded-t bg-emerald-500/80" style="height:{{ h if h >= 8 else (4 if s.count == 0 else 8) }}%" title="{{ s.date.isoformat() }}: {{ s.amount }}"></div>
+                        <div class="flex-1 rounded-t" style="height:{{ h if h >= 8 else (3 if s.count == 0 else 8) }}%; background: var(--mc-money); opacity:.85" title="{{ s.date.isoformat() }}: {{ s.amount }}"></div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="rounded-xl border border-amber-900/40 bg-amber-950/20 p-5 lg:col-span-7">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-amber-400/90">Needs your attention</h2>
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <section class="mc-card p-3 lg:col-span-8" style="border-color: #e2cfa3; background: var(--mc-warn-soft)">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-warn)">Attention</h2>
+                <div class="flex gap-1.5">
+                    <a href="{{ url('staff_dashboard:users') }}?filter=trial_soon" class="mc-btn mc-btn-primary">Convert trials</a>
+                    <a href="{{ url('staff_dashboard:users') }}" class="mc-btn mc-btn-ghost">People</a>
+                </div>
+            </div>
+            <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
-                    <div class="flex items-center justify-between">
-                        <p class="text-[11px] font-semibold text-slate-400">Trials ending ≤ 3 days</p>
-                        <a href="{{ url('staff_dashboard:users') }}?filter=trial_soon" class="text-[10px] font-semibold text-indigo-400 hover:underline">View all</a>
+                    <div class="mb-1 flex justify-between">
+                        <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Trial ≤3d</p>
+                        <a href="{{ url('staff_dashboard:users') }}?filter=trial_soon" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="mt-2 space-y-2">
-                        {% for p in trials_ending_soon %}
+                    <ul class="space-y-1">
+                        {% for p in trials_ending_soon[:5] %}
                         <li>
                             <a href="{{ url('staff_dashboard:user_detail', user_id=p.user.id) }}"
-                               class="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs hover:border-indigo-700">
-                                <span class="font-medium text-white">@{{ p.user.username }}</span>
-                                <span class="tabular-nums text-amber-300">{{ p.trial_ends }}</span>
+                               class="flex justify-between rounded border px-2 py-1 text-[11px] hover:opacity-90"
+                               style="border-color: var(--mc-line); background: var(--mc-paper)">
+                                <span class="font-medium">@{{ p.user.username }}</span>
+                                <span class="tabular-nums" style="color: var(--mc-warn)">{{ p.trial_ends }}</span>
                             </a>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-500">None — clear runway.</li>
+                        <li class="text-[11px]" style="color: var(--mc-muted)">Clear</li>
                         {% endfor %}
                     </ul>
                 </div>
                 <div>
-                    <div class="flex items-center justify-between">
-                        <p class="text-[11px] font-semibold text-slate-400">Paid plan · no payment logged</p>
-                        <a href="{{ url('staff_dashboard:users') }}?filter=unpaid" class="text-[10px] font-semibold text-indigo-400 hover:underline">View all</a>
+                    <div class="mb-1 flex justify-between">
+                        <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Paid · no $</p>
+                        <a href="{{ url('staff_dashboard:users') }}?filter=unpaid" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="mt-2 space-y-2">
-                        {% for u in unpaid_paid %}
+                    <ul class="space-y-1">
+                        {% for u in unpaid_paid[:5] %}
                         <li>
                             <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
-                               class="block rounded-lg border border-rose-900/40 bg-rose-950/20 px-3 py-2 text-xs hover:border-rose-700">
-                                <p class="font-medium text-white">@{{ u.username }}</p>
-                                <p class="text-rose-300/80">{{ u.profile.plan }} · record cash or downgrade</p>
+                               class="block rounded border px-2 py-1 text-[11px]"
+                               style="border-color: #e0b8b2; background: var(--mc-danger-soft)">
+                                <span class="font-medium">@{{ u.username }}</span>
+                                <span style="color: var(--mc-danger)"> · {{ u.profile.plan }}</span>
                             </a>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-500">Books match plans.</li>
+                        <li class="text-[11px]" style="color: var(--mc-muted)">Matched</li>
                         {% endfor %}
                     </ul>
                 </div>
                 <div>
-                    <p class="text-[11px] font-semibold text-slate-400">Teams near seat limit</p>
-                    <ul class="mt-2 space-y-2">
-                        {% for row in attention_seats %}
-                        <li class="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs">
-                            <p class="font-medium text-white">{{ row.team.name }}</p>
-                            <p class="text-slate-400">
-                                <a href="{{ url('staff_dashboard:user_detail', user_id=row.owner.id) }}" class="text-indigo-400 hover:underline">@{{ row.owner.username }}</a>
-                                · {{ row.filled }}/{{ row.limit }} · {{ row.plan }}
+                    <p class="mb-1 text-[10px] font-semibold" style="color: var(--mc-muted)">Near seat cap</p>
+                    <ul class="space-y-1">
+                        {% for row in attention_seats[:5] %}
+                        <li class="rounded border px-2 py-1 text-[11px]" style="border-color: var(--mc-line); background: var(--mc-paper)">
+                            <p class="font-medium truncate">{{ row.team.name }}</p>
+                            <p style="color: var(--mc-muted)">
+                                <a href="{{ url('staff_dashboard:user_detail', user_id=row.owner.id) }}" class="mc-link">@{{ row.owner.username }}</a>
+                                · {{ row.filled }}/{{ row.limit }}
                             </p>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-500">No teams at capacity.</li>
+                        <li class="text-[11px]" style="color: var(--mc-muted)">None</li>
                         {% endfor %}
                     </ul>
                 </div>
                 <div>
-                    <div class="flex items-center justify-between">
-                        <p class="text-[11px] font-semibold text-slate-400">Dormant (no login 14d)</p>
-                        <a href="{{ url('staff_dashboard:users') }}?filter=dormant" class="text-[10px] font-semibold text-indigo-400 hover:underline">View all</a>
+                    <div class="mb-1 flex justify-between">
+                        <p class="text-[10px] font-semibold" style="color: var(--mc-muted)">Dormant 14d</p>
+                        <a href="{{ url('staff_dashboard:users') }}?filter=dormant" class="mc-link text-[10px]">all</a>
                     </div>
-                    <ul class="mt-2 space-y-2">
-                        {% for u in dormant_users %}
+                    <ul class="space-y-1">
+                        {% for u in dormant_users[:5] %}
                         <li>
                             <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}"
-                               class="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs hover:border-indigo-700">
-                                <span class="font-medium text-white">@{{ u.username }}</span>
-                                <span class="text-slate-500">{{ u.last_login.strftime('%b %d') if u.last_login else 'never' }}</span>
+                               class="flex justify-between rounded border px-2 py-1 text-[11px]"
+                               style="border-color: var(--mc-line); background: var(--mc-paper)">
+                                <span class="font-medium">@{{ u.username }}</span>
+                                <span style="color: var(--mc-muted)">{{ u.last_login.strftime('%b %d') if u.last_login else '—' }}</span>
                             </a>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-500">Everyone active recently.</li>
+                        <li class="text-[11px]" style="color: var(--mc-muted)">Active</li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
-            <div class="mt-4 flex flex-wrap gap-2">
-                <a href="{{ url('staff_dashboard:users') }}?filter=trial_soon"
-                   class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white hover:bg-amber-500">Convert trials</a>
-                <a href="{{ url('staff_dashboard:users') }}"
-                   class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800">People directory</a>
-            </div>
         </section>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-        <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-            <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Recent signups</h2>
-                <a href="{{ url('staff_dashboard:users') }}" class="text-[11px] font-semibold text-indigo-400 hover:underline">All people</a>
+    <div class="grid gap-3 lg:grid-cols-2">
+        <section class="mc-card overflow-hidden">
+            <div class="flex items-center justify-between border-b px-2.5 py-1.5" style="border-color: var(--mc-line)">
+                <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Signups</h2>
+                <a href="{{ url('staff_dashboard:users') }}" class="mc-link text-[10px]">all</a>
             </div>
-            <table class="w-full text-left text-sm">
-                <thead class="text-[10px] uppercase tracking-wide text-slate-500">
+            <table class="mc-table w-full text-left text-[12px]">
+                <thead>
                     <tr>
-                        <th class="px-4 py-2">User</th>
-                        <th class="px-4 py-2">Plan</th>
-                        <th class="px-4 py-2">Joined</th>
+                        <th class="px-2.5 py-1">User</th>
+                        <th class="px-2.5 py-1">Plan</th>
+                        <th class="px-2.5 py-1">Joined</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800">
-                    {% for u in recent_signups %}
-                    <tr class="text-slate-300 hover:bg-slate-900/80">
-                        <td class="px-4 py-2.5">
-                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="block">
-                                <p class="font-medium text-white hover:text-indigo-300">@{{ u.username }}</p>
-                                <p class="text-[10px] text-slate-500">{{ u.email or '—' }}</p>
-                            </a>
+                <tbody>
+                    {% for u in recent_signups[:8] %}
+                    <tr class="border-t" style="border-color: var(--mc-line)">
+                        <td class="px-2.5 py-1">
+                            <a href="{{ url('staff_dashboard:user_detail', user_id=u.id) }}" class="font-medium mc-link">@{{ u.username }}</a>
+                            <p class="text-[10px]" style="color: var(--mc-muted)">{{ u.email or '—' }}</p>
                         </td>
-                        <td class="px-4 py-2.5 text-xs">
-                            {% if u.profile %}
-                            <span class="rounded bg-slate-800 px-1.5 py-0.5 font-semibold text-slate-200">{{ u.profile.plan }}</span>
-                            {% if u.profile.trial_active %}<span class="ml-1 text-amber-400">trial</span>{% endif %}
-                            {% else %}—{% endif %}
+                        <td class="px-2.5 py-1 text-[11px]">
+                            {% if u.profile %}{{ u.profile.plan }}{% if u.profile.trial_active %} · trial{% endif %}{% else %}—{% endif %}
                         </td>
-                        <td class="px-4 py-2.5 font-mono text-[11px] text-slate-500">{{ u.date_joined.strftime('%b %d') }}</td>
+                        <td class="px-2.5 py-1 font-mono text-[10px]" style="color: var(--mc-muted)">{{ u.date_joined.strftime('%b %d') }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No users yet.</td></tr>
+                    <tr><td colspan="3" class="px-2.5 py-4 text-center text-[11px]" style="color: var(--mc-muted)">None</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </section>
 
-        <section class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
-            <div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Cash · recent payments</h2>
-                <a href="{{ url('admin:billing_payment_changelist') }}" class="text-[11px] font-semibold text-indigo-400 hover:underline">All payments</a>
+        <section class="mc-card overflow-hidden">
+            <div class="flex items-center justify-between border-b px-2.5 py-1.5" style="border-color: var(--mc-line)">
+                <h2 class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--mc-muted)">Payments</h2>
+                <a href="{{ url('admin:billing_payment_changelist') }}" class="mc-link text-[10px]">all</a>
             </div>
-            <table class="w-full text-left text-sm">
-                <thead class="text-[10px] uppercase tracking-wide text-slate-500">
+            <table class="mc-table w-full text-left text-[12px]">
+                <thead>
                     <tr>
-                        <th class="px-4 py-2">When</th>
-                        <th class="px-4 py-2">Amount</th>
-                        <th class="px-4 py-2">User</th>
+                        <th class="px-2.5 py-1">When</th>
+                        <th class="px-2.5 py-1">Amount</th>
+                        <th class="px-2.5 py-1">User</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800">
-                    {% for p in recent_payments %}
-                    <tr class="text-slate-300">
-                        <td class="px-4 py-2.5 font-mono text-[11px] text-slate-500">{{ p.created_at.strftime('%b %d %H:%M') }}</td>
-                        <td class="px-4 py-2.5 font-semibold tabular-nums text-emerald-400">{{ p.currency }} {{ p.amount }}</td>
-                        <td class="px-4 py-2.5 text-xs">
-                            {% if p.user %}
-                            <a href="{{ url('staff_dashboard:user_detail', user_id=p.user.id) }}" class="text-indigo-400 hover:underline">@{{ p.user.username }}</a>
-                            {% else %}—{% endif %}
+                <tbody>
+                    {% for p in recent_payments[:8] %}
+                    <tr class="border-t" style="border-color: var(--mc-line)">
+                        <td class="px-2.5 py-1 font-mono text-[10px]" style="color: var(--mc-muted)">{{ p.created_at.strftime('%b %d %H:%M') }}</td>
+                        <td class="px-2.5 py-1 font-semibold tabular-nums" style="color: var(--mc-money)">{{ p.currency }} {{ p.amount }}</td>
+                        <td class="px-2.5 py-1 text-[11px]">
+                            {% if p.user %}<a href="{{ url('staff_dashboard:user_detail', user_id=p.user.id) }}" class="mc-link">@{{ p.user.username }}</a>{% else %}—{% endif %}
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No payments yet. Convert a user from their dossier.</td></tr>
+                    <tr><td colspan="3" class="px-2.5 py-4 text-center text-[11px]" style="color: var(--mc-muted)">Convert from a dossier</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
