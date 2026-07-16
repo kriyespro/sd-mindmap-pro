@@ -710,6 +710,59 @@ def notify_assignee(*, assignee_username: str, actor: User, title: str, old_assi
     Notification.objects.create(user=u, message=msg)
 
 
+def assignee_choices(*, actor: User, team: Team | None) -> list[str]:
+    """
+    Simple assign list for UI selects:
+    - Team board → active members (always includes you)
+    - Personal board → just you
+    """
+    if team is not None:
+        usernames = (
+            TeamMembership.objects.filter(team=team, is_active=True)
+            .select_related('user')
+            .values_list('user__username', flat=True)
+        )
+        clean = {(u or '').strip() for u in usernames if (u or '').strip()}
+        me = (actor.username or '').strip()
+        if me:
+            clean.add(me)
+        return sorted(clean, key=str.lower)
+    me = (actor.username or '').strip()
+    return [me] if me else []
+
+
+def resolve_assignee(
+    *,
+    actor: User,
+    team: Team | None,
+    raw: str,
+) -> tuple[str, str | None]:
+    """
+    Normalize assignee input.
+    Returns (canonical_username_or_empty, error_message_or_None).
+    Empty string = unassigned.
+    """
+    assignee = (raw or '').strip()
+    if not assignee:
+        return '', None
+
+    user = User.objects.filter(username__iexact=assignee).only('id', 'username').first()
+    if user is None:
+        return '', 'Person not found. Pick someone from the list.'
+
+    if team is None:
+        if user.id != actor.id:
+            return '', 'On personal boards, assign only to yourself (or leave unassigned).'
+        return user.username, None
+
+    is_member = TeamMembership.objects.filter(
+        team=team, user=user, is_active=True
+    ).exists()
+    if not is_member:
+        return '', 'Pick an active team member (or Unassigned).'
+    return user.username, None
+
+
 def sync_parent_completion_from_children(task: Task | None) -> None:
     """
     Keep branch completion status consistent:

@@ -18,6 +18,7 @@ from planner.forms import TaskCreateForm, TaskImportForm, TaskMetaForm, TaskTitl
 from planner.crypto import decrypt_task_title
 from planner.models import Notification, Task
 from planner.services import (
+    assignee_choices,
     build_task_tree,
     collect_branch_ids_with_children,
     collect_task_has_children,
@@ -28,6 +29,7 @@ from planner.services import (
     normalize_workspace_completion,
     notify_assignee,
     prune_mindmap_tree,
+    resolve_assignee,
     root_stats,
     sync_descendant_completion,
     sync_parent_completion_from_children,
@@ -242,6 +244,16 @@ def _active_team_usernames(team: Team | None) -> list[str]:
     return sorted({u for u in clean if u}, key=str.lower)
 
 
+def _validate_assignee_for_workspace(
+    *,
+    actor: User,
+    team: Team | None,
+    assignee_username: str,
+) -> tuple[str, str | None]:
+    """Returns (canonical_username, error_or_None). Empty username = unassigned."""
+    return resolve_assignee(actor=actor, team=team, raw=assignee_username)
+
+
 def _task_ancestor_ids(task: Task) -> set[int]:
     ancestor_ids: set[int] = set()
     current = task
@@ -359,21 +371,6 @@ def _mindmap_svg_bytes(*, tree: list[dict], flow_style: str = 'natural') -> byte
     return ''.join(out).encode('utf-8')
 
 
-def _validate_assignee_for_workspace(*, team: Team | None, assignee_username: str) -> str | None:
-    assignee = (assignee_username or '').strip()
-    if not assignee:
-        return None
-    if team is None:
-        return None
-    user = User.objects.filter(username__iexact=assignee).only('id', 'username').first()
-    if user is None:
-        return 'Assignee username not found. Add or invite that member first.'
-    is_member = TeamMembership.objects.filter(team=team, user=user, is_active=True).exists()
-    if not is_member:
-        return 'Assignee must be an active member of this team'
-    return None
-
-
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class BoardView(LoginRequiredMixin, TemplateView):
     template_name = 'pages/board.jinja'
@@ -449,7 +446,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         team_can_invite = False
         team_can_archive = False
         team_roster = []
-        team_assignee_usernames = _active_team_usernames(effective_team)
+        team_assignee_usernames = assignee_choices(actor=user, team=effective_team)
         if team:
             try:
                 has_team_plan = Profile.supports_team_plan(user.profile.plan)
@@ -514,7 +511,7 @@ def _tree_partial(
     if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
     u = workspace_urls(team, project)
-    team_assignee_usernames = _active_team_usernames(effective_team)
+    team_assignee_usernames = assignee_choices(actor=request.user, team=effective_team)
     if layout in ('mindmap', 'mini', 'idea'):
         mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
@@ -641,7 +638,8 @@ class TaskCreateView(LoginRequiredMixin, View):
                     return HttpResponse('Invalid date', status=400)
             assignee_username = (request.POST.get('assignee_username') or '').strip()
             effective_team = team or (project.team if project else None)
-            assignee_error = _validate_assignee_for_workspace(
+            assignee_username, assignee_error = _validate_assignee_for_workspace(
+                actor=request.user,
                 team=effective_team,
                 assignee_username=assignee_username,
             )
@@ -705,12 +703,14 @@ class TaskCreateView(LoginRequiredMixin, View):
 
         task = form.save(commit=False)
         effective_team = team or (project.team if project else None)
-        assignee_error = _validate_assignee_for_workspace(
+        canonical, assignee_error = _validate_assignee_for_workspace(
+            actor=request.user,
             team=effective_team,
             assignee_username=task.assignee_username,
         )
         if assignee_error:
             return HttpResponse(assignee_error, status=400)
+        task.assignee_username = canonical
         task.author = request.user
         task.project = project
         task.team = effective_team
@@ -838,14 +838,15 @@ class TaskMetaView(LoginRequiredMixin, View):
         old = task.assignee_username or ''
         new_assignee = (form.cleaned_data.get('assignee_username') or '').strip()
         effective_team = team or (project.team if project else None)
-        assignee_error = _validate_assignee_for_workspace(
+        canonical, assignee_error = _validate_assignee_for_workspace(
+            actor=request.user,
             team=effective_team,
             assignee_username=new_assignee,
         )
         if assignee_error:
             return HttpResponse(assignee_error, status=400)
         task.due_date = form.cleaned_data.get('due_date')
-        task.assignee_username = new_assignee
+        task.assignee_username = canonical
         task.save(update_fields=['due_date', 'assignee_username'])
         notify_assignee(
             assignee_username=task.assignee_username,
