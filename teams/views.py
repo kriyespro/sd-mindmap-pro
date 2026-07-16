@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -49,6 +50,18 @@ def _team_seat_limit(team: Team) -> int:
         except Profile.DoesNotExist:
             return Profile.TEAM_USER_LIMIT
     return Profile.TEAM_USER_LIMIT
+
+
+def _absolute_invite_url(request, token: str) -> str:
+    url = request.build_absolute_uri(reverse('teams:accept_invite', kwargs={'token': token}))
+    # Prefer https in production even if the proxy request looks like http.
+    if not settings.DEBUG and url.startswith('http://'):
+        url = 'https://' + url[len('http://') :]
+    return url
+
+
+def _store_invite_share(request, *, label: str, url: str) -> None:
+    request.session['invite_share'] = {'label': label, 'url': url}
 
 
 def _add_or_invite_member(
@@ -121,10 +134,9 @@ def _add_or_invite_member(
         expires_at__gt=timezone.now(),
     ).first()
     if usable_invite:
-        accept_url = request.build_absolute_uri(
-            reverse('teams:accept_invite', kwargs={'token': usable_invite.token})
-        )
-        return (False, f'Invite already active for this email. Share: {accept_url}')
+        accept_url = _absolute_invite_url(request, usable_invite.token)
+        _store_invite_share(request, label=clean_name, url=accept_url)
+        return (False, f'Invite already active for {clean_name}. Copy the link below.')
 
     invite = TeamInvite.objects.create(
         team=team,
@@ -135,17 +147,13 @@ def _add_or_invite_member(
         expires_at=timezone.now() + timedelta(days=7),
         max_uses=min(max(seat_limit, 1), 1),
     )
-    accept_url = request.build_absolute_uri(
-        reverse('teams:accept_invite', kwargs={'token': invite.token})
-    )
+    accept_url = _absolute_invite_url(request, invite.token)
+    _store_invite_share(request, label=clean_name, url=accept_url)
     Notification.objects.create(
         user=actor,
-        message=f'Invite created for {clean_name} ({clean_email}) in "{team.name}". Share: {accept_url}',
+        message=f'Invite created for {clean_name} ({clean_email}) in "{team.name}".',
     )
-    return (
-        True,
-        f'Invite ready for {clean_name}. Share this link: {accept_url}',
-    )
+    return (True, f'Invite ready for {clean_name}. Copy the link below.')
 
 
 class TeamCreateView(LoginRequiredMixin, View):
@@ -252,6 +260,8 @@ class TeamJoinLinkGenerateView(LoginRequiredMixin, View):
             max_uses=max(seat_limit, 1),
         )
         request.session['latest_team_join_token'] = invite.token
+        accept_url = _absolute_invite_url(request, invite.token)
+        _store_invite_share(request, label=team.name, url=accept_url)
         return redirect('billing:overview')
 
 

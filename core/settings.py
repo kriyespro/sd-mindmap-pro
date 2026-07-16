@@ -41,10 +41,19 @@ ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
 # HTTPS sites behind a reverse proxy (required for CSRF from Django 4+)
 _raw_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(',') if o.strip()]
-if not CSRF_TRUSTED_ORIGINS:
-    # Fallback for deployments where CSRF_TRUSTED_ORIGINS was not configured.
-    derived_hosts = [h for h in ALLOWED_HOSTS if h not in {'localhost', '127.0.0.1', 'testserver'}]
-    CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in derived_hosts if h and '*' not in h]
+# Always include https:// for real hostnames so Origin checks pass even if
+# CSRF_TRUSTED_ORIGINS was omitted or incomplete in .env.
+_skip_csrf_hosts = {'localhost', '127.0.0.1', 'testserver', 'nginx', 'web'}
+for _host in ALLOWED_HOSTS:
+    if not _host or '*' in _host or _host in _skip_csrf_hosts:
+        continue
+    # Skip raw IPs
+    if _host.replace('.', '').isdigit():
+        continue
+    for _scheme in ('https', 'http'):
+        _origin = f'{_scheme}://{_host}'
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -187,10 +196,15 @@ LOGOUT_REDIRECT_URL = 'users:login'
 # ── Session ───────────────────────────────────────────────────────────────────
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 14  # 2 weeks
 
-# ── Production security (only when DEBUG=False) ───────────────────────────────
+# ── Production security ───────────────────────────────────────────────────────
 # USE_HTTPS=true when users hit the site over HTTPS (or TLS terminates at a proxy
 # and you set X-Forwarded-Proto). For HTTP-only (e.g. raw droplet IP), keep False.
 USE_HTTPS = _env_bool('USE_HTTPS', default=False)
+
+# Trust proxy HTTPS even if DEBUG was left True by mistake — otherwise CSRF 403s
+# when Origin is https:// but Django thinks the request is http://.
+if USE_HTTPS:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
@@ -202,8 +216,11 @@ if not DEBUG:
         SECURE_HSTS_SECONDS = 31536000
         SECURE_HSTS_INCLUDE_SUBDOMAINS = True
         SECURE_HSTS_PRELOAD = True
-        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     else:
         SECURE_HSTS_SECONDS = 0
         SECURE_HSTS_INCLUDE_SUBDOMAINS = False
         SECURE_HSTS_PRELOAD = False
+elif USE_HTTPS:
+    # Accidental DEBUG=True on a public HTTPS site: still send Secure cookies.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

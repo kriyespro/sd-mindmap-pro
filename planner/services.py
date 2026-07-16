@@ -710,12 +710,34 @@ def notify_assignee(*, assignee_username: str, actor: User, title: str, old_assi
     Notification.objects.create(user=u, message=msg)
 
 
-def assignee_choices(*, actor: User, team: Team | None) -> list[str]:
+def assignee_choices(*, actor: User, team: Team | None, project=None) -> list[str]:
     """
-    Simple assign list for UI selects:
-    - Team board → active members (always includes you)
+    Assign list for UI selects:
+    - Project board → project members only (always includes you)
+    - Team board → active team members (always includes you)
     - Personal board → just you
     """
+    if project is not None:
+        from projects.models import ProjectMember
+
+        usernames = (
+            ProjectMember.objects.filter(project=project)
+            .select_related('user')
+            .values_list('user__username', flat=True)
+        )
+        clean = {(u or '').strip() for u in usernames if (u or '').strip()}
+        if project.owner_id:
+            owner_name = (getattr(project.owner, 'username', '') or '').strip()
+            if not owner_name:
+                owner = User.objects.filter(pk=project.owner_id).only('username').first()
+                owner_name = (owner.username if owner else '') or ''
+            if owner_name:
+                clean.add(owner_name)
+        me = (actor.username or '').strip()
+        if me:
+            clean.add(me)
+        return sorted(clean, key=str.lower)
+
     if team is not None:
         usernames = (
             TeamMembership.objects.filter(team=team, is_active=True)
@@ -736,6 +758,7 @@ def resolve_assignee(
     actor: User,
     team: Team | None,
     raw: str,
+    project=None,
 ) -> tuple[str, str | None]:
     """
     Normalize assignee input.
@@ -749,6 +772,13 @@ def resolve_assignee(
     user = User.objects.filter(username__iexact=assignee).only('id', 'username').first()
     if user is None:
         return '', 'Person not found. Pick someone from the list.'
+
+    if project is not None:
+        from projects.services import user_can_access_project
+
+        if not user_can_access_project(user, project):
+            return '', 'Pick a project member (or Unassigned).'
+        return user.username, None
 
     if team is None:
         if user.id != actor.id:

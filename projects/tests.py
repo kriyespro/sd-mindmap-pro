@@ -48,3 +48,31 @@ class ProjectBoardUnificationTests(TestCase):
         task = Task.objects.filter(project=self.project).first()
         self.assertIsNotNone(task)
         self.assertEqual(task.title_plain, 'From mindmap board')
+
+
+class ProjectMemberAddTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='pmowner', password='pass1234')
+        self.person = User.objects.create_user(
+            username='pmuser', email='pmuser@example.com', password='pass1234'
+        )
+        self.other_project = Project.objects.create(name='Other', owner=self.owner, slug='other-proj')
+        self.project = Project.objects.create(name='Target', owner=self.owner, slug='target-proj')
+        self.client.force_login(self.owner)
+
+    def test_add_member_only_current_project(self):
+        from projects.models import ProjectMember
+
+        response = self.client.post(
+            reverse('projects:member_add', kwargs={'slug': self.project.slug}),
+            {'who': 'pmuser', 'role': 'member', 'next': reverse('projects:board', kwargs={'slug': self.project.slug})},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            ProjectMember.objects.filter(project=self.project, user=self.person).exists()
+        )
+        self.assertFalse(
+            ProjectMember.objects.filter(project=self.other_project, user=self.person).exists()
+        )
+        self.assertContains(response, 'this project only')

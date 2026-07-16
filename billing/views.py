@@ -140,6 +140,7 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['team_join_link_form'] = TeamJoinLinkForm()
         ctx['team_member_role_choices'] = TeamMembership.ROLE_CHOICES
         ctx['team_join_url'] = team_join_url
+        ctx['invite_share'] = self.request.session.pop('invite_share', None)
         archived_teams = []
         manageable_active_teams = []
         memberships = (

@@ -92,6 +92,52 @@ def create_project_task(user, project: Project, data: dict) -> Task:
     return task
 
 
+def add_project_member(*, project, actor, who: str, role: str = ProjectMember.ROLE_MEMBER) -> tuple[bool, str]:
+    """Add an existing user to this project only (not other projects / not team workspace)."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    clean = (who or '').strip()
+    if not clean:
+        return False, 'Enter a username or email'
+    if role not in {
+        ProjectMember.ROLE_MANAGER,
+        ProjectMember.ROLE_MEMBER,
+        ProjectMember.ROLE_VIEWER,
+    }:
+        role = ProjectMember.ROLE_MEMBER
+
+    target = None
+    if '@' in clean:
+        target = User.objects.filter(email__iexact=clean).first()
+    else:
+        target = User.objects.filter(username__iexact=clean).first()
+        if target is None:
+            target = User.objects.filter(email__iexact=clean).first()
+
+    if target is None:
+        return (
+            False,
+            'No account found. They need a DCPMind account first — then add their username.',
+        )
+
+    if project.owner_id == target.id:
+        return False, 'That person already owns this project'
+
+    existing = ProjectMember.objects.filter(project=project, user=target).first()
+    if existing:
+        return False, f'@{target.username} is already on this project'
+
+    ProjectMember.objects.create(project=project, user=target, role=role)
+    from planner.models import Notification
+
+    Notification.objects.create(
+        user=target,
+        message=f'{actor.username} added you to project "{project.name}".',
+    )
+    return True, f'Added @{target.username} to this project only.'
+
+
 def user_can_edit_project_task(user, task: Task) -> bool:
     if task.project_id is None:
         return False

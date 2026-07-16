@@ -2,6 +2,7 @@
 {% block title %}Billing · DCPMind{% endblock %}
 
 {% block main %}
+{% include 'partials/_invite_share.jinja' %}
 <header class="border-b border-slate-200/80 bg-white px-4 py-3">
     <h1 class="text-lg font-semibold text-slate-900">Billing & Plan</h1>
     <p class="mt-0.5 text-xs text-slate-500">Compact billing view for plan, trial, seats, and team access.</p>
@@ -259,7 +260,8 @@
                         </button>
                     </div>
                     <p class="text-[11px] text-slate-500">
-                        Username → added now (assign tasks right away). Email → invite link to share.
+                        Username → added to this <span class="font-medium">team workspace</span> now.
+                        Email → copyable join link. For one project only, open that project → Add member.
                     </p>
                 </form>
                 {% elif billing_can_invite %}

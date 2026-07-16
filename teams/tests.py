@@ -213,4 +213,6 @@ class TeamMemberAddFlowTests(TestCase):
         invite = TeamInvite.objects.get(team=self.team, email='kriyes.pro@gmail.com')
         self.assertTrue(invite.is_usable)
         self.assertContains(response, 'Invite ready for kriyes.pro')
+        self.assertContains(response, 'Copy the link below')
         self.assertNotContains(response, 'No account found')
+        self.assertContains(response, 'Copy link')

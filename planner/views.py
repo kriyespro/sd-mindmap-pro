@@ -249,9 +249,12 @@ def _validate_assignee_for_workspace(
     actor: User,
     team: Team | None,
     assignee_username: str,
+    project=None,
 ) -> tuple[str, str | None]:
     """Returns (canonical_username, error_or_None). Empty username = unassigned."""
-    return resolve_assignee(actor=actor, team=team, raw=assignee_username)
+    return resolve_assignee(
+        actor=actor, team=team, raw=assignee_username, project=project
+    )
 
 
 def _task_ancestor_ids(task: Task) -> set[int]:
@@ -444,9 +447,16 @@ class BoardView(LoginRequiredMixin, TemplateView):
         u: WorkspaceUrls = workspace_urls(team, project)
         team_is_owner = False
         team_can_invite = False
+        project_can_invite = False
         team_can_archive = False
         team_roster = []
-        team_assignee_usernames = assignee_choices(actor=user, team=effective_team)
+        team_assignee_usernames = assignee_choices(
+            actor=user, team=None if project else effective_team, project=project
+        )
+        if project:
+            from projects.services import user_can_manage_project
+
+            project_can_invite = user_can_manage_project(user, project)
         if team:
             try:
                 has_team_plan = Profile.supports_team_plan(user.profile.plan)
@@ -463,6 +473,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 .select_related('user')
                 .order_by('-is_owner', 'user__username')
             )
+        invite_share = self.request.session.pop('invite_share', None)
         kanban_columns = None
         if layout == 'kanban':
             kanban_columns = _build_kanban_columns(qs)
@@ -485,9 +496,11 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'team_invite_form': TeamInviteForm(),
                 'team_is_owner': team_is_owner,
                 'team_can_invite': team_can_invite,
+                'project_can_invite': project_can_invite,
                 'team_can_archive': team_can_archive,
                 'team_roster': team_roster,
                 'team_assignee_usernames': team_assignee_usernames,
+                'invite_share': invite_share,
                 'tree_focus_expand_ids': _get_tree_focus_expand_ids(self.request),
                 'focus_task_id': focus_task_id,
                 'u': u,
@@ -511,7 +524,9 @@ def _tree_partial(
     if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
     u = workspace_urls(team, project)
-    team_assignee_usernames = assignee_choices(actor=request.user, team=effective_team)
+    team_assignee_usernames = assignee_choices(
+        actor=request.user, team=None if project else effective_team, project=project
+    )
     if layout in ('mindmap', 'mini', 'idea'):
         mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
@@ -642,6 +657,7 @@ class TaskCreateView(LoginRequiredMixin, View):
                 actor=request.user,
                 team=effective_team,
                 assignee_username=assignee_username,
+                project=project,
             )
             if assignee_error:
                 return HttpResponse(assignee_error, status=400)
@@ -707,6 +723,7 @@ class TaskCreateView(LoginRequiredMixin, View):
             actor=request.user,
             team=effective_team,
             assignee_username=task.assignee_username,
+            project=project,
         )
         if assignee_error:
             return HttpResponse(assignee_error, status=400)
@@ -842,6 +859,7 @@ class TaskMetaView(LoginRequiredMixin, View):
             actor=request.user,
             team=effective_team,
             assignee_username=new_assignee,
+            project=project,
         )
         if assignee_error:
             return HttpResponse(assignee_error, status=400)

@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -6,8 +7,9 @@ from django.views import View
 from django.views.generic import TemplateView
 
 from projects.forms import ProjectForm, ProjectTaskCreateForm
-from projects.models import Project
+from projects.models import Project, ProjectMember
 from projects.services import (
+    add_project_member,
     archive_project,
     clone_project,
     create_project,
@@ -152,3 +154,37 @@ class ArchivedProjectListView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx['projects'] = get_archived_projects(self.request.user)
         return ctx
+
+
+class ProjectMemberAddView(LoginRequiredMixin, View):
+    """Add an existing user to this project only — no access to other projects."""
+
+    def post(self, request, slug):
+        is_hx = bool(request.headers.get('HX-Request'))
+        next_url = (
+            (request.POST.get('next') or '').strip()
+            or request.META.get('HTTP_REFERER')
+            or reverse('projects:board', kwargs={'slug': slug})
+        )
+
+        def _error(message: str, *, status: int = 400):
+            if is_hx:
+                return HttpResponse(message, status=status)
+            messages.error(request, message)
+            return redirect(next_url)
+
+        project = get_object_or_404(Project, slug=slug, is_archived=False)
+        if not user_can_manage_project(request.user, project):
+            return _error('Only project owner/manager can add members', status=403)
+
+        who = (request.POST.get('who') or '').strip()
+        role = (request.POST.get('role') or ProjectMember.ROLE_MEMBER).strip()
+        ok, msg = add_project_member(project=project, actor=request.user, who=who, role=role)
+        if not ok:
+            return _error(msg)
+        messages.success(request, msg)
+        if is_hx:
+            resp = HttpResponse('')
+            resp['HX-Redirect'] = next_url
+            return resp
+        return redirect(next_url)

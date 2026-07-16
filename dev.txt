@@ -29,3 +29,5 @@
 [DONE] Phase PM-24 - Hide duplicate 99D/33D/11D title text after badge; starter creates blank titles
 [DONE] Phase PM-25 - Simple assignee: dropdown Unassigned/Me/team members; resolve_assignee + assignee_choices
 [DONE] Phase PM-26 - Team access UX: one field (username or email) + Add; simple member list; copy join link; board modal matched
+[DONE] Phase PM-27 - Easy-copy invite share card; project Add member = that project only; assignees scoped to project members
+[DONE] Phase PM-28 - Fix CSRF 403 behind HTTPS: preserve X-Forwarded-Proto in docker nginx; proxy SSL header when USE_HTTPS

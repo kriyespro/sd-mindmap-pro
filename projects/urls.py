@@ -59,6 +59,7 @@ urlpatterns = [
         planner_views.TaskKanbanStatusView.as_view(),
         name='board_kanban_status',
     ),
+    path('<slug:slug>/members/add/', views.ProjectMemberAddView.as_view(), name='member_add'),
     path('<slug:slug>/', views.ProjectDetailView.as_view(), name='detail'),
     path('<slug:slug>/edit/', views.ProjectEditView.as_view(), name='edit'),
     path('<slug:slug>/archive/', views.ProjectArchiveView.as_view(), name='archive'),
