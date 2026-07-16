@@ -35,3 +35,4 @@
 [DONE] Phase PM-30 - Card layout: top = badge+title only; bottom = date/assign/%/done/delete/+ ; drop “+ Sub”
 [DONE] Phase PM-31 - Card bottom: remove Task Details icon and % progress
 [DONE] Phase PM-32 - Fix assign overflow; done checkbox only on ST (depth 3+); parents auto-complete
+[DONE] Phase PM-33 - Landing: Dream Conversion Process hero; pricing ₹99/₹299/₹999; footer Winning Blueprints

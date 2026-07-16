@@ -37,9 +37,9 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['plan_code'] = 'solo'
         ctx['plan_name'] = 'Solo'
         ctx['trial_days_left'] = 0
-        ctx['solo_price_inr'] = 199
-        ctx['team_price_inr'] = 399
-        ctx['team_20_price_inr'] = 1999
+        ctx['solo_price_inr'] = 99
+        ctx['team_price_inr'] = 299
+        ctx['team_20_price_inr'] = 999
         ctx['team_user_limit'] = Profile.TEAM_USER_LIMIT
         ctx['team_20_user_limit'] = Profile.TEAM_20_USER_LIMIT
         try:

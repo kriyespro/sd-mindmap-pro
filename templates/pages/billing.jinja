@@ -130,7 +130,7 @@
                 </div>
                 <div class="mt-2 grid gap-2 sm:grid-cols-3">
                     <div class="rounded-lg border p-2 {% if plan_code == 'solo' %}border-indigo-300 bg-indigo-50/50{% else %}border-slate-200 bg-slate-50{% endif %}">
-                        <p class="text-xs font-semibold text-slate-700">Solo</p>
+                        <p class="text-xs font-semibold text-slate-700">Starter</p>
                         <p class="text-lg font-bold text-slate-900">₹{{ solo_price_inr }}<span class="text-xs font-medium text-slate-500">/month</span></p>
                         <ul class="mt-0.5 space-y-0 text-[11px] text-slate-600">
                             <li>Personal workspace</li>
@@ -144,7 +144,7 @@
                                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                                 <input type="hidden" name="plan" value="solo">
                                 <button type="submit" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">
-                                    Switch to Solo
+                                    Switch to Starter
                                 </button>
                             </form>
                             {% endif %}
@@ -172,7 +172,7 @@
                         </div>
                     </div>
                     <div class="rounded-lg border p-2 {% if plan_code == 'team_20' %}border-fuchsia-300 bg-fuchsia-50/50{% else %}border-slate-200 bg-slate-50{% endif %}">
-                        <p class="text-xs font-semibold text-slate-700">Team Pro</p>
+                        <p class="text-xs font-semibold text-slate-700">Pro</p>
                         <p class="text-lg font-bold text-slate-900">₹{{ team_20_price_inr }}<span class="text-xs font-medium text-slate-500">/month</span></p>
                         <ul class="mt-0.5 space-y-0 text-[11px] text-slate-600">
                             <li>Up to {{ team_20_user_limit }} users</li>
@@ -186,7 +186,7 @@
                                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                                 <input type="hidden" name="plan" value="team_20">
                                 <button type="submit" class="rounded-lg bg-fuchsia-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-fuchsia-700">
-                                    Upgrade to Team Pro
+                                    Upgrade to Pro
                                 </button>
                             </form>
                             {% endif %}

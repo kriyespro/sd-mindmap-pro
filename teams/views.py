@@ -162,12 +162,12 @@ class TeamCreateView(LoginRequiredMixin, View):
             profile = request.user.profile
         except Profile.DoesNotExist:
             return HttpResponse(
-                'You are on Solo plan. Upgrade to Team plan (₹399/mo) to create teams.',
+                'You are on Solo plan. Upgrade to Team plan (₹299/mo) to create teams.',
                 status=403,
             )
         if not Profile.supports_team_plan(profile.plan):
             return HttpResponse(
-                'You are on Solo plan. Upgrade to Team plan (₹399/mo) to create teams.',
+                'You are on Solo plan. Upgrade to Team plan (₹299/mo) to create teams.',
                 status=403,
             )
         form = TeamCreateForm(request.POST)
@@ -198,7 +198,7 @@ class TeamInviteView(LoginRequiredMixin, View):
         except Profile.DoesNotExist:
             return HttpResponse('Upgrade to Team plan to invite members', status=403)
         if not Profile.supports_team_plan(profile.plan):
-            return HttpResponse('Upgrade to Team plan (₹399/mo) to invite members', status=403)
+            return HttpResponse('Upgrade to Team plan (₹299/mo) to invite members', status=403)
         seat_limit = _team_seat_limit(team)
         if TeamMembership.objects.filter(team=team, is_active=True).count() >= seat_limit:
             return HttpResponse(f'Team member limit reached (max {seat_limit} users)', status=400)
@@ -241,7 +241,7 @@ class TeamJoinLinkGenerateView(LoginRequiredMixin, View):
         except Profile.DoesNotExist:
             return HttpResponse('Upgrade to Team plan to generate links', status=403)
         if not Profile.supports_team_plan(profile.plan):
-            return HttpResponse('Upgrade to Team plan (₹399/mo) to generate links', status=403)
+            return HttpResponse('Upgrade to Team plan (₹299/mo) to generate links', status=403)
 
         role = request.POST.get('role', TeamInvite.ROLE_MEMBER)
         if role not in {TeamInvite.ROLE_ADMIN, TeamInvite.ROLE_MEMBER}:
