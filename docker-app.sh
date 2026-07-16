@@ -8,6 +8,9 @@ python manage.py migrate --noinput
 echo "==> Collecting static files..."
 python manage.py collectstatic --noinput
 
+echo "==> Checking task title encryption..."
+python manage.py check_task_encryption
+
 echo "==> Starting gunicorn..."
 exec gunicorn core.wsgi:application \
     --bind 0.0.0.0:8000 \

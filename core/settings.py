@@ -27,6 +27,9 @@ SECRET_KEY = os.environ.get(
 )
 # Optional Fernet key for task title encryption-at-rest.
 # Must be a urlsafe base64-encoded 32-byte key when provided.
+# IMPORTANT: Prefer setting TASK_ENCRYPTION_KEY in production so titles
+# stay readable even if SECRET_KEY changes. Generate once and never rotate casually:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 TASK_ENCRYPTION_KEY = os.environ.get('TASK_ENCRYPTION_KEY', '').strip()
 
 # Default False: set DEBUG=True in .env for local debugging (never on public servers).

@@ -22,3 +22,4 @@
 [DONE] Phase PM-17 - Mindmap expand perf: O(n) tree build, session-only collapse state, hx-sync drop, scroll preserve, +N button always visible when collapsed
 [DONE] Phase PM-18 - Sidebar encryption announcement: “Your task titles are encrypted at rest”; dismissible via localStorage
 [DONE] Phase PM-19 - New root task “99D starter”: 1×99D → 3×33D → 9×11D (create_99d_template + modal option)
+[DONE] Phase PM-20 - check_task_encryption command + docker startup roundtrip; document TASK_ENCRYPTION_KEY pin
