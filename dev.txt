@@ -25,3 +25,4 @@
 [DONE] Phase PM-20 - check_task_encryption command + docker startup roundtrip; document TASK_ENCRYPTION_KEY pin
 [DONE] Phase PM-21 - Rebrand to DCPMind (Dream Conversion Process / Mind Tool) on landing, auth, app sidebar, staff Control, admin
 [DONE] Phase PM-22 - Restore indigo/violet home theme; mind-map node logo (fix cramped DCP mark)
+[DONE] Phase PM-23 - Depth badges: CO→99D, DO→33D, IO→11D on mindmap/tree cards
