@@ -24,3 +24,4 @@
 [DONE] Phase PM-19 - New root task “99D starter”: 1×99D → 3×33D → 9×11D (create_99d_template + modal option)
 [DONE] Phase PM-20 - check_task_encryption command + docker startup roundtrip; document TASK_ENCRYPTION_KEY pin
 [DONE] Phase PM-21 - Rebrand to DCPMind (Dream Conversion Process / Mind Tool) on landing, auth, app sidebar, staff Control, admin
+[DONE] Phase PM-22 - Restore indigo/violet home theme; mind-map node logo (fix cramped DCP mark)

@@ -371,8 +371,13 @@
         <div class="border-b border-[#d9cfc3]/90 bg-[#f7f2ea]/95 p-2">
             <div class="sidebar-brand flex min-w-0 items-center gap-2" :class="!sidebarOpen && 'flex-col gap-1'">
                 <a href="{{ url('planner:board_personal') }}" class="flex min-w-0 items-center gap-2.5" :class="!sidebarOpen && 'justify-center'" title="DCPMind — Dream Conversion Process">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-slate-800 text-[10px] font-black tracking-tight text-white shadow-md shadow-teal-800/20">
-                        DCP
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25" aria-hidden="true">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="5" r="2.2"/>
+                            <circle cx="6" cy="18" r="2.2"/>
+                            <circle cx="18" cy="18" r="2.2"/>
+                            <path d="M12 7.2v4.3M12 11.5L6.8 16M12 11.5l5.2 4.5"/>
+                        </svg>
                     </div>
                     <div x-show="sidebarOpen" x-cloak class="min-w-0">
                         <p class="text-sm font-semibold tracking-tight text-stone-900">DCPMind</p>
