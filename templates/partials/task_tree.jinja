@@ -116,26 +116,13 @@
                 </form>
             </div>
 
-            <span class="ml-auto shrink-0 text-[10px] font-extrabold tabular-nums {% if task.percent == 100 %}text-emerald-600{% else %}text-slate-500{% endif %}" title="Progress">{{ task.percent }}%</span>
-
             <button type="button"
                     hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                     hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
                     title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
-                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition active:scale-90
+                    class="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded border transition active:scale-90
                            {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-slate-300 text-transparent hover:border-indigo-400{% endif %}">
                 <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-
-            <button type="button"
-                    @click="taskDetailOpen = true"
-                    hx-get="{{ url('planner:task_detail', task_id=task.id) }}"
-                    hx-target="#task-detail-content"
-                    hx-swap="innerHTML"
-                    data-hx-no-task-focus
-                    class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600"
-                    title="Open task details">
-                <svg class="pointer-events-none h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </button>
 
             <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
