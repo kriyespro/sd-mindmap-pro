@@ -264,7 +264,7 @@
         <div class="mb-4 flex items-start justify-between">
             <div>
                 <h2 class="text-sm font-semibold text-slate-900" x-text="parentIdForModal ? 'Add subtask' : 'New root task'"></h2>
-                <p class="mt-0.5 text-[11px] text-slate-500" x-text="parentIdForModal ? 'Nested under parent card' : 'Top-level OKR'"></p>
+                <p class="mt-0.5 text-[11px] text-slate-500" x-text="parentIdForModal ? 'Nested under this card (works on 11D too — becomes ST)' : 'Top-level OKR'"></p>
             </div>
             <button type="button" @click="addModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

@@ -31,3 +31,4 @@
 [DONE] Phase PM-26 - Team access UX: one field (username or email) + Add; simple member list; copy join link; board modal matched
 [DONE] Phase PM-27 - Easy-copy invite share card; project Add member = that project only; assignees scoped to project members
 [DONE] Phase PM-28 - Fix CSRF 403 behind HTTPS: preserve X-Forwarded-Proto in docker nginx; proxy SSL header when USE_HTTPS
+[DONE] Phase PM-29 - 11D cards: always-visible + add-subtask (header + clearer “+ Sub”); stop overflow clipping on mindmap
