@@ -54,14 +54,14 @@ class Create99dTemplateTests(TestCase):
     def test_service_builds_1_3_9_tree(self):
         from planner.services import create_99d_template
 
-        root = create_99d_template(author=self.user, root_title='99D')
-        self.assertEqual(root.title_plain, '99D')
+        root = create_99d_template(author=self.user, root_title='')
+        self.assertEqual(root.title_plain, '')
         mids = list(Task.objects.filter(parent=root).order_by('position', 'id'))
         self.assertEqual(len(mids), 3)
-        self.assertTrue(all(m.title_plain == '33D' for m in mids))
+        self.assertTrue(all(m.title_plain == '' for m in mids))
         leaves = Task.objects.filter(parent__in=mids)
         self.assertEqual(leaves.count(), 9)
-        self.assertTrue(all(t.title_plain == '11D' for t in leaves))
+        self.assertTrue(all(t.title_plain == '' for t in leaves))
         self.assertEqual(Task.objects.count(), 13)
 
     def test_create_view_99d_template(self):
@@ -73,5 +73,5 @@ class Create99dTemplateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Task.objects.count(), 13)
         root = Task.objects.get(parent__isnull=True)
-        self.assertEqual(root.title_plain, '99D')
+        self.assertEqual(root.title_plain, '')
         self.assertEqual(Task.objects.filter(parent=root).count(), 3)

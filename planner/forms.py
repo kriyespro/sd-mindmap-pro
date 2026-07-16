@@ -29,7 +29,7 @@ class TaskCreateForm(forms.ModelForm):
 
 
 class TaskTitleForm(forms.Form):
-    title = forms.CharField(max_length=500)
+    title = forms.CharField(max_length=500, required=False)
 
 
 class TaskMetaForm(forms.Form):

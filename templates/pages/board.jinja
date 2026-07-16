@@ -275,8 +275,7 @@
                     <div class="grid gap-2">
                         <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 transition hover:border-slate-300"
                                :class="(!taskStarter || taskStarter === '') && 'border-indigo-300 bg-indigo-50/60 ring-1 ring-indigo-200'">
-                            <input type="radio" name="template" value="" class="mt-0.5" x-model="taskStarter"
-                                   @change="const t=$el.closest('form').querySelector('[name=title]'); if(t && t.value==='99D') t.value='';">
+                            <input type="radio" name="template" value="" class="mt-0.5" x-model="taskStarter">
                             <span>
                                 <span class="block text-xs font-semibold text-slate-800">Blank root</span>
                                 <span class="block text-[10px] text-slate-500">One empty top-level task</span>
@@ -284,11 +283,10 @@
                         </label>
                         <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 transition hover:border-amber-300"
                                :class="taskStarter === '99d' && 'border-amber-400 bg-amber-100/80 ring-1 ring-amber-300'">
-                            <input type="radio" name="template" value="99d" class="mt-0.5" x-model="taskStarter"
-                                   @change="const t=$el.closest('form').querySelector('[name=title]'); if(t && !t.value.trim()) t.value='99D';">
+                            <input type="radio" name="template" value="99d" class="mt-0.5" x-model="taskStarter">
                             <span>
                                 <span class="block text-xs font-semibold text-amber-950">99D starter</span>
-                                <span class="block text-[10px] leading-snug text-amber-900/80">1×99D → 3×33D → each with 3×11D (13 tasks)</span>
+                                <span class="block text-[10px] leading-snug text-amber-900/80">1×99D → 3×33D → each with 3×11D — badges only; add your own titles</span>
                             </span>
                         </label>
                     </div>
@@ -296,7 +294,7 @@
                 <div>
                     <label class="mb-1 block text-[11px] font-medium text-slate-600">Title <span class="text-rose-500" x-show="taskStarter !== '99d' || parentIdForModal">*</span></label>
                     {{ task_create_form.title }}
-                    <p x-show="taskStarter === '99d' && !parentIdForModal" class="mt-1 text-[10px] text-slate-500">Leave blank to use “99D”. Subtasks are always 33D / 11D.</p>
+                    <p x-show="taskStarter === '99d' && !parentIdForModal" class="mt-1 text-[10px] text-slate-500">Optional. Depth badges show 99D / 33D / 11D — titles stay blank until you name them.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>

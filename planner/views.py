@@ -628,8 +628,9 @@ class TaskCreateView(LoginRequiredMixin, View):
         use_99d = template == '99d' and not (request.POST.get('parent_id') or '').strip()
 
         if use_99d:
-            # Title optional for template — default root label is 99D.
-            title = (request.POST.get('title') or '').strip() or '99D'
+            title = (request.POST.get('title') or '').strip()
+            if title in {'99D', '33D', '11D'}:
+                title = ''
             due_raw = (request.POST.get('due_date') or '').strip()
             due_date = None
             if due_raw:
@@ -815,10 +816,11 @@ class TaskRenameView(LoginRequiredMixin, View):
             return HttpResponse('Not found', status=404)
         form = TaskTitleForm(request.POST)
         if not form.is_valid():
-            return HttpResponse('Title required', status=400)
+            return HttpResponse('Invalid title', status=400)
         task.title = form.cleaned_data['title'].strip()
-        if not task.title:
-            return HttpResponse('Title required', status=400)
+        # Allow clearing badge-default labels (99D / 33D / 11D) to empty.
+        if task.title in {'99D', '33D', '11D'}:
+            task.title = ''
         task.save(update_fields=['title'])
         return _tree_partial(request, team_slug, project_slug)
 

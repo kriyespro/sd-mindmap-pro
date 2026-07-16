@@ -55,16 +55,15 @@ def create_99d_template(
     project=None,
     due_date: date | None = None,
     assignee_username: str = '',
-    root_title: str = '99D',
+    root_title: str = '',
 ) -> Task:
     """
-    Create the 99D OKR starter tree:
-      99D
-        ├─ 33D → 11D, 11D, 11D
-        ├─ 33D → 11D, 11D, 11D
-        └─ 33D → 11D, 11D, 11D
+    Create the 99D OKR starter tree (badges show 99D / 33D / 11D; titles stay empty for the user to fill).
     """
-    title = (root_title or '').strip() or '99D'
+    title = (root_title or '').strip()
+    # Avoid duplicating badge labels as titles (UI already shows 99D / 33D / 11D).
+    if title in {'99D', '33D', '11D'}:
+        title = ''
     root = _create_task(
         author=author,
         team=team,
@@ -80,7 +79,7 @@ def create_99d_template(
             author=author,
             team=team,
             project=project,
-            title='33D',
+            title='',
             parent=root,
             position=i,
         )
@@ -89,7 +88,7 @@ def create_99d_template(
                 author=author,
                 team=team,
                 project=project,
-                title='11D',
+                title='',
                 parent=mid,
                 position=j,
             )

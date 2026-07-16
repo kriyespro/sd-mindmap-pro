@@ -42,17 +42,24 @@
             <span class="inline-flex shrink-0 select-none items-center rounded-md border px-2 py-0.5 text-[9px] font-extrabold tracking-wide {% if layout_mode in ['mindmap', 'mini'] %}scale-95{% endif %} {% if layout_mode in ['mini', 'idea'] %}hidden group-hover:inline-flex{% endif %}"
                   style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
             <div class="min-w-0 flex-1">
+                {% set _title = (task.title or '')|trim %}
+                {% set _badge_title = _title in ['99D', '33D', '11D'] %}
                 <button type="button" x-show="!editingTitle"
                         @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
-                        class="block w-full text-left {% if layout_mode in ['mindmap', 'mini', 'idea'] %}text-[12px]{% else %}text-[13px]{% endif %} font-bold leading-snug transition {% if task.is_completed %}text-slate-400 line-through{% else %}text-slate-900 hover:text-indigo-600{% endif %} {% if layout_mode == 'mini' %}truncate group-hover:whitespace-normal{% else %}break-words{% endif %}">
+                        class="block w-full text-left {% if layout_mode in ['mindmap', 'mini', 'idea'] %}text-[12px]{% else %}text-[13px]{% endif %} font-bold leading-snug transition {% if task.is_completed %}text-slate-400 line-through{% elif _badge_title or not _title %}text-slate-400 hover:text-indigo-600{% else %}text-slate-900 hover:text-indigo-600{% endif %} {% if layout_mode == 'mini' %}truncate group-hover:whitespace-normal{% else %}break-words{% endif %}">
+                    {% if _badge_title or not _title %}
+                    <span class="font-semibold italic">Add title…</span>
+                    {% else %}
                     {{ task.title }}
+                    {% endif %}
                 </button>
                 <form x-show="editingTitle" x-cloak class="mt-0.5"
                       hx-post="{{ u.title(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                       hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
                       @click.outside="editingTitle=false" @keydown.escape.prevent="editingTitle=false">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                    <input x-ref="titleInput" x-model="titleDraft" name="title" required
+                    <input x-ref="titleInput" x-model="titleDraft" name="title"
+                           placeholder="Add title…"
                            class="w-full rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                            @change="$el.form.requestSubmit()">
                 </form>
