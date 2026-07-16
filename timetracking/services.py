@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -11,26 +12,38 @@ def get_running_timer(user) -> TimeEntry | None:
 
 
 def start_timer(user, task=None, project=None, description='') -> TimeEntry:
-    # Stop any running timer first
-    running = get_running_timer(user)
-    if running:
-        running.stop()
-    entry = TimeEntry.objects.create(
-        user=user,
-        task=task,
-        project=project,
-        description=description,
-        status=TimeEntry.STATUS_RUNNING,
-        started_at=timezone.now(),
-    )
+    # select_for_update + atomic: without this, two concurrent starts (double
+    # click, two tabs) can both read "no running timer" before either writes,
+    # leaving two STATUS_RUNNING entries for the same user.
+    with transaction.atomic():
+        running = (
+            TimeEntry.objects.select_for_update()
+            .filter(user=user, status=TimeEntry.STATUS_RUNNING)
+            .first()
+        )
+        if running:
+            running.stop()
+        entry = TimeEntry.objects.create(
+            user=user,
+            task=task,
+            project=project,
+            description=description,
+            status=TimeEntry.STATUS_RUNNING,
+            started_at=timezone.now(),
+        )
     return entry
 
 
 def stop_timer(user) -> TimeEntry | None:
-    running = get_running_timer(user)
-    if running:
-        running.stop()
-    return running
+    with transaction.atomic():
+        running = (
+            TimeEntry.objects.select_for_update()
+            .filter(user=user, status=TimeEntry.STATUS_RUNNING)
+            .first()
+        )
+        if running:
+            running.stop()
+        return running
 
 
 def get_daily_seconds(user, d: date) -> int:

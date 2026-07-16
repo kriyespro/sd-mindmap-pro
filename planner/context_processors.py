@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from planner.models import Notification
 from planner.models import Task
-from planner.services import tasks_for_workspace, workspace_root_average_percent
+from planner.services import workspace_root_average_percent_by_team
 from teams.models import TeamMembership
 from users.ui_mode import get_user_ui_mode, normalize_layout
 
@@ -32,9 +32,11 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
         .select_related('team')
         .order_by('-is_pinned', 'pinned_at', 'team__name')
     )
+    pct_by_team = workspace_root_average_percent_by_team(
+        request.user, [m.team_id for m in memberships]
+    )
     for m in memberships:
-        team_qs = tasks_for_workspace(request.user, m.team)
-        setattr(m, 'done_pct', workspace_root_average_percent(team_qs))
+        setattr(m, 'done_pct', pct_by_team.get(m.team_id, 0))
 
     my_teams = [m for m in memberships if bool(m.is_owner)]
     other_teams = [m for m in memberships if not bool(m.is_owner)]

@@ -25,12 +25,7 @@ def _clear_team_assignee_labels_for_user(*, team: Team, username: str) -> None:
     target = (username or '').strip().lower()
     if not target:
         return
-    for task in Task.objects.filter(team=team).only('id', 'assignee_username'):
-        current = (task.assignee_username or '').strip().lower()
-        if current != target:
-            continue
-        task.assignee_username = ''
-        task.save(update_fields=['assignee_username'])
+    Task.objects.filter(team=team, assignee_username__iexact=target).update(assignee_username='')
 
 
 def _team_seat_limit(team: Team) -> int:

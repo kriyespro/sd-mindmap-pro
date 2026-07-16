@@ -3,6 +3,7 @@ from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import CreateView
 from django.views.generic import TemplateView
 
@@ -39,7 +40,9 @@ class SignUpView(CreateView):
             'Welcome! We created a Welcome Tour project to help you explore the app.',
         )
         next_url = (self.request.GET.get('next') or self.request.POST.get('next') or '').strip()
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={self.request.get_host()}, require_https=self.request.is_secure()
+        ):
             return redirect(next_url)
         if tutorial:
             return redirect('projects:board', slug=tutorial.slug)

@@ -143,6 +143,8 @@ class ProjectUnarchiveView(LoginRequiredMixin, View):
 class ProjectCloneView(LoginRequiredMixin, View):
     def post(self, request, slug):
         project = get_object_or_404(Project, slug=slug)
+        if not user_can_access_project(request.user, project):
+            return HttpResponse(status=403)
         clone = clone_project(project, request.user)
         return redirect('projects:detail', slug=clone.slug)
 

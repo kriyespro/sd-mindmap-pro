@@ -58,6 +58,8 @@ class GanttPartialView(LoginRequiredMixin, View):
     def get(self, request, slug):
         from django.template.loader import render_to_string
         project = get_object_or_404(Project, slug=slug)
+        if not user_can_access_project(request.user, project):
+            return HttpResponse(status=403)
         view = request.GET.get('view', 'weekly')
         if view not in ('daily', 'weekly', 'monthly', 'quarterly', 'yearly'):
             view = 'weekly'

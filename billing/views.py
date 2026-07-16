@@ -143,25 +143,29 @@ class BillingView(LoginRequiredMixin, TemplateView):
         ctx['invite_share'] = self.request.session.pop('invite_share', None)
         archived_teams = []
         manageable_active_teams = []
-        memberships = (
+        memberships = list(
             TeamMembership.objects.filter(user=self.request.user, is_active=True)
             .select_related('team')
             .order_by('team__name')
         )
+        team_ids = [m.team_id for m in memberships]
+        active_team_ids = set(
+            Task.objects.filter(team_id__in=team_ids, is_archived=False)
+            .values_list('team_id', flat=True)
+            .distinct()
+        )
+        archived_team_ids = set(
+            Task.objects.filter(team_id__in=team_ids, is_archived=True)
+            .values_list('team_id', flat=True)
+            .distinct()
+        )
         for membership in memberships:
-            has_active_tasks = Task.objects.filter(
-                team=membership.team,
-                is_archived=False,
-            ).exists()
+            has_active_tasks = membership.team_id in active_team_ids
             if has_active_tasks and membership.can_manage_invites:
                 manageable_active_teams.append(membership)
             if has_active_tasks:
                 continue
-            has_archived_tasks = Task.objects.filter(
-                team=membership.team,
-                is_archived=True,
-            ).exists()
-            if has_archived_tasks:
+            if membership.team_id in archived_team_ids:
                 archived_teams.append(membership)
         ctx['manageable_active_team_memberships'] = manageable_active_teams
         ctx['archived_team_memberships'] = archived_teams
@@ -190,12 +194,20 @@ class UIModeChangeView(LoginRequiredMixin, View):
 class PlanChangeView(LoginRequiredMixin, View):
     login_url = reverse_lazy('users:login')
 
+    # TODO(stripe): once payment collection is wired in, allow upgrades here
+    # after a successful charge/subscription. Until then, self-serve upgrades
+    # are blocked so this endpoint can't be used to grant paid entitlements for free.
+    PLAN_RANK = {Profile.PLAN_SOLO: 0, Profile.PLAN_TEAM: 1, Profile.PLAN_TEAM_20: 2}
+
     def post(self, request):
         plan = (request.POST.get('plan') or '').strip()
-        if plan not in {Profile.PLAN_SOLO, Profile.PLAN_TEAM, Profile.PLAN_TEAM_20}:
+        if plan not in self.PLAN_RANK:
             return HttpResponse('Invalid plan', status=400)
 
         profile, _ = Profile.objects.get_or_create(user=request.user)
+        if self.PLAN_RANK[plan] > self.PLAN_RANK.get(profile.plan, 0):
+            return HttpResponse('Plan upgrades require payment — contact us to upgrade.', status=403)
+
         profile.plan = plan
         profile.save(update_fields=['plan'])
         return redirect('billing:overview')

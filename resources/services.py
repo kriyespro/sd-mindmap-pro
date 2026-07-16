@@ -28,27 +28,46 @@ def get_workload_data(owner, weeks=4):
         ProjectMember.objects.filter(project_id__in=owned_project_ids).values_list('user_id', flat=True)
     )
     member_user_ids.add(owner.id)
-    users = User.objects.filter(id__in=member_user_ids).order_by('username')
+    users = list(User.objects.filter(id__in=member_user_ids).order_by('username'))
 
-    week_starts = [today + timedelta(weeks=i) - timedelta(days=today.weekday()) + timedelta(weeks=i - (0 if today.weekday() == 0 else 0)) for i in range(weeks)]
-    # Simple: just use current week + next N-1 weeks
-    week_starts = []
     monday = today - timedelta(days=today.weekday())
-    for i in range(weeks):
-        week_starts.append(monday + timedelta(weeks=i))
+    week_starts = [monday + timedelta(weeks=i) for i in range(weeks)]
+    range_start, range_end = week_starts[0], week_starts[-1] + timedelta(days=6)
+
+    # Fetch once for the whole span, bucket per-week in Python instead of
+    # issuing 2 queries per (user, week) pair.
+    allocs_by_user = {}
+    for a in ResourceAllocation.objects.filter(
+        user_id__in=member_user_ids, start_date__lte=range_end, end_date__gte=range_start
+    ):
+        allocs_by_user.setdefault(a.user_id, []).append(a)
+
+    logged_by_user_week = {}
+    entries = (
+        TimeEntry.objects.filter(
+            user_id__in=member_user_ids,
+            started_at__date__gte=range_start,
+            started_at__date__lte=range_end,
+            status='stopped',
+        )
+        .values('user_id', 'started_at__date')
+        .annotate(total=Sum('duration_seconds'))
+    )
+    for row in entries:
+        entry_week = row['started_at__date'] - timedelta(days=row['started_at__date'].weekday())
+        key = (row['user_id'], entry_week)
+        logged_by_user_week[key] = logged_by_user_week.get(key, 0) + (row['total'] or 0)
 
     result = []
     for user in users:
         weeks_data = []
+        user_allocs = allocs_by_user.get(user.id, [])
         for ws in week_starts:
             we = ws + timedelta(days=6)
-            allocs = ResourceAllocation.objects.filter(
-                user=user,
-                start_date__lte=we,
-                end_date__gte=ws,
-            )
             allocated_hours = 0
-            for a in allocs:
+            for a in user_allocs:
+                if a.start_date > we or a.end_date < ws:
+                    continue
                 overlap_start = max(a.start_date, ws)
                 overlap_end = min(a.end_date, we)
                 days = max(0, (overlap_end - overlap_start).days + 1)
@@ -56,12 +75,7 @@ def get_workload_data(owner, weeks=4):
                 working_days = sum(1 for d in range(days) if (overlap_start + timedelta(d)).weekday() < 5)
                 allocated_hours += float(a.hours_per_day) * working_days
 
-            logged = TimeEntry.objects.filter(
-                user=user,
-                started_at__date__gte=ws,
-                started_at__date__lte=we,
-                status='stopped',
-            ).aggregate(s=Sum('duration_seconds'))['s'] or 0
+            logged = logged_by_user_week.get((user.id, ws), 0)
             logged_hours = round(logged / 3600, 1)
 
             capacity = 40  # 8h * 5 days

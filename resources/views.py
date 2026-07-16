@@ -1,10 +1,12 @@
 from datetime import date
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
+from projects.services import user_can_manage_project
 from resources.models import ResourceAllocation
 from resources.services import get_workload_data, get_accessible_projects, get_project_allocations
 
@@ -39,22 +41,34 @@ class ResourceAllocationCreateView(LoginRequiredMixin, View):
         if not all([user_id, start, end]):
             return HttpResponse('Missing required fields', status=400)
 
+        from projects.models import Project
         try:
             user = User.objects.get(pk=user_id)
-            from projects.models import Project
             project = Project.objects.get(pk=project_id) if project_id else None
+        except (User.DoesNotExist, Project.DoesNotExist):
+            return HttpResponse('Invalid data', status=400)
+
+        if project is not None and not user_can_manage_project(request.user, project):
+            return HttpResponse(status=403)
+
+        try:
+            hours_value = float(hours)
+        except ValueError:
+            return HttpResponse('Invalid hours', status=400)
+
+        try:
             alloc = ResourceAllocation.objects.create(
                 user=user,
                 project=project,
                 role=role,
-                hours_per_day=float(hours),
+                hours_per_day=hours_value,
                 start_date=start,
                 end_date=end,
                 notes=notes,
                 created_by=request.user,
             )
-        except Exception:
-            return HttpResponse('Invalid data', status=400)
+        except ValidationError as exc:
+            return HttpResponse('; '.join(exc.messages), status=400)
 
         allocations = ResourceAllocation.objects.filter(
             project__owner=request.user

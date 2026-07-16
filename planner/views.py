@@ -1082,6 +1082,13 @@ class TaskKanbanStatusView(LoginRequiredMixin, View):
         valid = [c[0] for c in TaskModel.STATUS_CHOICES]
         if new_status not in valid:
             return HttpResponse(status=400)
+        # Same invariant as TaskToggleView: only ST (depth 3+) can be marked
+        # done directly; 99D/33D/11D must auto-complete from their children.
+        if new_status == TaskModel.STATUS_DONE and task_depth(task) < 3:
+            return HttpResponse(
+                'Mark done on ST subtasks only — 99D / 33D / 11D complete automatically.',
+                status=400,
+            )
         task.status = new_status
         if new_status == TaskModel.STATUS_DONE:
             task.is_completed = True

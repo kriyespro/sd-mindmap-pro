@@ -34,11 +34,18 @@ def get_dashboard_stats(user) -> dict:
 
 
 def get_project_progress(user) -> list[dict]:
-    projects = Project.objects.filter(owner=user, is_archived=False).order_by('-updated_at')[:10]
+    projects = list(Project.objects.filter(owner=user, is_archived=False).order_by('-updated_at')[:10])
+    project_ids = [p.id for p in projects]
+    counts = (
+        Task.objects.filter(project_id__in=project_ids)
+        .values('project_id')
+        .annotate(total=Count('id'), done=Count('id', filter=Q(is_completed=True)))
+    )
+    counts_by_project = {row['project_id']: row for row in counts}
     result = []
     for p in projects:
-        total = Task.objects.filter(project=p).count()
-        done = Task.objects.filter(project=p, is_completed=True).count()
+        row = counts_by_project.get(p.id, {'total': 0, 'done': 0})
+        total, done = row['total'], row['done']
         pct = int(done / total * 100) if total else 0
         result.append({
             'project': p,
@@ -51,21 +58,24 @@ def get_project_progress(user) -> list[dict]:
 
 def get_tasks_by_status(user) -> list[dict]:
     from planner.models import Task as T
-    statuses = T.STATUS_CHOICES
-    result = []
-    for val, label in statuses:
-        count = Task.objects.filter(author=user, status=val, is_archived=False).count()
-        result.append({'status': val, 'label': label, 'count': count})
-    return result
+    counts = dict(
+        Task.objects.filter(author=user, is_archived=False)
+        .values_list('status')
+        .annotate(count=Count('id'))
+        .values_list('status', 'count')
+    )
+    return [{'status': val, 'label': label, 'count': counts.get(val, 0)} for val, label in T.STATUS_CHOICES]
 
 
 def get_tasks_by_priority(user) -> list[dict]:
     from planner.models import Task as T
-    result = []
-    for val, label in T.PRIORITY_CHOICES:
-        count = Task.objects.filter(author=user, priority=val, is_archived=False, is_completed=False).count()
-        result.append({'priority': val, 'label': label, 'count': count})
-    return result
+    counts = dict(
+        Task.objects.filter(author=user, is_archived=False, is_completed=False)
+        .values_list('priority')
+        .annotate(count=Count('id'))
+        .values_list('priority', 'count')
+    )
+    return [{'priority': val, 'label': label, 'count': counts.get(val, 0)} for val, label in T.PRIORITY_CHOICES]
 
 
 def get_overdue_tasks(user, limit=10):

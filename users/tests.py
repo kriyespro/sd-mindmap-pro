@@ -14,7 +14,7 @@ class LandingPageTests(TestCase):
     def test_public_user_sees_landing_page(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Turn goals into execution')
+        self.assertContains(response, 'Dream Conversion Process')
 
     def test_authenticated_user_redirects_to_board(self):
         user = User.objects.create_user(username='demo', password='pass1234')

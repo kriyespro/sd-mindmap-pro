@@ -19,7 +19,7 @@
         <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
             {% if task.project %}{{ task.project.name }}{% else %}Personal Task{% endif %}
         </p>
-        <h2 class="text-base font-bold leading-snug text-slate-900 break-words">{{ task.title }}</h2>
+        <h2 class="text-base font-bold leading-snug text-slate-900 break-words">{{ task.title_plain }}</h2>
     </div>
     <button type="button" @click="taskDetailOpen = false"
             class="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">

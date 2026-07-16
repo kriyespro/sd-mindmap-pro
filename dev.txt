@@ -36,3 +36,18 @@
 [DONE] Phase PM-31 - Card bottom: remove Task Details icon and % progress
 [DONE] Phase PM-32 - Fix assign overflow; done checkbox only on ST (depth 3+); parents auto-complete
 [DONE] Phase PM-33 - Landing: Dream Conversion Process hero; pricing ₹99/₹299/₹999; footer Winning Blueprints
+[DONE] Phase PM-34 - Full-project security/perf/bug audit + fixes:
+  Security (IDOR/access-control): milestones MilestoneListView, gantt GanttPartialView, projects ProjectCloneView, resources ResourceAllocationCreateView now enforce user_can_access_project/user_can_manage_project.
+  Security (revenue): billing PlanChangeView blocks self-serve plan upgrades (403, TODO stripe); downgrades still allowed.
+  Security: users SignUpView `next` redirect now validated via url_has_allowed_host_and_scheme (was open redirect).
+  Bug: _task_detail.jinja showed raw encrypted ciphertext as task title — now uses task.title_plain.
+  Bug: planner TaskKanbanStatusView could mark 99D/33D/11D done directly via drag, bypassing the ST-only completion invariant TaskToggleView already enforced — same depth check added.
+  Bug: timetracking start_timer/stop_timer had a race (two concurrent starts could both see "no running timer") — wrapped in transaction.atomic()+select_for_update().
+  Bug: resources ResourceAllocationCreateView bare `except Exception` swallowed real errors — narrowed to expected exceptions only.
+  Perf: planner workspace_chrome context processor (runs on every page, all apps) no longer decrypts every task title or issues one query per team — single batched query via workspace_root_average_percent_by_team.
+  Perf: resources get_workload_data was O(users*weeks) queries — now 2 queries total, bucketed in Python.
+  Perf: reports get_project_progress/get_tasks_by_status/get_tasks_by_priority — replaced per-row/per-choice .count() loops with single annotated aggregate queries.
+  Perf: billing BillingView per-membership Task.exists() loop — replaced with 2 batched queries.
+  Perf: teams _clear_team_assignee_labels_for_user — replaced per-row .save() loop with single bulk .update().
+  Test: added billing PlanChangeView upgrade-blocked/downgrade-allowed tests; fixed stale landing-page copy assertion (pre-existing failure from PM-33 rebrand, unrelated to this pass).
+  Deferred (not applied, needs migration review): missing db_index on Task.is_archived/assignee_username/status/due_date, ResourceAllocation.start_date/end_date, Milestone.due_date — flagged for a future migration, not created yet per CLAUDE.md migration-safety rule.

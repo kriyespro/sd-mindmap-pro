@@ -853,13 +853,38 @@ def workspace_root_average_percent(qs: QuerySet[Task]) -> int:
     """
     Sidebar completion metric:
     average of root task percentages (0-100), rounded to int.
+    Only needs id/parent_id/is_completed, so skip title decryption entirely.
     """
-    rows = task_rows_for_tree(qs)
+    rows = list(qs.values('id', 'parent_id', 'is_completed'))
     roots = build_task_tree(rows)
     if not roots:
         return 0
     total = sum(int(r.get('percent') or 0) for r in roots)
     return int(round(total / len(roots)))
+
+
+def workspace_root_average_percent_by_team(user: User, team_ids: list[int]) -> dict[int, int]:
+    """
+    Batched sidebar completion metric for multiple teams in one query,
+    instead of one tasks_for_workspace() query per team.
+    """
+    if not team_ids:
+        return {}
+    rows_by_team: dict[int, list[dict]] = {tid: [] for tid in team_ids}
+    for row in Task.objects.filter(
+        team_id__in=team_ids, is_archived=False, project__isnull=True
+    ).values('id', 'parent_id', 'team_id', 'is_completed'):
+        rows_by_team[row['team_id']].append(row)
+
+    result: dict[int, int] = {}
+    for tid, rows in rows_by_team.items():
+        roots = build_task_tree(rows)
+        if not roots:
+            result[tid] = 0
+            continue
+        total = sum(int(r.get('percent') or 0) for r in roots)
+        result[tid] = int(round(total / len(roots)))
+    return result
 
 
 def normalize_workspace_completion(qs: QuerySet[Task]) -> bool:

@@ -7,11 +7,17 @@ from django.views.generic import TemplateView
 from milestones.forms import MilestoneForm
 from milestones.models import Milestone
 from projects.models import Project
-from projects.services import get_user_projects, user_can_manage_project
+from projects.services import get_user_projects, user_can_access_project, user_can_manage_project
 
 
 class MilestoneListView(LoginRequiredMixin, TemplateView):
     template_name = 'milestones/list.jinja'
+
+    def dispatch(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, slug=kwargs['slug'])
+        if not user_can_access_project(request.user, project):
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
