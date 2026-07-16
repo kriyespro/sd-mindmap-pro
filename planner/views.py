@@ -33,6 +33,7 @@ from planner.services import (
     root_stats,
     sync_descendant_completion,
     sync_parent_completion_from_children,
+    task_depth,
     workspace_root_average_percent,
     set_mindmap_collapsed_ids,
     task_rows_for_tree,
@@ -794,12 +795,16 @@ class TaskToggleView(LoginRequiredMixin, View):
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
+        # Only ST (depth 3+) can be toggled; 99D/33D/11D auto-complete from children.
+        if task_depth(task) < 3:
+            return HttpResponse(
+                'Mark done on ST subtasks only — 99D / 33D / 11D complete automatically.',
+                status=400,
+            )
         task.is_completed = not task.is_completed
         _sync_task_completion_fields(task)
         task.save(update_fields=['is_completed', 'status'])
-        # Keep branch behavior consistent: toggling a parent cascades to all descendants.
         sync_descendant_completion(task, task.is_completed)
-        # Propagate completion consistency upward through all ancestors.
         sync_parent_completion_from_children(task.parent)
         _maybe_update_project_progress(task)
         return _tree_partial(request, team_slug, project_slug)

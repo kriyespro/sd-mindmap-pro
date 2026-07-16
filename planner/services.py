@@ -793,6 +793,20 @@ def resolve_assignee(
     return user.username, None
 
 
+def task_depth(task: Task) -> int:
+    """0 = root (99D), 1 = 33D, 2 = 11D, 3+ = ST subtasks."""
+    depth = 0
+    current = task
+    seen: set[int] = set()
+    while current is not None and current.parent_id is not None:
+        if current.id in seen:
+            break
+        seen.add(current.id)
+        depth += 1
+        current = current.parent
+    return depth
+
+
 def sync_parent_completion_from_children(task: Task | None) -> None:
     """
     Keep branch completion status consistent:
@@ -812,7 +826,15 @@ def sync_parent_completion_from_children(task: Task | None) -> None:
             ).exists()
             if current.is_completed != all_children_done:
                 current.is_completed = all_children_done
-                current.save(update_fields=['is_completed'])
+                if all_children_done:
+                    current.status = Task.STATUS_DONE
+                    current.save(update_fields=['is_completed', 'status'])
+                else:
+                    if current.status == Task.STATUS_DONE:
+                        current.status = Task.STATUS_TODO
+                        current.save(update_fields=['is_completed', 'status'])
+                    else:
+                        current.save(update_fields=['is_completed'])
         current = current.parent
 
 

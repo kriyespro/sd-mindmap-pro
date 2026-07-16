@@ -34,3 +34,4 @@
 [DONE] Phase PM-29 - 11D cards: always-visible + add-subtask (header + clearer “+ Sub”); stop overflow clipping on mindmap
 [DONE] Phase PM-30 - Card layout: top = badge+title only; bottom = date/assign/%/done/delete/+ ; drop “+ Sub”
 [DONE] Phase PM-31 - Card bottom: remove Task Details icon and % progress
+[DONE] Phase PM-32 - Fix assign overflow; done checkbox only on ST (depth 3+); parents auto-complete
