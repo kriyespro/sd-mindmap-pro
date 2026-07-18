@@ -359,7 +359,7 @@ MINDMAP_CARD_MAX_W = 372
 MINDMAP_CARD_BASE_H = 78
 CMAP_CARD_MIN_W = 176
 CMAP_CARD_MAX_W = 248
-CMAP_CARD_BASE_H = 58
+CMAP_CARD_BASE_H = 34
 MINDMAP_COL_GAP = 36
 MINDMAP_ROW_GAP = 6
 MINDMAP_ROOT_GAP = 13
@@ -372,6 +372,14 @@ MINDMAP_EDGE_COLORS = [
     '#86efac',  # soft green
     '#fcd34d',  # soft amber
     '#c4b5fd',  # soft violet
+]
+# Compact map: deeper connector colors (thicker strokes applied in layout).
+CMAP_EDGE_COLORS = [
+    '#334155',  # deep slate
+    '#1d4ed8',  # deep blue
+    '#15803d',  # deep green
+    '#b45309',  # deep amber
+    '#6d28d9',  # deep violet
 ]
 
 
@@ -406,6 +414,8 @@ def _mindmap_subtree(
     flow_style: str,
     row_gap: float,
     col_gap: float,
+    *,
+    dense_mode: bool = False,
 ) -> dict:
     """Recursive layout left → right. Fills positions and paths (parent → child Béziers)."""
     ch = node.get('children') or []
@@ -440,6 +450,7 @@ def _mindmap_subtree(
                 flow_style,
                 row_gap,
                 col_gap,
+                dense_mode=dense_mode,
             )
         )
         if idx < len(ch) - 1:
@@ -464,11 +475,12 @@ def _mindmap_subtree(
 
     px_out = x + node_w
     child_count = len(ch)
+    edge_colors = CMAP_EDGE_COLORS if dense_mode else MINDMAP_EDGE_COLORS
     for idx, c in enumerate(ch):
         cp = positions[c['id']]
         cy_c = cp['top'] + cp['height'] / 2
         cx_in = cp['left']
-        stroke = MINDMAP_EDGE_COLORS[(depth + idx + 1) % len(MINDMAP_EDGE_COLORS)]
+        stroke = edge_colors[(depth + idx + 1) % len(edge_colors)]
         dx = cx_in - px_out
         py = cy
         dy = cy_c - py
@@ -485,6 +497,9 @@ def _mindmap_subtree(
         # stronger near root, lighter on deeper levels.
         stroke_w = max(1.15, 1.95 - (depth * 0.18))
         stroke_opacity = max(0.46, 0.86 - (depth * 0.08))
+        if dense_mode:
+            stroke_w = max(2.3, stroke_w * 2.0)
+            stroke_opacity = min(0.95, max(0.72, stroke_opacity + 0.12))
         dash = ''
         paths.append(
             {
@@ -715,7 +730,18 @@ def compute_mindmap_layout(
         dense_mode=dense_mode,
     )
     for root in roots:
-        _mindmap_subtree(root, 0, y_ptr, depth_lefts, positions, paths, flow_style, row_gap, col_gap)
+        _mindmap_subtree(
+            root,
+            0,
+            y_ptr,
+            depth_lefts,
+            positions,
+            paths,
+            flow_style,
+            row_gap,
+            col_gap,
+            dense_mode=dense_mode,
+        )
         y_ptr[0] += root_gap
 
     nodes = sorted(positions.values(), key=lambda n: (n['top'], n['left'], n['task']['id']))

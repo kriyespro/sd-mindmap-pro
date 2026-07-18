@@ -42,11 +42,11 @@
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
      tabindex="-1"
-     class="cmap-card group relative w-full overflow-visible rounded-md border border-slate-200/90 bg-white shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+     class="cmap-card group relative z-[1] w-full max-h-[34px] overflow-hidden rounded-md border border-slate-200/90 bg-white shadow-sm transition hover:z-30 hover:max-h-[78px] hover:overflow-visible hover:border-indigo-200 hover:shadow-md"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
     <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
     <div class="pl-2.5 pr-1.5 py-1">
-        {# Row 1: badge · title · primary actions (always visible) #}
+        {# Row 1: badge · title · collapse only #}
         <div class="flex min-w-0 items-center gap-1">
             <span class="inline-flex shrink-0 select-none items-center rounded border px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
                   style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
@@ -69,7 +69,66 @@
                            @change="$el.form.requestSubmit()">
                 </form>
             </div>
-            <div class="flex shrink-0 items-center gap-0.5">
+            {% if _branch %}
+            <button type="button"
+                    data-hx-no-task-focus
+                    hx-post="{{ u.mindmap_collapse(task.id) }}"
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop"
+                    hx-indicator="this"
+                    hx-disabled-elt="this"
+                    class="flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-indigo-600 disabled:opacity-60"
+                    title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+            </button>
+            {% endif %}
+        </div>
+
+        {# Row 2 (hover): date · narrow assign · check · + · delete #}
+        <div class="mt-0.5 flex max-h-0 min-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-150 group-hover:max-h-10 group-hover:opacity-100">
+            <button type="button" x-show="!editingDue"
+                    @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
+                    class="inline-flex max-w-[4.25rem] shrink-0 truncate rounded px-1 py-0 text-[9px] font-semibold
+                           {% if task.due_state == 'overdue' %}bg-rose-50 text-rose-700
+                           {% elif task.due_state == 'today' %}bg-amber-50 text-amber-800
+                           {% elif task.due_state == 'upcoming' %}bg-indigo-50 text-indigo-700
+                           {% else %}text-slate-400 hover:bg-slate-50{% endif %}">
+                {{ task.due_date or 'Date' }}
+            </button>
+            <form x-show="editingDue" x-cloak
+                  hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                  @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
+                       class="w-[96px] rounded border border-slate-200 px-1 py-0 text-[9px]"
+                       @change="$el.form.requestSubmit()">
+                <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
+            </form>
+
+            <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                  class="w-[4.25rem] shrink-0">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
+                <select name="assignee_username"
+                        title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
+                        class="block w-full truncate rounded border border-slate-200 bg-slate-50 py-0 pl-1 pr-0 text-[9px] font-semibold text-slate-600 hover:border-indigo-300 focus:outline-none"
+                        onchange="this.form.requestSubmit()">
+                    <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
+                    {% if team_assignee_usernames %}
+                        {% for uname in team_assignee_usernames %}
+                        <option value="{{ uname }}" {% if task.assignee == uname %}selected{% endif %}>
+                            {% if uname == user.username %}Me{% elif uname|length > 6 %}{{ uname[:6] }}…{% else %}{{ uname }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="{{ user.username }}" {% if task.assignee == user.username %}selected{% endif %}>Me</option>
+                    {% endif %}
+                </select>
+            </form>
+
+            <div class="ml-auto flex shrink-0 items-center gap-0.5">
                 {% if depth >= 3 %}
                 <button type="button"
                         hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
@@ -84,73 +143,14 @@
                         @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
                         title="Add child"
                         class="flex h-5 w-5 items-center justify-center rounded border border-indigo-200 bg-indigo-50 text-[12px] font-extrabold leading-none text-indigo-700 hover:bg-indigo-100">+</button>
-                {% if _branch %}
-                <button type="button"
-                        data-hx-no-task-focus
-                        hx-post="{{ u.mindmap_collapse(task.id) }}"
-                        hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                        hx-sync="#task-tree:drop"
-                        hx-indicator="this"
-                        hx-disabled-elt="this"
-                        class="flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-indigo-600 disabled:opacity-60"
-                        title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
-                    {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+                <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                        hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                        hx-confirm="Delete this task and all subtasks?"
+                        title="Delete"
+                        class="flex h-5 w-5 items-center justify-center rounded text-slate-300 hover:bg-rose-50 hover:text-rose-600">
+                    <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
                 </button>
-                {% endif %}
             </div>
-        </div>
-
-        {# Row 2: date · assign · delete — always visible, tiny #}
-        <div class="mt-0.5 flex min-w-0 items-center gap-1">
-            <button type="button" x-show="!editingDue"
-                    @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
-                    class="inline-flex max-w-[4.5rem] shrink-0 truncate rounded px-1 py-0 text-[9px] font-semibold
-                           {% if task.due_state == 'overdue' %}bg-rose-50 text-rose-700
-                           {% elif task.due_state == 'today' %}bg-amber-50 text-amber-800
-                           {% elif task.due_state == 'upcoming' %}bg-indigo-50 text-indigo-700
-                           {% else %}text-slate-400 hover:bg-slate-50{% endif %}">
-                {{ task.due_date or 'Date' }}
-            </button>
-            <form x-show="editingDue" x-cloak
-                  hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                  @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
-                       class="w-[100px] rounded border border-slate-200 px-1 py-0 text-[9px]"
-                       @change="$el.form.requestSubmit()">
-                <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
-            </form>
-
-            <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                  class="min-w-0 flex-1">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
-                <select name="assignee_username"
-                        title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
-                        class="block w-full max-w-full truncate rounded border-0 bg-transparent py-0 pl-0 pr-0 text-[9px] font-semibold text-slate-500 hover:text-indigo-700 focus:outline-none"
-                        onchange="this.form.requestSubmit()">
-                    <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
-                    {% if team_assignee_usernames %}
-                        {% for uname in team_assignee_usernames %}
-                        <option value="{{ uname }}" {% if task.assignee == uname %}selected{% endif %}>
-                            {% if uname == user.username %}Me{% elif uname|length > 8 %}{{ uname[:8] }}…{% else %}{{ uname }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="{{ user.username }}" {% if task.assignee == user.username %}selected{% endif %}>Me</option>
-                    {% endif %}
-                </select>
-            </form>
-
-            <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                    hx-confirm="Delete this task and all subtasks?"
-                    title="Delete"
-                    class="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-rose-50 hover:text-rose-600">
-                <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
-            </button>
         </div>
     </div>
 </div>
@@ -169,7 +169,7 @@
             <span class="text-slate-300">→</span>
             <span class="rounded border px-1 py-0.5" style="background:#ccfbf1;color:#115e59;border-color:#5eead4">1D</span>
         </div>
-        <p class="flex-1 text-[10px] font-medium text-slate-500">Compact · always-on actions · click title to edit</p>
+        <p class="flex-1 text-[10px] font-medium text-slate-500">Hover card for date · assign · done · + · delete</p>
         <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
                     class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom out">−</button>
@@ -202,9 +202,9 @@
                 <path d="{{ p.d }}"
                       fill="none"
                       stroke="{{ p.stroke }}"
-                      stroke-width="{{ p.stroke_w or 1.75 }}"
+                      stroke-width="{{ p.stroke_w or 3.5 }}"
                       stroke-linecap="round"
-                      opacity="{{ p.opacity or 0.8 }}"
+                      opacity="{{ p.opacity or 0.88 }}"
                       {% if p.dash %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
                 {% endfor %}
             </svg>
