@@ -357,9 +357,9 @@ def user_can_access_task(user: User, task: Task, team: Team | None = None) -> bo
 MINDMAP_CARD_MIN_W = 228
 MINDMAP_CARD_MAX_W = 372
 MINDMAP_CARD_BASE_H = 78
-CMAP_CARD_MIN_W = 148
-CMAP_CARD_MAX_W = 210
-CMAP_CARD_BASE_H = 46
+CMAP_CARD_MIN_W = 176
+CMAP_CARD_MAX_W = 248
+CMAP_CARD_BASE_H = 58
 MINDMAP_COL_GAP = 36
 MINDMAP_ROW_GAP = 6
 MINDMAP_ROOT_GAP = 13
@@ -516,10 +516,9 @@ def _mindmap_node_size(
         if not title:
             return (CMAP_CARD_MIN_W, CMAP_CARD_BASE_H)
         title_len = len(title)
-        width = min(CMAP_CARD_MAX_W, max(CMAP_CARD_MIN_W, 120 + (title_len * 4)))
-        est_lines = 1 if title_len < 28 else 2
-        height = CMAP_CARD_BASE_H + ((est_lines - 1) * 12)
-        return (int(width), int(height))
+        # Fixed two-row chip height so actions stay visible and layout is stable.
+        width = min(CMAP_CARD_MAX_W, max(CMAP_CARD_MIN_W, 140 + (title_len * 3)))
+        return (int(width), CMAP_CARD_BASE_H)
 
     title = str(node.get('title') or '').strip()
     if not title:
@@ -684,10 +683,10 @@ def compute_mindmap_layout(
     density_boost = min(46.0, max(0.0, total_nodes - 6) * 1.8)
 
     if dense_mode:
-        # Compact map: smaller cards, tighter packing for large 99D trees.
-        row_gap = 6.0 + (density_boost * 0.28)
-        col_gap = 28.0 + (density_boost * 0.30)
-        root_gap = 14.0 + (density_boost * 0.28)
+        # Compact map chips: readable packing without stacking/overlap.
+        row_gap = 10.0 + (density_boost * 0.22)
+        col_gap = 36.0 + (density_boost * 0.24)
+        root_gap = 18.0 + (density_boost * 0.22)
     elif compact_mode:
         # Idea mode keeps cards collapsed visually, but hover reveals extra controls.
         row_gap = 34.0 + (density_boost * 0.36)

@@ -1,32 +1,196 @@
-{% from 'partials/task_tree.jinja' import node_card with context %}
-{# Compact Map — denser clone of Map; does not alter live Map (task_mindmap.jinja). #}
-<div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto p-1.5">
+{% macro cmap_card(task, depth=0, mindmap_collapsed_ids=None, has_children_branch=None) %}
+{% if depth == 0 %}
+  {% set bar = '#ea580c' %}
+  {% set tag_bg = '#ffedd5' %}
+  {% set tag_txt = '#9a3412' %}
+  {% set tag_bdr = '#fdba74' %}
+  {% set lbl = '99D' %}
+{% elif depth == 1 %}
+  {% set bar = '#0891b2' %}
+  {% set tag_bg = '#ecfeff' %}
+  {% set tag_txt = '#155e75' %}
+  {% set tag_bdr = '#67e8f9' %}
+  {% set lbl = '33D' %}
+{% elif depth == 2 %}
+  {% set bar = '#db2777' %}
+  {% set tag_bg = '#fce7f3' %}
+  {% set tag_txt = '#9d174d' %}
+  {% set tag_bdr = '#f9a8d4' %}
+  {% set lbl = '11D' %}
+{% elif depth == 3 %}
+  {% set bar = '#0d9488' %}
+  {% set tag_bg = '#ccfbf1' %}
+  {% set tag_txt = '#115e59' %}
+  {% set tag_bdr = '#5eead4' %}
+  {% set lbl = '1D' %}
+{% else %}
+  {% set bar = '#65a30d' %}
+  {% set tag_bg = '#ecfccb' %}
+  {% set tag_txt = '#3f6212' %}
+  {% set tag_bdr = '#bef264' %}
+  {% set lbl = 'ST' %}
+{% endif %}
+{% if has_children_branch is not none %}
+  {% set _branch = has_children_branch %}
+{% else %}
+  {% set _branch = task.children|length > 0 %}
+{% endif %}
+{% set _mc = mindmap_collapsed_ids if mindmap_collapsed_ids is not none else [] %}
+{% set _title = (task.title or '')|trim %}
+{% set _badge_title = _title in ['99D', '33D', '11D', '1D'] %}
+
+<div id="task-card-{{ task.id }}"
+     data-task-id="{{ task.id }}"
+     tabindex="-1"
+     class="cmap-card group relative w-full overflow-visible rounded-md border border-slate-200/90 bg-white shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+     x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
+    <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
+    <div class="pl-2.5 pr-1.5 py-1">
+        {# Row 1: badge · title · primary actions (always visible) #}
+        <div class="flex min-w-0 items-center gap-1">
+            <span class="inline-flex shrink-0 select-none items-center rounded border px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
+                  style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
+            <div class="min-w-0 flex-1">
+                <button type="button" x-show="!editingTitle"
+                        @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
+                        class="block w-full truncate text-left text-[11px] font-semibold leading-tight transition
+                               {% if task.is_completed %}text-slate-400 line-through
+                               {% elif _badge_title or not _title %}text-slate-400 italic hover:text-indigo-600
+                               {% else %}text-slate-900 hover:text-indigo-600{% endif %}">
+                    {% if _badge_title or not _title %}Add title…{% else %}{{ task.title }}{% endif %}
+                </button>
+                <form x-show="editingTitle" x-cloak
+                      hx-post="{{ u.title(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                      hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                      @click.outside="editingTitle=false" @keydown.escape.prevent="editingTitle=false">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <input x-ref="titleInput" x-model="titleDraft" name="title" placeholder="Add title…"
+                           class="w-full rounded border border-indigo-300 px-1 py-0.5 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                           @change="$el.form.requestSubmit()">
+                </form>
+            </div>
+            <div class="flex shrink-0 items-center gap-0.5">
+                {% if depth >= 3 %}
+                <button type="button"
+                        hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                        hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                        title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
+                        class="flex h-5 w-5 items-center justify-center rounded border text-[10px] transition
+                               {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-slate-300 text-transparent hover:border-indigo-400{% endif %}">
+                    <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+                {% endif %}
+                <button type="button"
+                        @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
+                        title="Add child"
+                        class="flex h-5 w-5 items-center justify-center rounded border border-indigo-200 bg-indigo-50 text-[12px] font-extrabold leading-none text-indigo-700 hover:bg-indigo-100">+</button>
+                {% if _branch %}
+                <button type="button"
+                        data-hx-no-task-focus
+                        hx-post="{{ u.mindmap_collapse(task.id) }}"
+                        hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                        hx-sync="#task-tree:drop"
+                        hx-indicator="this"
+                        hx-disabled-elt="this"
+                        class="flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600 hover:bg-white hover:text-indigo-600 disabled:opacity-60"
+                        title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
+                    {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Row 2: date · assign · delete — always visible, tiny #}
+        <div class="mt-0.5 flex min-w-0 items-center gap-1">
+            <button type="button" x-show="!editingDue"
+                    @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
+                    class="inline-flex max-w-[4.5rem] shrink-0 truncate rounded px-1 py-0 text-[9px] font-semibold
+                           {% if task.due_state == 'overdue' %}bg-rose-50 text-rose-700
+                           {% elif task.due_state == 'today' %}bg-amber-50 text-amber-800
+                           {% elif task.due_state == 'upcoming' %}bg-indigo-50 text-indigo-700
+                           {% else %}text-slate-400 hover:bg-slate-50{% endif %}">
+                {{ task.due_date or 'Date' }}
+            </button>
+            <form x-show="editingDue" x-cloak
+                  hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                  @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
+                       class="w-[100px] rounded border border-slate-200 px-1 py-0 text-[9px]"
+                       @change="$el.form.requestSubmit()">
+                <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
+            </form>
+
+            <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                  class="min-w-0 flex-1">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
+                <select name="assignee_username"
+                        title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
+                        class="block w-full max-w-full truncate rounded border-0 bg-transparent py-0 pl-0 pr-0 text-[9px] font-semibold text-slate-500 hover:text-indigo-700 focus:outline-none"
+                        onchange="this.form.requestSubmit()">
+                    <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
+                    {% if team_assignee_usernames %}
+                        {% for uname in team_assignee_usernames %}
+                        <option value="{{ uname }}" {% if task.assignee == uname %}selected{% endif %}>
+                            {% if uname == user.username %}Me{% elif uname|length > 8 %}{{ uname[:8] }}…{% else %}{{ uname }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="{{ user.username }}" {% if task.assignee == user.username %}selected{% endif %}>Me</option>
+                    {% endif %}
+                </select>
+            </form>
+
+            <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                    hx-confirm="Delete this task and all subtasks?"
+                    title="Delete"
+                    class="flex h-4 w-4 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-rose-50 hover:text-rose-600">
+                <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{# Compact Map — purpose-built chips; live Map untouched #}
+<div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto rounded-xl bg-slate-50/80 p-2">
 {% if mindmap.nodes %}
-    <div class="sticky top-0 z-10 mb-1.5 flex flex-wrap items-center gap-1.5 px-1 py-1">
-        <p class="flex-1 text-[10px] font-semibold text-slate-500">
-            Compact map · <span class="font-bold text-slate-700">−/+N</span> branches · denser cards
-        </p>
-        <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 text-[10px] font-semibold shadow-sm">
+    <div class="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur">
+        <div class="mr-1 flex flex-wrap items-center gap-1 text-[9px] font-bold">
+            <span class="rounded border px-1 py-0.5" style="background:#ffedd5;color:#9a3412;border-color:#fdba74">99D</span>
+            <span class="text-slate-300">→</span>
+            <span class="rounded border px-1 py-0.5" style="background:#ecfeff;color:#155e75;border-color:#67e8f9">33D</span>
+            <span class="text-slate-300">→</span>
+            <span class="rounded border px-1 py-0.5" style="background:#fce7f3;color:#9d174d;border-color:#f9a8d4">11D</span>
+            <span class="text-slate-300">→</span>
+            <span class="rounded border px-1 py-0.5" style="background:#ccfbf1;color:#115e59;border-color:#5eead4">1D</span>
+        </div>
+        <p class="flex-1 text-[10px] font-medium text-slate-500">Compact · always-on actions · click title to edit</p>
+        <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
-                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" title="Zoom out">−</button>
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom out">−</button>
             <button type="button" @click="zoomReset()"
-                    class="min-w-[2.6rem] rounded px-1 py-0.5 tabular-nums text-slate-700 hover:bg-slate-100"
+                    class="min-w-[2.6rem] rounded px-1 py-0.5 tabular-nums text-slate-700 hover:bg-white"
                     x-text="Math.round(boardZoom * 100) + '%'" title="Reset zoom"></button>
             <button type="button" @click="zoomIn()" :disabled="boardZoom >= boardZoomMax"
-                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" title="Zoom in">+</button>
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom in">+</button>
         </div>
         <button type="button"
                 hx-post="{{ u.mindmap_collapse_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                 hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
-                class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
-                title="Collapse all branches">Collapse all</button>
+                class="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300"
+                title="Collapse all">Collapse</button>
         <button type="button"
                 hx-post="{{ u.mindmap_expand_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                 hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
-                class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
-                title="Expand all branches">Expand all</button>
+                class="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300"
+                title="Expand all">Expand</button>
     </div>
     <div id="mm-zoom-outer" style="--mm-w: {{ mindmap.width }}px; --mm-h: {{ mindmap.height }}px;">
         <div id="mm-zoom-stage" class="relative">
@@ -38,24 +202,24 @@
                 <path d="{{ p.d }}"
                       fill="none"
                       stroke="{{ p.stroke }}"
-                      stroke-width="{{ p.stroke_w or 1.6 }}"
+                      stroke-width="{{ p.stroke_w or 1.75 }}"
                       stroke-linecap="round"
-                      opacity="{{ p.opacity or 0.75 }}"
+                      opacity="{{ p.opacity or 0.8 }}"
                       {% if p.dash %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
                 {% endfor %}
             </svg>
             {% for n in mindmap.nodes %}
             {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
             <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
-                {{ node_card(n.task, n.depth, 'cmap', mindmap_collapsed_ids, _hc) }}
+                {{ cmap_card(n.task, n.depth, mindmap_collapsed_ids, _hc) }}
             </div>
             {% endfor %}
         </div>
     </div>
 {% else %}
     <div class="flex w-full flex-col items-center py-24 text-center">
-        <p class="text-sm font-semibold text-slate-600">No tasks to map</p>
-        <p class="mt-1 max-w-xs text-[11px] text-slate-400">Create a root task, then open Compact map.</p>
+        <p class="text-sm font-semibold text-slate-600">No tasks yet</p>
+        <p class="mt-1 max-w-xs text-[11px] text-slate-400">Create a 99D starter, then use Compact map to work the tree fast.</p>
     </div>
 {% endif %}
 </div>
