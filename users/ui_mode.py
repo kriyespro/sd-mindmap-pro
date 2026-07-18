@@ -4,11 +4,11 @@ from typing import Any
 
 from users.models import Profile
 
-ALL_LAYOUTS = ('tree', 'mindmap', 'mini', 'idea', 'kanban')
+ALL_LAYOUTS = ('tree', 'mindmap', 'cmap', 'mini', 'idea', 'kanban')
 
 LAYOUTS_BY_MODE: dict[str, tuple[str, ...]] = {
-    Profile.UI_MODE_MINIMAL: ('tree', 'mindmap'),
-    Profile.UI_MODE_EXPRESS: ('tree', 'mindmap', 'kanban'),
+    Profile.UI_MODE_MINIMAL: ('tree', 'mindmap', 'cmap'),
+    Profile.UI_MODE_EXPRESS: ('tree', 'mindmap', 'cmap', 'kanban'),
     Profile.UI_MODE_PRO: ALL_LAYOUTS,
 }
 

@@ -34,7 +34,7 @@ class UIModeTests(TestCase):
 
     def test_minimal_chrome_hides_extra_layouts(self):
         chrome = chrome_for_mode(Profile.UI_MODE_MINIMAL)
-        self.assertEqual(chrome['layouts'], ['tree', 'mindmap'])
+        self.assertEqual(chrome['layouts'], ['tree', 'mindmap', 'cmap'])
         self.assertFalse(chrome['sidebar']['gantt'])
 
     def test_normalize_layout_falls_back_for_minimal(self):

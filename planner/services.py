@@ -357,6 +357,9 @@ def user_can_access_task(user: User, task: Task, team: Team | None = None) -> bo
 MINDMAP_CARD_MIN_W = 228
 MINDMAP_CARD_MAX_W = 372
 MINDMAP_CARD_BASE_H = 78
+CMAP_CARD_MIN_W = 148
+CMAP_CARD_MAX_W = 210
+CMAP_CARD_BASE_H = 46
 MINDMAP_COL_GAP = 36
 MINDMAP_ROW_GAP = 6
 MINDMAP_ROOT_GAP = 13
@@ -496,7 +499,9 @@ def _mindmap_subtree(
     return {'top': top, 'bottom': top + node_h}
 
 
-def _mindmap_node_size(node: dict, *, compact_mode: bool = False) -> tuple[int, int]:
+def _mindmap_node_size(
+    node: dict, *, compact_mode: bool = False, dense_mode: bool = False
+) -> tuple[int, int]:
     if compact_mode:
         title = str(node.get('title') or '').strip()
         if not title:
@@ -505,6 +510,16 @@ def _mindmap_node_size(node: dict, *, compact_mode: bool = False) -> tuple[int, 
         # Idea mode should show full title without trimming in collapsed state.
         width = min(520, max(160, 140 + (title_len * 6)))
         return (int(width), 28)
+
+    if dense_mode:
+        title = str(node.get('title') or '').strip()
+        if not title:
+            return (CMAP_CARD_MIN_W, CMAP_CARD_BASE_H)
+        title_len = len(title)
+        width = min(CMAP_CARD_MAX_W, max(CMAP_CARD_MIN_W, 120 + (title_len * 4)))
+        est_lines = 1 if title_len < 28 else 2
+        height = CMAP_CARD_BASE_H + ((est_lines - 1) * 12)
+        return (int(width), int(height))
 
     title = str(node.get('title') or '').strip()
     if not title:
@@ -525,14 +540,17 @@ def _annotate_mindmap_sizes(
     *,
     col_gap: float,
     compact_mode: bool = False,
+    dense_mode: bool = False,
 ) -> tuple[dict[int, float], int, int]:
     depth_widths: dict[int, float] = {}
-    max_w = MINDMAP_CARD_MIN_W
-    max_h = MINDMAP_CARD_BASE_H
+    max_w = CMAP_CARD_MIN_W if dense_mode else MINDMAP_CARD_MIN_W
+    max_h = CMAP_CARD_BASE_H if dense_mode else MINDMAP_CARD_BASE_H
 
     def walk(node: dict, depth: int) -> None:
         nonlocal max_w, max_h
-        width, height = _mindmap_node_size(node, compact_mode=compact_mode)
+        width, height = _mindmap_node_size(
+            node, compact_mode=compact_mode, dense_mode=dense_mode
+        )
         node['_mm_w'] = width
         node['_mm_h'] = height
         depth_widths[depth] = max(depth_widths.get(depth, 0.0), float(width))
@@ -646,6 +664,7 @@ def compute_mindmap_layout(
     *,
     flow_style: str = 'natural',
     compact_mode: bool = False,
+    dense_mode: bool = False,
 ) -> dict:
     """
     Build node positions and cubic SVG paths for a forest of task trees.
@@ -655,8 +674,8 @@ def compute_mindmap_layout(
         'paths': [],
         'width': 920,
         'height': 480,
-        'card_w': MINDMAP_CARD_MIN_W,
-        'card_h': MINDMAP_CARD_BASE_H,
+        'card_w': CMAP_CARD_MIN_W if dense_mode else MINDMAP_CARD_MIN_W,
+        'card_h': CMAP_CARD_BASE_H if dense_mode else MINDMAP_CARD_BASE_H,
     }
     if not roots:
         return empty
@@ -664,9 +683,13 @@ def compute_mindmap_layout(
     total_nodes = sum(1 + int(r.get('subtask_total') or 0) for r in roots)
     density_boost = min(46.0, max(0.0, total_nodes - 6) * 1.8)
 
-    if compact_mode:
-        # Mini2 keeps cards collapsed visually, but hover reveals extra controls.
-        # Increase vertical breathing room so neighboring nodes do not overlap.
+    if dense_mode:
+        # Compact map: smaller cards, tighter packing for large 99D trees.
+        row_gap = 6.0 + (density_boost * 0.28)
+        col_gap = 28.0 + (density_boost * 0.30)
+        root_gap = 14.0 + (density_boost * 0.28)
+    elif compact_mode:
+        # Idea mode keeps cards collapsed visually, but hover reveals extra controls.
         row_gap = 34.0 + (density_boost * 0.36)
         col_gap = 56.0 + (density_boost * 0.40)
         root_gap = 44.0 + (density_boost * 0.34)
@@ -690,6 +713,7 @@ def compute_mindmap_layout(
         roots,
         col_gap=col_gap,
         compact_mode=compact_mode,
+        dense_mode=dense_mode,
     )
     for root in roots:
         _mindmap_subtree(root, 0, y_ptr, depth_lefts, positions, paths, flow_style, row_gap, col_gap)

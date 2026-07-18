@@ -384,7 +384,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
         mode = get_user_ui_mode(request.user)
         request.session.setdefault('task_layout', normalize_layout(mode, 'mindmap'))
         lay = request.GET.get('layout')
-        if lay in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
+        if lay in ('tree', 'mindmap', 'cmap', 'mini', 'idea', 'kanban'):
             request.session['task_layout'] = normalize_layout(mode, lay)
             return redirect(request.path)
         return super().get(request, *args, **kwargs)
@@ -439,8 +439,9 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 pruned_for_mm,
                 flow_style='natural',
                 compact_mode=(layout == 'idea'),
+                dense_mode=(layout == 'cmap'),
             )
-            if layout in ('mindmap', 'mini', 'idea')
+            if layout in ('mindmap', 'cmap', 'mini', 'idea')
             else None
         )
         flowmap = compute_mindmap_layout(task_tree, flow_style='relaxed') if layout == 'flow' else None
@@ -522,13 +523,13 @@ def _tree_partial(
     effective_team = team or (project.team if project else None)
     qs, tree = _board_task_tree(request.user, team, project)
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
+    if layout not in ('tree', 'mindmap', 'cmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
     u = workspace_urls(team, project)
     team_assignee_usernames = assignee_choices(
         actor=request.user, team=None if project else effective_team, project=project
     )
-    if layout in ('mindmap', 'mini', 'idea'):
+    if layout in ('mindmap', 'cmap', 'mini', 'idea'):
         mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
         pruned = prune_mindmap_tree(tree, mm_collapsed)
@@ -537,6 +538,7 @@ def _tree_partial(
                 pruned,
                 flow_style='natural',
                 compact_mode=(layout == 'idea'),
+                dense_mode=(layout == 'cmap'),
             ),
             'task_tree': tree,
             'task_layout': layout,
@@ -548,7 +550,11 @@ def _tree_partial(
             'tree_focus_expand_ids': _get_tree_focus_expand_ids(request),
             'u': u,
         }
-        tmpl = 'partials/task_mindmap.jinja'
+        tmpl = (
+            'partials/task_cmap.jinja'
+            if layout == 'cmap'
+            else 'partials/task_mindmap.jinja'
+        )
     elif layout == 'kanban':
         ctx = {
             'task_tree': tree,

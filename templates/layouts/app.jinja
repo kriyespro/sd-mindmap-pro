@@ -366,8 +366,8 @@
         boardZoomMin: 0.4,
         boardZoomMax: 1.6,
         boardZoomStep: 0.1,
-        isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
-        isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
+        isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'cmap', 'tree', 'mini', 'idea'])|tojson }},
+        isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'cmap', 'mini', 'idea'])|tojson }},
         darkMode: false,
         applyBoardZoom() {
           const z = Math.round(this.boardZoom * 100) / 100;

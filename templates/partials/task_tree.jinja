@@ -40,20 +40,20 @@
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
      tabindex="-1"
-     class="group relative {% if layout_mode == 'idea' %}overflow-visible z-[1] hover:z-[30]{% else %}overflow-visible{% endif %} rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md {% if layout_mode == 'tree' %}min-w-[230px] max-w-[290px] hover:-translate-y-0.5{% else %}w-full{% endif %} {% if layout_mode == 'mini' %}max-h-[30px] hover:max-h-[180px] overflow-hidden ring-1 ring-indigo-100/70 hover:ring-indigo-200{% endif %} {% if layout_mode == 'idea' %}max-h-[28px] rounded-lg border-slate-200/95 shadow-none hover:shadow-lg hover:ring-1 hover:ring-slate-300/80{% endif %}"
+     class="group relative {% if layout_mode == 'idea' %}overflow-visible z-[1] hover:z-[30]{% else %}overflow-visible{% endif %} rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md {% if layout_mode == 'tree' %}min-w-[230px] max-w-[290px] hover:-translate-y-0.5{% else %}w-full{% endif %} {% if layout_mode == 'mini' %}max-h-[30px] hover:max-h-[180px] overflow-hidden ring-1 ring-indigo-100/70 hover:ring-indigo-200{% endif %} {% if layout_mode == 'idea' %}max-h-[28px] rounded-lg border-slate-200/95 shadow-none hover:shadow-lg hover:ring-1 hover:ring-slate-300/80{% endif %} {% if layout_mode == 'cmap' %}rounded-lg max-h-[46px] hover:max-h-[120px] overflow-hidden shadow-none hover:shadow-sm ring-1 ring-slate-100{% endif %}"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
-    <div class="{% if layout_mode in ['mindmap', 'mini'] %}h-[2px]{% elif layout_mode == 'idea' %}h-0{% else %}h-[3px]{% endif %}" style="background:{{ bar }}"></div>
-    <div class="{% if layout_mode == 'mindmap' %}space-y-1 px-2 py-1{% elif layout_mode == 'mini' %}space-y-0.5 px-1.5 py-0.5{% elif layout_mode == 'idea' %}space-y-0.5 px-2 py-0.5{% else %}space-y-1.5 px-2.5 py-1.5{% endif %}">
+    <div class="{% if layout_mode in ['mindmap', 'mini', 'cmap'] %}h-[2px]{% elif layout_mode == 'idea' %}h-0{% else %}h-[3px]{% endif %}" style="background:{{ bar }}"></div>
+    <div class="{% if layout_mode == 'mindmap' %}space-y-1 px-2 py-1{% elif layout_mode == 'cmap' %}space-y-0.5 px-1.5 py-0.5{% elif layout_mode == 'mini' %}space-y-0.5 px-1.5 py-0.5{% elif layout_mode == 'idea' %}space-y-0.5 px-2 py-0.5{% else %}space-y-1.5 px-2.5 py-1.5{% endif %}">
         {# Top: badge + title only — max room for the name #}
         <div class="flex min-w-0 items-start gap-1.5">
-            <span class="mt-0.5 inline-flex shrink-0 select-none items-center rounded-md border px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide {% if layout_mode in ['mini', 'idea'] %}hidden group-hover:inline-flex{% endif %}"
+            <span class="mt-0.5 inline-flex shrink-0 select-none items-center rounded-md border px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide {% if layout_mode in ['mini', 'idea'] %}hidden group-hover:inline-flex{% endif %} {% if layout_mode == 'cmap' %}!px-1 !py-0 text-[8px]{% endif %}"
                   style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
             <div class="min-w-0 flex-1">
                 {% set _title = (task.title or '')|trim %}
                 {% set _badge_title = _title in ['99D', '33D', '11D', '1D'] %}
                 <button type="button" x-show="!editingTitle"
                         @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
-                        class="block w-full text-left {% if layout_mode in ['mindmap', 'mini', 'idea'] %}text-[12px]{% else %}text-[13px]{% endif %} font-bold leading-snug transition {% if task.is_completed %}text-slate-400 line-through{% elif _badge_title or not _title %}text-slate-400 hover:text-indigo-600{% else %}text-slate-900 hover:text-indigo-600{% endif %} {% if layout_mode == 'mini' %}truncate group-hover:whitespace-normal{% else %}break-words{% endif %}">
+                        class="block w-full text-left {% if layout_mode == 'cmap' %}text-[11px] truncate{% elif layout_mode in ['mindmap', 'mini', 'idea'] %}text-[12px]{% else %}text-[13px]{% endif %} font-bold leading-snug transition {% if task.is_completed %}text-slate-400 line-through{% elif _badge_title or not _title %}text-slate-400 hover:text-indigo-600{% else %}text-slate-900 hover:text-indigo-600{% endif %} {% if layout_mode == 'mini' %}truncate group-hover:whitespace-normal{% elif layout_mode != 'cmap' %}break-words{% endif %}">
                     {% if _badge_title or not _title %}
                     <span class="font-semibold italic">Add title…</span>
                     {% else %}
@@ -74,7 +74,7 @@
         </div>
 
         {# Bottom: date · assign (clipped) · actions (never overlap) #}
-        <div class="{% if layout_mode == 'idea' %}absolute left-1/2 top-[calc(100%-1px)] z-40 min-w-full w-max max-w-[320px] -translate-x-1/2 rounded-xl border border-slate-200/90 bg-white/95 px-1.5 py-1 shadow-[0_10px_24px_rgba(15,23,42,0.16)] backdrop-blur-[1px] flex items-center flex-nowrap overflow-x-auto no-scrollbar{% else %}flex min-w-0 items-center{% endif %} gap-1 {% if layout_mode == 'mini' %}max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100{% elif layout_mode == 'idea' %}pointer-events-none opacity-0 translate-y-1 scale-[0.96] transition-all duration-180 ease-out [transition-delay:120ms] group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:[transition-delay:0ms]{% endif %}">
+        <div class="{% if layout_mode == 'idea' %}absolute left-1/2 top-[calc(100%-1px)] z-40 min-w-full w-max max-w-[320px] -translate-x-1/2 rounded-xl border border-slate-200/90 bg-white/95 px-1.5 py-1 shadow-[0_10px_24px_rgba(15,23,42,0.16)] backdrop-blur-[1px] flex items-center flex-nowrap overflow-x-auto no-scrollbar{% else %}flex min-w-0 items-center{% endif %} gap-1 {% if layout_mode in ['mini', 'cmap'] %}max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100{% elif layout_mode == 'idea' %}pointer-events-none opacity-0 translate-y-1 scale-[0.96] transition-all duration-180 ease-out [transition-delay:120ms] group-hover:pointer-events-auto group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:[transition-delay:0ms]{% endif %}">
             <div class="shrink-0">
                 <button type="button" x-show="!editingDue"
                         @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
@@ -150,7 +150,7 @@
                 +
             </button>
 
-            {% if layout_mode in ['mindmap', 'mini'] and _branch %}
+            {% if layout_mode in ['mindmap', 'mini', 'cmap'] and _branch %}
             <button type="button"
                     data-hx-no-task-focus
                     hx-post="{{ u.mindmap_collapse(task.id) }}"

@@ -48,6 +48,11 @@
             <a href="{{ request.path }}?layout=mindmap"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mindmap' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Map</a>
             {% endif %}
+            {% if 'cmap' in ui.layouts %}
+            <a href="{{ request.path }}?layout=cmap"
+               class="rounded px-1.5 py-0.5 transition {% if task_layout == 'cmap' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}"
+               title="Compact map — denser cards for large trees">CMap</a>
+            {% endif %}
             {% if 'mini' in ui.layouts %}
             <a href="{{ request.path }}?layout=mini"
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'mini' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Mini</a>
@@ -61,7 +66,7 @@
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'kanban' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Kanban</a>
             {% endif %}
         </div>
-        {% if task_layout in ['mindmap', 'tree', 'mini', 'idea'] %}
+        {% if task_layout in ['mindmap', 'cmap', 'tree', 'mini', 'idea'] %}
         <div class="board-zoom-bar dark-topbar-pill inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 text-[10px] font-semibold shadow-sm"
              title="Zoom · Ctrl/⌘ + scroll · Ctrl/⌘ 0 reset">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
@@ -222,6 +227,8 @@
          class="min-h-[calc(100vh-8rem)] rounded-2xl border border-slate-200/80 bg-slate-100/70 p-4 shadow-inner dark:border-slate-700/80 dark:bg-slate-900/60">
         {% if task_layout == 'kanban' %}
             {% include 'partials/task_kanban.jinja' %}
+        {% elif task_layout == 'cmap' %}
+            {% include 'partials/task_cmap.jinja' %}
         {% elif task_layout in ['mindmap', 'mini', 'idea'] %}
             {% include 'partials/task_mindmap.jinja' %}
         {% else %}
