@@ -1,18 +1,28 @@
 {% from 'partials/task_tree.jinja' import node_card with context %}
 {# Mind map uses same task cards as tree view; dot-grid background comes from parent #task-tree #}
 {% set card_mode = 'idea' if task_layout == 'idea' else ('mini' if task_layout == 'mini' else 'mindmap') %}
-<div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto {% if card_mode == 'idea' %}rounded-2xl bg-[#eeeeef] p-3{% else %}p-2{% endif %}">
+<div id="mm-scroll-area"
+     class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto {% if card_mode == 'idea' %}rounded-2xl bg-[#eeeeef] p-3{% else %}p-2{% endif %}">
 {% if mindmap.nodes %}
-    <div class="mb-2 flex items-center gap-2 px-1">
+    <div class="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-2 px-1 py-1 backdrop-blur-[1px]">
         <p class="flex-1 text-[11px] font-semibold text-slate-500">
         {% if card_mode == 'idea' %}
             Idea — hover node to reveal controls
         {% elif card_mode == 'mini' %}
             Mini — hover card to expand · <span class="font-bold text-slate-700">−/+N</span> for branches
         {% else %}
-            <span class="font-bold text-slate-700">−/+N</span> on cards to collapse or expand branches
+            <span class="font-bold text-slate-700">−/+N</span> on cards to collapse or expand · zoom in toolbar
         {% endif %}
         </p>
+        <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 text-[10px] font-semibold shadow-sm">
+            <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" title="Zoom out">−</button>
+            <button type="button" @click="zoomReset()"
+                    class="min-w-[2.6rem] rounded px-1 py-0.5 tabular-nums text-slate-700 hover:bg-slate-100"
+                    x-text="Math.round(boardZoom * 100) + '%'" title="Reset zoom"></button>
+            <button type="button" @click="zoomIn()" :disabled="boardZoom >= boardZoomMax"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" title="Zoom in">+</button>
+        </div>
         <button type="button"
                 hx-post="{{ u.mindmap_collapse_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
@@ -26,27 +36,29 @@
                 class="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700"
                 title="Expand all branches">Expand all</button>
     </div>
-    <div class="relative" style="width:{{ mindmap.width }}px;height:{{ mindmap.height }}px;min-width:min(100%,{{ mindmap.width }}px);">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             width="{{ mindmap.width }}"
-             height="{{ mindmap.height }}"
-             class="absolute left-0 top-0 overflow-visible text-[0]">
-            {% for p in mindmap.paths %}
-            <path d="{{ p.d }}"
-                  fill="none"
-                  stroke="{% if card_mode == 'idea' %}#b9bcc4{% else %}{{ p.stroke }}{% endif %}"
-                  stroke-width="{% if card_mode == 'idea' %}2.2{% else %}{{ p.stroke_w or 2.25 }}{% endif %}"
-                  stroke-linecap="round"
-                  opacity="{% if card_mode == 'idea' %}0.78{% else %}{{ p.opacity or 0.88 }}{% endif %}"
-                  {% if p.dash and card_mode != 'idea' %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
+    <div id="mm-zoom-outer" style="--mm-w: {{ mindmap.width }}px; --mm-h: {{ mindmap.height }}px;">
+        <div id="mm-zoom-stage" class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="{{ mindmap.width }}"
+                 height="{{ mindmap.height }}"
+                 class="absolute left-0 top-0 overflow-visible text-[0]">
+                {% for p in mindmap.paths %}
+                <path d="{{ p.d }}"
+                      fill="none"
+                      stroke="{% if card_mode == 'idea' %}#b9bcc4{% else %}{{ p.stroke }}{% endif %}"
+                      stroke-width="{% if card_mode == 'idea' %}2.2{% else %}{{ p.stroke_w or 2.25 }}{% endif %}"
+                      stroke-linecap="round"
+                      opacity="{% if card_mode == 'idea' %}0.78{% else %}{{ p.opacity or 0.88 }}{% endif %}"
+                      {% if p.dash and card_mode != 'idea' %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
+                {% endfor %}
+            </svg>
+            {% for n in mindmap.nodes %}
+            {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
+            <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
+                {{ node_card(n.task, n.depth, card_mode, mindmap_collapsed_ids, _hc) }}
+            </div>
             {% endfor %}
-        </svg>
-        {% for n in mindmap.nodes %}
-        {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
-        <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
-            {{ node_card(n.task, n.depth, card_mode, mindmap_collapsed_ids, _hc) }}
         </div>
-        {% endfor %}
     </div>
 {% else %}
     <div class="flex w-full flex-col items-center py-24 text-center">

@@ -57,3 +57,4 @@
 [DONE] Phase PM-38 - Fix Attention panel overlap: dedicated CSS grid, truncate rows, 2-col layout, min-width:0
 [DONE] Phase PM-39 - Pulse KPIs as one-liner chips (cash/MRR/convert/growth/trials/accounts/ops)
 [DONE] Phase PM-40 - 99D starter 4 levels: 1×99D → 3×33D → 3×11D each → 11×1D each; badge 1D; done on 1D/ST
+[DONE] Phase PM-41 - Board zoom: toolbar −/%/+ , Ctrl/⌘+scroll, Ctrl/⌘0 reset, localStorage; Map+Tree

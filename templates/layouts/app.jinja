@@ -141,6 +141,32 @@
             border-color: #375169 !important;
             box-shadow: 0 5px 16px rgba(0, 0, 0, 0.24) !important;
         }
+        #mm-zoom-outer {
+            width: calc(var(--mm-w, 800px) * var(--board-zoom, 1));
+            height: calc(var(--mm-h, 600px) * var(--board-zoom, 1));
+            min-width: 0;
+        }
+        #mm-zoom-stage {
+            transform: scale(var(--board-zoom, 1));
+            transform-origin: 0 0;
+            width: var(--mm-w, 800px);
+            height: var(--mm-h, 600px);
+        }
+        #tree-zoom-stage {
+            transform: scale(var(--board-zoom, 1));
+            transform-origin: 0 0;
+            display: inline-block;
+            min-width: 100%;
+        }
+        #tree-zoom-outer {
+            width: calc(100% * var(--board-zoom, 1));
+            min-height: calc(60vh * var(--board-zoom, 1));
+            overflow: visible;
+        }
+        .board-zoom-bar button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
         .dark #billing-page .team-control-panel {
             background-color: #182635 !important;
             border-color: #365168 !important;
@@ -336,9 +362,37 @@
         sidebarOpen: false,
         taskDetailOpen: false,
         uiReady: false,
+        boardZoom: 1,
+        boardZoomMin: 0.4,
+        boardZoomMax: 1.6,
+        boardZoomStep: 0.1,
         isBoardView: {{ (task_layout is defined and task_layout in ['mindmap', 'tree', 'mini', 'idea'])|tojson }},
         isMindmap: {{ (task_layout|default('mindmap') in ['mindmap', 'mini', 'idea'])|tojson }},
         darkMode: false,
+        applyBoardZoom() {
+          const z = Math.round(this.boardZoom * 100) / 100;
+          this.boardZoom = z;
+          document.documentElement.style.setProperty('--board-zoom', String(z));
+          try { localStorage.setItem('boardZoom', String(z)); } catch (e) {}
+        },
+        zoomIn() {
+          this.boardZoom = Math.min(this.boardZoomMax, this.boardZoom + this.boardZoomStep);
+          this.applyBoardZoom();
+        },
+        zoomOut() {
+          this.boardZoom = Math.max(this.boardZoomMin, this.boardZoom - this.boardZoomStep);
+          this.applyBoardZoom();
+        },
+        zoomReset() {
+          this.boardZoom = 1;
+          this.applyBoardZoom();
+        },
+        zoomByWheel(e) {
+          if (!(e.ctrlKey || e.metaKey)) return;
+          e.preventDefault();
+          if (e.deltaY < 0) this.zoomIn();
+          else if (e.deltaY > 0) this.zoomOut();
+        },
         toggleSidebar() {
           this.sidebarOpen = !this.sidebarOpen;
           localStorage.setItem('sidebarOpen', this.sidebarOpen ? '1' : '0');
@@ -351,6 +405,11 @@
             if (storedSidebar !== null) {
               this.sidebarOpen = storedSidebar === '1';
             }
+            const storedZoom = parseFloat(localStorage.getItem('boardZoom') || '1');
+            if (!Number.isNaN(storedZoom) && storedZoom >= this.boardZoomMin && storedZoom <= this.boardZoomMax) {
+              this.boardZoom = storedZoom;
+            }
+            this.applyBoardZoom();
             this.uiReady = true;
         },
         toggleTheme() {
@@ -361,7 +420,13 @@
       }"
       x-init="initTheme()"
       @keydown.window.ctrl.k.prevent="addModalOpen = true; parentIdForModal = ''"
-      @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''">
+      @keydown.window.meta.k.prevent="addModalOpen = true; parentIdForModal = ''"
+      @keydown.window.ctrl.equal.prevent="isBoardView && zoomIn()"
+      @keydown.window.meta.equal.prevent="isBoardView && zoomIn()"
+      @keydown.window.ctrl.minus.prevent="isBoardView && zoomOut()"
+      @keydown.window.meta.minus.prevent="isBoardView && zoomOut()"
+      @keydown.window.ctrl.0.prevent="isBoardView && zoomReset()"
+      @keydown.window.meta.0.prevent="isBoardView && zoomReset()">
 <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside x-cloak

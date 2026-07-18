@@ -61,6 +61,18 @@
                class="rounded px-1.5 py-0.5 transition {% if task_layout == 'kanban' %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-700{% endif %}">Kanban</a>
             {% endif %}
         </div>
+        {% if task_layout in ['mindmap', 'tree', 'mini', 'idea'] %}
+        <div class="board-zoom-bar dark-topbar-pill inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white p-0.5 text-[10px] font-semibold shadow-sm"
+             title="Zoom · Ctrl/⌘ + scroll · Ctrl/⌘ 0 reset">
+            <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" aria-label="Zoom out">−</button>
+            <button type="button" @click="zoomReset()"
+                    class="min-w-[2.6rem] rounded px-1 py-0.5 tabular-nums text-slate-700 hover:bg-slate-100"
+                    x-text="Math.round(boardZoom * 100) + '%'"></button>
+            <button type="button" @click="zoomIn()" :disabled="boardZoom >= boardZoomMax"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-slate-100" aria-label="Zoom in">+</button>
+        </div>
+        {% endif %}
         {% if ui.top.gantt %}
         {% if current_project %}
         <a href="{{ url('gantt:gantt', slug=current_project.slug) }}"
@@ -452,6 +464,10 @@
 <script>
 (function () {
   var _scroll = null;
+  var ZOOM_MIN = 0.4;
+  var ZOOM_MAX = 1.6;
+  var ZOOM_STEP = 0.1;
+
   document.addEventListener('htmx:beforeSwap', function (e) {
     if (e.detail.target && e.detail.target.id === 'task-tree') {
       var el = document.getElementById('mm-scroll-area');
@@ -464,7 +480,45 @@
       if (el) { el.scrollLeft = _scroll.x; el.scrollTop = _scroll.y; }
       _scroll = null;
     }
+    bindBoardZoomWheel();
   });
+
+  function currentZoom() {
+    var z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--board-zoom'));
+    return Number.isFinite(z) && z > 0 ? z : 1;
+  }
+
+  function setZoom(next) {
+    next = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next)) * 100) / 100;
+    document.documentElement.style.setProperty('--board-zoom', String(next));
+    try { localStorage.setItem('boardZoom', String(next)); } catch (err) {}
+    try {
+      if (window.Alpine && typeof Alpine.$data === 'function') {
+        var d = Alpine.$data(document.body);
+        if (d && typeof d.boardZoom !== 'undefined') d.boardZoom = next;
+      }
+    } catch (err) {}
+  }
+
+  function bindBoardZoomWheel() {
+    ['mm-scroll-area', 'tree-zoom-outer', 'task-tree'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.zoomWheelBound === '1') return;
+      el.dataset.zoomWheelBound = '1';
+      el.addEventListener('wheel', function (e) {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        e.preventDefault();
+        var cur = currentZoom();
+        setZoom(e.deltaY < 0 ? cur + ZOOM_STEP : cur - ZOOM_STEP);
+      }, { passive: false });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindBoardZoomWheel);
+  } else {
+    bindBoardZoomWheel();
+  }
 })();
 </script>
 {% endblock %}

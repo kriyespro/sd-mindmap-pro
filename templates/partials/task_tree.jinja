@@ -204,7 +204,8 @@
 </div>
 {% endmacro %}
 
-<div class="flex flex-wrap items-start gap-4 py-1">
+<div id="tree-zoom-outer" class="overflow-auto">
+<div id="tree-zoom-stage" class="flex flex-wrap items-start gap-4 py-1">
 {% if task_tree %}
     <div class="mb-2 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm">
         <span class="font-bold text-slate-500">Depth:</span>
@@ -233,4 +234,5 @@
         <p class="mt-1 max-w-xs text-[11px] text-slate-400">Use <span class="font-semibold text-indigo-600">New task</span> or <kbd class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px]">⌘K</kbd></p>
     </div>
 {% endif %}
+</div>
 </div>
