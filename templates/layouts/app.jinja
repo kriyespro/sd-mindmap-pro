@@ -136,10 +136,13 @@
             background-image: radial-gradient(circle at 1.5px 1.5px, rgba(147, 197, 253, 0.18) 1.2px, transparent 0) !important;
             background-size: 24px 24px !important;
         }
-        .dark #task-tree [data-task-id] {
+        .dark #task-tree [data-task-id]:not(.cmap-card) {
             background-color: #1d2c3d !important;
             border-color: #375169 !important;
             box-shadow: 0 5px 16px rgba(0, 0, 0, 0.24) !important;
+        }
+        .dark #task-tree .cmap-card[data-task-id] {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28) !important;
         }
         /* Compact map: hover reveal (belt + suspenders if CSS build lags) */
         .cmap-card .cmap-card-actions {
