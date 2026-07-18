@@ -65,7 +65,7 @@
      class="cmap-card group relative z-[1] w-full max-h-[30px] overflow-hidden rounded-md border shadow-sm transition hover:z-[30] hover:max-h-[180px] hover:shadow-md"
      style="background:{{ card_bg }};border-color:{{ card_bdr }};"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
-    <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
+    <div class="cmap-accent-bar absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
     <div class="pl-2.5 pr-1.5 py-1">
         <div class="flex min-w-0 items-center gap-1">
             <span class="inline-flex shrink-0 select-none items-center rounded border px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
@@ -95,7 +95,7 @@
                     hx-sync="#task-tree:drop"
                     hx-indicator="this"
                     hx-disabled-elt="this"
-                    class="flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/90 text-[10px] font-bold text-slate-600 hover:text-indigo-700 disabled:opacity-60"
+                    class="cmap-collapse-pop flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/90 text-[10px] font-bold text-slate-600 hover:text-indigo-700 disabled:opacity-60"
                     title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
                 {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
             </button>
@@ -238,7 +238,7 @@
         {% endif %}
     </div>
     <div id="mm-zoom-outer" style="--mm-w: {{ mindmap.width }}px; --mm-h: {{ mindmap.height }}px;">
-        <div id="mm-zoom-stage" class="relative">
+        <div id="mm-zoom-stage" class="cmap-stage relative">
             <svg xmlns="http://www.w3.org/2000/svg"
                  width="{{ mindmap.width }}"
                  height="{{ mindmap.height }}"
@@ -250,12 +250,15 @@
                       stroke-width="{{ p.stroke_w or 3.5 }}"
                       stroke-linecap="round"
                       opacity="{{ p.opacity or 0.88 }}"
+                      class="cmap-edge"
+                      style="animation-delay:{{ ((p.depth|default(0)) * 90) % 460 }}ms"
                       {% if p.dash %}stroke-dasharray="{{ p.dash }}"{% endif %}/>
                 {% endfor %}
             </svg>
             {% for n in mindmap.nodes %}
             {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
-            <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
+            <div class="cmap-node-in absolute"
+                 style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;animation-delay:{{ (n.depth * 60 + (loop.index0 * 5) % 60) % 480 }}ms;">
                 {{ cmap_card(n.task, n.depth, mindmap_collapsed_ids, _hc, _level_focus) }}
             </div>
             {% endfor %}

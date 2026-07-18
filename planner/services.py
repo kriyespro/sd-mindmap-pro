@@ -510,6 +510,7 @@ def _mindmap_subtree(
                 'stroke_w': stroke_w,
                 'opacity': stroke_opacity,
                 'dash': dash,
+                'depth': depth,
             }
         )
 

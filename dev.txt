@@ -64,3 +64,4 @@
 [DONE] Phase PM-45 - Fix Compact hover reveal: missing Tailwind utilities + scoped .cmap-card CSS fallback
 [DONE] Phase PM-46 - Compact: dual collapse on 33D/11D; multicolor card backgrounds by depth
 [DONE] Phase PM-47 - Compact level Focus (All/33D/11D/1D); soft tint card colors; remove dual collapse
+[DONE] Phase PM-48 - Compact map real animation (ClickUp-style): staggered card fan-in, animated connector draw-in, springy hover lift, collapse-button pop; scoped to .cmap-* only, Map/Tree/Kanban untouched
