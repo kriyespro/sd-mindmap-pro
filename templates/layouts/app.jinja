@@ -151,6 +151,17 @@
         .cmap-card:hover {
             border-color: #cbd5e1;
         }
+        /* Compact map: whiteboard-style drag-to-pan on empty canvas. */
+        .cmap-pan {
+            cursor: grab;
+        }
+        .cmap-pan.cmap-panning {
+            cursor: grabbing;
+            user-select: none;
+        }
+        .cmap-pan.cmap-panning * {
+            pointer-events: none;
+        }
         #mm-zoom-outer {
             width: calc(var(--mm-w, 800px) * var(--board-zoom, 1));
             height: calc(var(--mm-h, 600px) * var(--board-zoom, 1));
@@ -256,6 +267,42 @@
                 var meta = document.querySelector('meta[name=csrf-token]');
                 if (meta && meta.content) e.detail.headers['X-CSRFToken'] = meta.content;
             });
+
+            // Compact map: click-and-drag empty canvas to pan, like a whiteboard.
+            // Delegated on document so it survives htmx swaps of #task-tree.
+            (function () {
+                var panEl = null;
+                var startX = 0, startY = 0, startLeft = 0, startTop = 0;
+                var dragging = false;
+
+                document.body.addEventListener('mousedown', function (e) {
+                    var area = e.target.closest && e.target.closest('.cmap-pan');
+                    if (!area || e.button !== 0) return;
+                    if (e.target.closest('.cmap-card, button, select, input, a, form, .sticky')) return;
+                    panEl = area;
+                    dragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startLeft = area.scrollLeft;
+                    startTop = area.scrollTop;
+                    area.classList.add('cmap-panning');
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', function (e) {
+                    if (!dragging || !panEl) return;
+                    panEl.scrollLeft = startLeft - (e.clientX - startX);
+                    panEl.scrollTop = startTop - (e.clientY - startY);
+                });
+
+                function stopPan() {
+                    if (panEl) panEl.classList.remove('cmap-panning');
+                    dragging = false;
+                    panEl = null;
+                }
+                document.addEventListener('mouseup', stopPan);
+                document.addEventListener('mouseleave', stopPan);
+            })();
 
             document.body.addEventListener('htmx:beforeRequest', function (e) {
                 var source = e && e.detail ? e.detail.elt : null;

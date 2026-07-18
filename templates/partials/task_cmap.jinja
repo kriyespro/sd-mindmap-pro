@@ -147,7 +147,7 @@
 {% set _level_focus = _focus in [1, 2, 3] %}
 
 {# Compact Map — level focus + soft tint cards #}
-<div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto rounded-xl bg-slate-50/80 p-2">
+<div id="mm-scroll-area" class="cmap-pan relative min-h-[calc(100vh-10rem)] w-full overflow-auto rounded-xl bg-slate-50/80 p-2">
 {% if mindmap.nodes %}
     <div class="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur">
         <span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Focus</span>
@@ -181,8 +181,12 @@
             {% if _focus == 1 %}Showing only 33D cards
             {% elif _focus == 2 %}Showing only 11D cards
             {% elif _focus == 3 %}Showing only 1D cards
-            {% else %}Clean by default — hover a card for date · assign · done · add · delete{% endif %}
+            {% else %}Drag empty space to pan · hover a card for date/assign/done{% endif %}
         </p>
+        <button type="button"
+                onclick="var sa=document.getElementById('mm-scroll-area'); if(sa){sa.scrollTo({left:0,top:0,behavior:'smooth'});}"
+                class="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300"
+                title="Scroll back to the root">Center</button>
         <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
                     class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom out">−</button>

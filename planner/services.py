@@ -449,6 +449,30 @@ def _connector_pull_distance(
     return max(36.0, horizontal + vertical + branch_load - depth_tighten)
 
 
+def _cmap_connector_pull_distance(
+    *,
+    dx: float,
+    dy: float,
+    sibling_count: int,
+    depth: int,
+) -> float:
+    """
+    Compact map only: columns sit much closer together than Map's, so
+    weighting the pull toward the vertical offset (like Map does) makes the
+    control points overshoot the child's column — the curve loops back on
+    itself instead of sweeping. Leaning on dx instead gives every branch a
+    near-full, flat-tangent "S": lines leave a card horizontally and enter
+    the next one horizontally no matter how far apart they sit vertically,
+    which reads as one clean natural branch instead of a kink or a diagonal
+    ruler-line, and a wide fan-out of siblings stays legible.
+    """
+    base = max(dx * 0.86, 24.0)
+    branch_load = max(min((sibling_count - 1) * 1.6, 14.0), 0.0)
+    depth_tighten = min(depth * 1.2, 8.0)
+    pull = base + branch_load - depth_tighten
+    return max(20.0, min(pull, dx * 0.96))
+
+
 def _mindmap_subtree(
     node: dict,
     depth: int,
@@ -534,7 +558,8 @@ def _mindmap_subtree(
         dx = cx_in - px_out
         py = cy
         dy = cy_c - py
-        pull = _connector_pull_distance(
+        pull_fn = _cmap_connector_pull_distance if dense_mode else _connector_pull_distance
+        pull = pull_fn(
             dx=dx,
             dy=dy,
             sibling_count=child_count,
