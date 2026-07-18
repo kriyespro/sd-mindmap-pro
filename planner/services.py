@@ -58,11 +58,13 @@ def create_99d_template(
     root_title: str = '',
 ) -> Task:
     """
-    Create the 99D OKR starter tree (badges show 99D / 33D / 11D; titles stay empty for the user to fill).
+    Create the 99D starter tree (4 levels):
+    1×99D → 3×33D → each with 3×11D → each with 11×1D.
+    Badges show depth; titles stay empty for the user to fill.
     """
     title = (root_title or '').strip()
-    # Avoid duplicating badge labels as titles (UI already shows 99D / 33D / 11D).
-    if title in {'99D', '33D', '11D'}:
+    # Avoid duplicating badge labels as titles (UI already shows 99D / 33D / 11D / 1D).
+    if title in {'99D', '33D', '11D', '1D'}:
         title = ''
     root = _create_task(
         author=author,
@@ -84,7 +86,7 @@ def create_99d_template(
             position=i,
         )
         for j in range(3):
-            _create_task(
+            leaf_11 = _create_task(
                 author=author,
                 team=team,
                 project=project,
@@ -92,6 +94,15 @@ def create_99d_template(
                 parent=mid,
                 position=j,
             )
+            for k in range(11):
+                _create_task(
+                    author=author,
+                    team=team,
+                    project=project,
+                    title='',
+                    parent=leaf_11,
+                    position=k,
+                )
     return root
 
 
@@ -794,7 +805,7 @@ def resolve_assignee(
 
 
 def task_depth(task: Task) -> int:
-    """0 = root (99D), 1 = 33D, 2 = 11D, 3+ = ST subtasks."""
+    """0 = 99D, 1 = 33D, 2 = 11D, 3 = 1D, 4+ = ST subtasks."""
     depth = 0
     current = task
     seen: set[int] = set()

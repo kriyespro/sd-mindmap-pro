@@ -264,7 +264,7 @@
         <div class="mb-4 flex items-start justify-between">
             <div>
                 <h2 class="text-sm font-semibold text-slate-900" x-text="parentIdForModal ? 'Add subtask' : 'New root task'"></h2>
-                <p class="mt-0.5 text-[11px] text-slate-500" x-text="parentIdForModal ? 'Nested under this card (works on 11D too — becomes ST)' : 'Top-level OKR'"></p>
+                <p class="mt-0.5 text-[11px] text-slate-500" x-text="parentIdForModal ? 'Nested under this card' : 'Top-level OKR'"></p>
             </div>
             <button type="button" @click="addModalOpen = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -293,7 +293,7 @@
                             <input type="radio" name="template" value="99d" class="mt-0.5" x-model="taskStarter">
                             <span>
                                 <span class="block text-xs font-semibold text-amber-950">99D starter</span>
-                                <span class="block text-[10px] leading-snug text-amber-900/80">1×99D → 3×33D → each with 3×11D — badges only; add your own titles</span>
+                                <span class="block text-[10px] leading-snug text-amber-900/80">1×99D → 3×33D → 3×11D each → 11×1D each — 4 levels; badges only</span>
                             </span>
                         </label>
                     </div>
@@ -301,7 +301,7 @@
                 <div>
                     <label class="mb-1 block text-[11px] font-medium text-slate-600">Title <span class="text-rose-500" x-show="taskStarter !== '99d' || parentIdForModal">*</span></label>
                     {{ task_create_form.title }}
-                    <p x-show="taskStarter === '99d' && !parentIdForModal" class="mt-1 text-[10px] text-slate-500">Optional. Depth badges show 99D / 33D / 11D — titles stay blank until you name them.</p>
+                    <p x-show="taskStarter === '99d' && !parentIdForModal" class="mt-1 text-[10px] text-slate-500">Optional. Depth badges show 99D / 33D / 11D / 1D — titles stay blank until you name them.</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>

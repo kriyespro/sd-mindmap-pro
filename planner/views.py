@@ -642,7 +642,7 @@ class TaskCreateView(LoginRequiredMixin, View):
 
         if use_99d:
             title = (request.POST.get('title') or '').strip()
-            if title in {'99D', '33D', '11D'}:
+            if title in {'99D', '33D', '11D', '1D'}:
                 title = ''
             due_raw = (request.POST.get('due_date') or '').strip()
             due_date = None
@@ -795,10 +795,10 @@ class TaskToggleView(LoginRequiredMixin, View):
         task = get_object_or_404(Task, pk=task_id)
         if not user_can_access_task(request.user, task, team):
             return HttpResponse('Not found', status=404)
-        # Only ST (depth 3+) can be toggled; 99D/33D/11D auto-complete from children.
+        # Only 1D / ST (depth 3+) can be toggled; 99D/33D/11D auto-complete from children.
         if task_depth(task) < 3:
             return HttpResponse(
-                'Mark done on ST subtasks only — 99D / 33D / 11D complete automatically.',
+                'Mark done on 1D / ST only — 99D / 33D / 11D complete automatically.',
                 status=400,
             )
         task.is_completed = not task.is_completed
@@ -840,8 +840,8 @@ class TaskRenameView(LoginRequiredMixin, View):
         if not form.is_valid():
             return HttpResponse('Invalid title', status=400)
         task.title = form.cleaned_data['title'].strip()
-        # Allow clearing badge-default labels (99D / 33D / 11D) to empty.
-        if task.title in {'99D', '33D', '11D'}:
+        # Allow clearing badge-default labels (99D / 33D / 11D / 1D) to empty.
+        if task.title in {'99D', '33D', '11D', '1D'}:
             task.title = ''
         task.save(update_fields=['title'])
         return _tree_partial(request, team_slug, project_slug)
@@ -1082,11 +1082,11 @@ class TaskKanbanStatusView(LoginRequiredMixin, View):
         valid = [c[0] for c in TaskModel.STATUS_CHOICES]
         if new_status not in valid:
             return HttpResponse(status=400)
-        # Same invariant as TaskToggleView: only ST (depth 3+) can be marked
+        # Same invariant as TaskToggleView: only 1D / ST (depth 3+) can be marked
         # done directly; 99D/33D/11D must auto-complete from their children.
         if new_status == TaskModel.STATUS_DONE and task_depth(task) < 3:
             return HttpResponse(
-                'Mark done on ST subtasks only — 99D / 33D / 11D complete automatically.',
+                'Mark done on 1D / ST only — 99D / 33D / 11D complete automatically.',
                 status=400,
             )
         task.status = new_status

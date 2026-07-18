@@ -56,3 +56,4 @@
 [DONE] Phase PM-37 - Mission Control cream compact UI: IBM Plex, narrow rail, dense KPIs/tables, teal/ink accents on cream paper
 [DONE] Phase PM-38 - Fix Attention panel overlap: dedicated CSS grid, truncate rows, 2-col layout, min-width:0
 [DONE] Phase PM-39 - Pulse KPIs as one-liner chips (cash/MRR/convert/growth/trials/accounts/ops)
+[DONE] Phase PM-40 - 99D starter 4 levels: 1×99D → 3×33D → 3×11D each → 11×1D each; badge 1D; done on 1D/ST
