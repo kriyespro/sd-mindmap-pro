@@ -1,55 +1,17 @@
 {% macro cmap_card(task, depth=0, mindmap_collapsed_ids=None, has_children_branch=None, level_focus=false) %}
 {% if depth == 0 %}
-  {% set bar = '#ea580c' %}
-  {% set card_bg = '#fffaf5' %}
-  {% set card_bdr = '#fdba74' %}
-  {% set title_c = '#9a3412' %}
-  {% set title_muted = '#c2410c' %}
-  {% set tag_bg = '#ffedd5' %}
-  {% set tag_txt = '#9a3412' %}
-  {% set tag_bdr = '#fdba74' %}
   {% set lbl = '99D' %}
 {% elif depth == 1 %}
-  {% set bar = '#0284c7' %}
-  {% set card_bg = '#f0f9ff' %}
-  {% set card_bdr = '#7dd3fc' %}
-  {% set title_c = '#075985' %}
-  {% set title_muted = '#0369a1' %}
-  {% set tag_bg = '#e0f2fe' %}
-  {% set tag_txt = '#075985' %}
-  {% set tag_bdr = '#7dd3fc' %}
   {% set lbl = '33D' %}
 {% elif depth == 2 %}
-  {% set bar = '#a21caf' %}
-  {% set card_bg = '#fdf4ff' %}
-  {% set card_bdr = '#e9d5ff' %}
-  {% set title_c = '#86198f' %}
-  {% set title_muted = '#a21caf' %}
-  {% set tag_bg = '#fae8ff' %}
-  {% set tag_txt = '#86198f' %}
-  {% set tag_bdr = '#e9d5ff' %}
   {% set lbl = '11D' %}
 {% elif depth == 3 %}
-  {% set bar = '#0f766e' %}
-  {% set card_bg = '#f0fdfa' %}
-  {% set card_bdr = '#99f6e4' %}
-  {% set title_c = '#115e59' %}
-  {% set title_muted = '#0f766e' %}
-  {% set tag_bg = '#ccfbf1' %}
-  {% set tag_txt = '#115e59' %}
-  {% set tag_bdr = '#99f6e4' %}
   {% set lbl = '1D' %}
 {% else %}
-  {% set bar = '#4d7c0f' %}
-  {% set card_bg = '#f7fee7' %}
-  {% set card_bdr = '#bef264' %}
-  {% set title_c = '#3f6212' %}
-  {% set title_muted = '#4d7c0f' %}
-  {% set tag_bg = '#ecfccb' %}
-  {% set tag_txt = '#3f6212' %}
-  {% set tag_bdr = '#bef264' %}
   {% set lbl = 'ST' %}
 {% endif %}
+{% set fg = task._cmap_fg or '#1e293b' %}
+{% set bg = task._cmap_bg or '#f8fafc' %}
 {% if has_children_branch is not none %}
   {% set _branch = has_children_branch %}
 {% else %}
@@ -58,23 +20,26 @@
 {% set _mc = mindmap_collapsed_ids if mindmap_collapsed_ids is not none else [] %}
 {% set _title = (task.title or '')|trim %}
 {% set _badge_title = _title in ['99D', '33D', '11D', '1D'] %}
+{% set _collapsed = task.id in _mc %}
+{% set _count = task.subtask_total or 0 %}
 
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
      tabindex="-1"
-     class="cmap-card group relative z-[1] w-full max-h-[30px] overflow-hidden rounded-md border shadow-sm transition hover:z-[30] hover:max-h-[180px] hover:shadow-md"
-     style="background:{{ card_bg }};border-color:{{ card_bdr }};"
+     class="cmap-card group relative z-[1] w-full max-h-[30px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:z-[30] hover:max-h-[180px] hover:border-slate-300 hover:shadow-md"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
-    <div class="cmap-accent-bar absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
+    <div class="cmap-accent-bar absolute inset-y-0 left-0 w-[3px] rounded-l-lg" style="background:{{ fg }}"></div>
     <div class="pl-2.5 pr-1.5 py-1">
-        <div class="flex min-w-0 items-center gap-1">
-            <span class="inline-flex shrink-0 select-none items-center rounded border px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
-                  style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
+        <div class="flex min-w-0 items-center gap-1.5">
+            <span class="inline-flex shrink-0 select-none items-center rounded px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
+                  style="background:{{ bg }};color:{{ fg }}">{{ lbl }}</span>
             <div class="min-w-0 flex-1">
                 <button type="button" x-show="!editingTitle"
                         @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
-                        class="block w-full truncate text-left text-[11px] font-semibold leading-tight transition hover:underline"
-                        style="{% if task.is_completed %}color:#64748b;text-decoration:line-through;{% elif _badge_title or not _title %}color:{{ title_muted }};font-style:italic;{% else %}color:{{ title_c }};{% endif %}">
+                        class="block w-full truncate text-left text-[11px] font-semibold leading-tight transition hover:underline
+                               {% if task.is_completed %}text-slate-400 line-through
+                               {% elif _badge_title or not _title %}text-slate-400 italic
+                               {% else %}text-slate-800{% endif %}">
                     {% if _badge_title or not _title %}Add title…{% else %}{{ task.title }}{% endif %}
                 </button>
                 <form x-show="editingTitle" x-cloak
@@ -95,10 +60,14 @@
                     hx-sync="#task-tree:drop"
                     hx-indicator="this"
                     hx-disabled-elt="this"
-                    class="cmap-collapse-pop flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/90 text-[10px] font-bold text-slate-600 hover:text-indigo-700 disabled:opacity-60"
-                    title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
-                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+                    class="cmap-collapse-pop flex h-[18px] {% if _collapsed %}min-w-[1.5rem] px-1.5{% else %}min-w-[1.5rem] px-1{% endif %} shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none text-white shadow-sm disabled:opacity-60"
+                    style="background:{{ fg }}"
+                    title="{% if _collapsed %}Expand — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% else %}Collapse — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% endif %}">
+                {% if _collapsed %}+{{ _count }}{% else %}{{ _count }}{% endif %}
             </button>
+            {% elif _count and level_focus %}
+            <span class="flex h-[18px] min-w-[1.5rem] shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none text-white shadow-sm"
+                  style="background:{{ fg }}" title="{{ _count }} subtask{{ 's' if _count != 1 else '' }}">{{ _count }}</span>
             {% endif %}
         </div>
 
@@ -207,11 +176,11 @@
                     hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
                     class="rounded px-2 py-1 text-[10px] font-bold {% if _focus == 3 %}bg-teal-100 text-teal-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">1D</button>
         </div>
-        <p class="flex-1 text-[10px] font-medium text-slate-500">
+        <p class="flex-1 truncate text-[10px] font-medium text-slate-500">
             {% if _focus == 1 %}Showing only 33D cards
             {% elif _focus == 2 %}Showing only 11D cards
             {% elif _focus == 3 %}Showing only 1D cards
-            {% else %}Full tree · hover card for date · assign · +{% endif %}
+            {% else %}Each branch keeps one color · numbered badge = subtasks inside · hover for date/assign/+{% endif %}
         </p>
         <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"

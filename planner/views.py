@@ -18,6 +18,7 @@ from planner.forms import TaskCreateForm, TaskImportForm, TaskMetaForm, TaskTitl
 from planner.crypto import decrypt_task_title
 from planner.models import Notification, Task
 from planner.services import (
+    annotate_cmap_branch_colors,
     assignee_choices,
     build_task_tree,
     collect_branch_ids_with_children,
@@ -445,6 +446,8 @@ class BoardView(LoginRequiredMixin, TemplateView):
                     )
         branch_children = collect_task_has_children(task_tree)
         cmap_focus_depth = get_cmap_focus_depth(self.request, team, project=project)
+        if layout == 'cmap':
+            annotate_cmap_branch_colors(task_tree)
         pruned_for_mm = prepare_mindmap_roots(
             task_tree,
             mm_collapsed,
@@ -551,6 +554,8 @@ def _tree_partial(
         mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
         cmap_focus_depth = get_cmap_focus_depth(request, team, project=project)
+        if layout == 'cmap':
+            annotate_cmap_branch_colors(tree)
         pruned = prepare_mindmap_roots(
             tree,
             mm_collapsed,

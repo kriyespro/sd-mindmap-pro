@@ -382,6 +382,51 @@ CMAP_EDGE_COLORS = [
     '#6d28d9',  # deep violet
 ]
 
+# Compact map: one consistent color per top-level branch (ClickUp mind map style) —
+# every descendant of a given 33D branch keeps that branch's color, all the way down.
+CMAP_BRANCH_PALETTE = [
+    ('#7c3aed', '#f5f3ff'),  # violet
+    ('#059669', '#ecfdf5'),  # emerald
+    ('#dc2626', '#fef2f2'),  # red
+    ('#d97706', '#fffbeb'),  # amber
+    ('#0891b2', '#ecfeff'),  # cyan
+    ('#db2777', '#fdf2f8'),  # pink
+    ('#4f46e5', '#eef2ff'),  # indigo
+    ('#65a30d', '#f7fee7'),  # lime
+]
+CMAP_ROOT_FG = '#1e293b'
+CMAP_ROOT_BG = '#f8fafc'
+
+
+def annotate_cmap_branch_colors(roots: list[dict]) -> None:
+    """
+    Mutates nodes in place: assigns one branch color (fg + soft bg tint) per
+    top-level branch and propagates it to every descendant, mirroring how
+    ClickUp's mind map colors an entire branch consistently from its trunk.
+    Root nodes stay neutral (they are the trunk, not a branch).
+    """
+    counter = [0]
+
+    def paint(node: dict, fg: str, bg: str) -> None:
+        node['_cmap_fg'] = fg
+        node['_cmap_bg'] = bg
+        for c in node.get('children') or []:
+            paint(c, fg, bg)
+
+    def walk_root(node: dict) -> None:
+        node['_cmap_fg'] = CMAP_ROOT_FG
+        node['_cmap_bg'] = CMAP_ROOT_BG
+        children = node.get('children') or []
+        if not children:
+            return
+        for c in children:
+            fg, bg = CMAP_BRANCH_PALETTE[counter[0] % len(CMAP_BRANCH_PALETTE)]
+            counter[0] += 1
+            paint(c, fg, bg)
+
+    for r in roots:
+        walk_root(r)
+
 
 def _connector_pull_distance(
     *,
@@ -482,7 +527,10 @@ def _mindmap_subtree(
         cp = positions[c['id']]
         cy_c = cp['top'] + cp['height'] / 2
         cx_in = cp['left']
-        stroke = edge_colors[(depth + idx + 1) % len(edge_colors)]
+        if dense_mode and c.get('_cmap_fg'):
+            stroke = c['_cmap_fg']
+        else:
+            stroke = edge_colors[(depth + idx + 1) % len(edge_colors)]
         dx = cx_in - px_out
         py = cy
         dy = cy_c - py
