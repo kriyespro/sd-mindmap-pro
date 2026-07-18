@@ -42,7 +42,7 @@
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
      tabindex="-1"
-     class="cmap-card group relative z-[1] w-full max-h-[34px] overflow-hidden rounded-md border border-slate-200/90 bg-white shadow-sm transition hover:z-30 hover:max-h-[78px] hover:overflow-visible hover:border-indigo-200 hover:shadow-md"
+     class="cmap-card group relative z-[1] w-full max-h-[30px] overflow-hidden rounded-md border border-slate-200/90 bg-white shadow-sm transition hover:z-[30] hover:max-h-[180px] hover:border-indigo-200 hover:shadow-md"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
     <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
     <div class="pl-2.5 pr-1.5 py-1">
@@ -84,8 +84,8 @@
             {% endif %}
         </div>
 
-        {# Row 2 (hover): date · narrow assign · check · + · delete #}
-        <div class="mt-0.5 flex max-h-0 min-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-150 group-hover:max-h-10 group-hover:opacity-100">
+        {# Row 2 (hover): date · narrow assign · check · + · delete — use compiled Tailwind group-hover:max-h-24 #}
+        <div class="cmap-card-actions mt-0.5 flex max-h-0 min-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100">
             <button type="button" x-show="!editingDue"
                     @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
                     class="inline-flex max-w-[4.25rem] shrink-0 truncate rounded px-1 py-0 text-[9px] font-semibold

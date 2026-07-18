@@ -141,6 +141,24 @@
             border-color: #375169 !important;
             box-shadow: 0 5px 16px rgba(0, 0, 0, 0.24) !important;
         }
+        /* Compact map: hover reveal (belt + suspenders if CSS build lags) */
+        .cmap-card .cmap-card-actions {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .cmap-card:hover,
+        .cmap-card:focus-within {
+            max-height: 180px;
+            z-index: 30;
+        }
+        .cmap-card:hover .cmap-card-actions,
+        .cmap-card:focus-within .cmap-card-actions {
+            max-height: 6rem;
+            opacity: 1;
+            pointer-events: auto;
+        }
         #mm-zoom-outer {
             width: calc(var(--mm-w, 800px) * var(--board-zoom, 1));
             height: calc(var(--mm-h, 600px) * var(--board-zoom, 1));
