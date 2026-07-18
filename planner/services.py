@@ -357,9 +357,9 @@ def user_can_access_task(user: User, task: Task, team: Team | None = None) -> bo
 MINDMAP_CARD_MIN_W = 228
 MINDMAP_CARD_MAX_W = 372
 MINDMAP_CARD_BASE_H = 78
-CMAP_CARD_MIN_W = 194
-CMAP_CARD_MAX_W = 264
-CMAP_CARD_BASE_H = 52
+CMAP_CARD_MIN_W = 180
+CMAP_CARD_MAX_W = 252
+CMAP_CARD_BASE_H = 30
 MINDMAP_COL_GAP = 36
 MINDMAP_ROW_GAP = 6
 MINDMAP_ROOT_GAP = 13
@@ -814,9 +814,10 @@ def compute_mindmap_layout(
     density_boost = min(46.0, max(0.0, total_nodes - 6) * 1.8)
 
     if dense_mode:
-        # Compact map chips: readable packing without stacking/overlap.
-        row_gap = 14.0 + (density_boost * 0.24)
-        col_gap = 40.0 + (density_boost * 0.26)
+        # Compact map chips: readable packing; a little extra row gap gives the
+        # hover popover (date/assign/done/actions) room to breathe.
+        row_gap = 17.0 + (density_boost * 0.24)
+        col_gap = 38.0 + (density_boost * 0.26)
         root_gap = 20.0 + (density_boost * 0.24)
     elif compact_mode:
         # Idea mode keeps cards collapsed visually, but hover reveals extra controls.

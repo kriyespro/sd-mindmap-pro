@@ -26,121 +26,119 @@
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
      tabindex="-1"
-     class="cmap-card group relative w-full rounded-lg border border-slate-200 bg-white shadow-sm"
+     class="cmap-card group relative z-[1] w-full rounded-lg border border-slate-200 bg-white shadow-sm hover:z-30 hover:border-slate-300 focus-within:z-30"
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
     <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-lg" style="background:{{ fg }}"></div>
-    <div class="pl-2.5 pr-1.5 py-1.5">
-        {# Row 1: depth chip · title · subtask-count / collapse badge #}
-        <div class="flex min-w-0 items-center gap-1.5">
-            <span class="inline-flex shrink-0 select-none items-center rounded px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
-                  style="background:{{ bg }};color:{{ fg }}">{{ lbl }}</span>
-            <div class="min-w-0 flex-1">
-                <button type="button" x-show="!editingTitle"
-                        @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
-                        class="block w-full truncate text-left text-[11px] font-semibold leading-tight hover:underline
-                               {% if task.is_completed %}text-slate-400 line-through
-                               {% elif _badge_title or not _title %}text-slate-400 italic
-                               {% else %}text-slate-800{% endif %}">
-                    {% if _badge_title or not _title %}Add title…{% else %}{{ task.title }}{% endif %}
-                </button>
-                <form x-show="editingTitle" x-cloak
-                      hx-post="{{ u.title(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                      hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                      @click.outside="editingTitle=false" @keydown.escape.prevent="editingTitle=false">
-                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                    <input x-ref="titleInput" x-model="titleDraft" name="title" placeholder="Add title…"
-                           class="w-full rounded border border-indigo-300 px-1 py-0.5 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                           @change="$el.form.requestSubmit()">
-                </form>
-            </div>
-            {% if _branch and not level_focus %}
-            <button type="button"
-                    data-hx-no-task-focus
-                    hx-post="{{ u.mindmap_collapse(task.id) }}"
-                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:drop"
-                    hx-indicator="this"
-                    hx-disabled-elt="this"
-                    class="flex h-[18px] {% if _collapsed %}min-w-[1.5rem] px-1.5{% else %}min-w-[1.5rem] px-1{% endif %} shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none text-white disabled:opacity-60"
-                    style="background:{{ fg }}"
-                    title="{% if _collapsed %}Expand — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% else %}Collapse — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% endif %}">
-                {% if _collapsed %}+{{ _count }}{% else %}{{ _count }}{% endif %}
-            </button>
-            {% elif _count and level_focus %}
-            <span class="flex h-[18px] min-w-[1.5rem] shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none text-white"
-                  style="background:{{ fg }}" title="{{ _count }} subtask{{ 's' if _count != 1 else '' }}">{{ _count }}</span>
-            {% endif %}
-        </div>
 
-        {# Row 2 — always visible: date · assignee · done · add · delete. No hover to discover. #}
-        <div class="mt-1 flex min-w-0 items-center gap-1">
-            <button type="button" x-show="!editingDue"
-                    @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
-                    class="inline-flex h-[18px] max-w-[3.9rem] shrink-0 items-center truncate rounded bg-slate-50 px-1 text-[9px] font-semibold
-                           {% if task.due_state == 'overdue' %}bg-rose-50 text-rose-700
-                           {% elif task.due_state == 'today' %}bg-amber-50 text-amber-800
-                           {% elif task.due_state == 'upcoming' %}bg-indigo-50 text-indigo-700
-                           {% else %}text-slate-400{% endif %}">
-                {{ task.due_date or 'Date' }}
+    {# Clean default state — just like ClickUp: icon + title + count. Everything else is hover-only. #}
+    <div class="flex min-w-0 items-center gap-1.5 pl-2.5 pr-1.5 py-1.5">
+        <span class="inline-flex shrink-0 select-none items-center rounded px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
+              style="background:{{ bg }};color:{{ fg }}">{{ lbl }}</span>
+        <div class="min-w-0 flex-1">
+            <button type="button" x-show="!editingTitle"
+                    @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
+                    class="block w-full truncate text-left text-[11px] font-semibold leading-tight hover:underline
+                           {% if task.is_completed %}text-slate-400 line-through
+                           {% elif _badge_title or not _title %}text-slate-400 italic
+                           {% else %}text-slate-800{% endif %}">
+                {% if _badge_title or not _title %}Add title…{% else %}{{ task.title }}{% endif %}
             </button>
-            <form x-show="editingDue" x-cloak
-                  hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+            <form x-show="editingTitle" x-cloak
+                  hx-post="{{ u.title(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                   hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                  @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
+                  @click.outside="editingTitle=false" @keydown.escape.prevent="editingTitle=false">
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
-                       class="w-[96px] rounded border border-slate-200 px-1 py-0 text-[9px]"
+                <input x-ref="titleInput" x-model="titleDraft" name="title" placeholder="Add title…"
+                       class="w-full rounded border border-indigo-300 px-1 py-0.5 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-400"
                        @change="$el.form.requestSubmit()">
-                <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
             </form>
-
-            <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                  hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                  class="w-[3.9rem] shrink-0">
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
-                <select name="assignee_username"
-                        title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
-                        class="block h-[18px] w-full truncate rounded border border-slate-200 bg-slate-50 py-0 pl-1 pr-0 text-[9px] font-semibold text-slate-600 focus:outline-none"
-                        onchange="this.form.requestSubmit()">
-                    <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
-                    {% if team_assignee_usernames %}
-                        {% for uname in team_assignee_usernames %}
-                        <option value="{{ uname }}" {% if task.assignee == uname %}selected{% endif %}>
-                            {% if uname == user.username %}Me{% elif uname|length > 6 %}{{ uname[:6] }}…{% else %}{{ uname }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="{{ user.username }}" {% if task.assignee == user.username %}selected{% endif %}>Me</option>
-                    {% endif %}
-                </select>
-            </form>
-
-            {% if depth >= 3 %}
-            <button type="button"
-                    hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                    hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                    title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
-                    class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border
-                           {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-slate-300 bg-white text-transparent{% endif %}">
-                <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-            {% endif %}
-
-            <div class="ml-auto flex shrink-0 items-center gap-0.5">
-                <button type="button"
-                        @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
-                        title="Add child"
-                        class="flex h-[18px] w-[18px] items-center justify-center rounded border border-indigo-200 bg-white text-[12px] font-extrabold leading-none text-indigo-700">+</button>
-                <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-                        hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
-                        hx-confirm="Delete this task and all subtasks?"
-                        title="Delete"
-                        class="flex h-[18px] w-[18px] items-center justify-center rounded text-slate-400 hover:bg-rose-50 hover:text-rose-600">
-                    <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
-                </button>
-            </div>
         </div>
+        {% if _branch and not level_focus %}
+        <button type="button"
+                data-hx-no-task-focus
+                hx-post="{{ u.mindmap_collapse(task.id) }}"
+                hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                hx-sync="#task-tree:drop"
+                hx-indicator="this"
+                hx-disabled-elt="this"
+                class="flex h-[18px] {% if _collapsed %}min-w-[1.5rem] px-1.5{% else %}min-w-[1.5rem] px-1{% endif %} shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none text-white disabled:opacity-60"
+                style="background:{{ fg }}"
+                title="{% if _collapsed %}Expand — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% else %}Collapse — {{ _count }} subtask{{ 's' if _count != 1 else '' }}{% endif %}">
+            {% if _collapsed %}+{{ _count }}{% else %}{{ _count }}{% endif %}
+        </button>
+        {% elif _count and level_focus %}
+        <span class="flex h-[18px] min-w-[1.5rem] shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none text-white"
+              style="background:{{ fg }}" title="{{ _count }} subtask{{ 's' if _count != 1 else '' }}">{{ _count }}</span>
+        {% endif %}
+    </div>
+
+    {# Hover-only popover — date · assignee · done · add · delete. Hidden by default, no animation. #}
+    <div class="hidden items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-1.5 py-1 shadow-lg group-hover:flex group-focus-within:flex"
+         style="position:absolute;left:0;top:100%;z-index:20;margin-top:2px;">
+        <button type="button" x-show="!editingDue"
+                @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
+                class="inline-flex h-[18px] max-w-[3.9rem] shrink-0 items-center truncate rounded bg-slate-50 px-1 text-[9px] font-semibold
+                       {% if task.due_state == 'overdue' %}bg-rose-50 text-rose-700
+                       {% elif task.due_state == 'today' %}bg-amber-50 text-amber-800
+                       {% elif task.due_state == 'upcoming' %}bg-indigo-50 text-indigo-700
+                       {% else %}text-slate-400{% endif %}">
+            {{ task.due_date or 'Date' }}
+        </button>
+        <form x-show="editingDue" x-cloak
+              hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+              hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+              @click.outside="editingDue=false" @keydown.escape.prevent="editingDue=false">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input x-ref="dueInput" x-model="dueDraft" type="date" name="due_date"
+                   class="w-[96px] rounded border border-slate-200 px-1 py-0 text-[9px]"
+                   @change="$el.form.requestSubmit()">
+            <input type="hidden" name="assignee_username" value="{{ task.assignee or '' }}">
+        </form>
+
+        <form hx-post="{{ u.meta(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+              hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+              class="w-[3.9rem] shrink-0">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
+            <select name="assignee_username"
+                    title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
+                    class="block h-[18px] w-full truncate rounded border border-slate-200 bg-slate-50 py-0 pl-1 pr-0 text-[9px] font-semibold text-slate-600 focus:outline-none"
+                    onchange="this.form.requestSubmit()">
+                <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
+                {% if team_assignee_usernames %}
+                    {% for uname in team_assignee_usernames %}
+                    <option value="{{ uname }}" {% if task.assignee == uname %}selected{% endif %}>
+                        {% if uname == user.username %}Me{% elif uname|length > 6 %}{{ uname[:6] }}…{% else %}{{ uname }}{% endif %}
+                    </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="{{ user.username }}" {% if task.assignee == user.username %}selected{% endif %}>Me</option>
+                {% endif %}
+            </select>
+        </form>
+
+        {% if depth >= 3 %}
+        <button type="button"
+                hx-post="{{ u.toggle(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
+                class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border
+                       {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-slate-300 bg-white text-transparent{% endif %}">
+            <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        </button>
+        {% endif %}
+
+        <button type="button"
+                @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
+                title="Add child"
+                class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border border-indigo-200 bg-white text-[12px] font-extrabold leading-none text-indigo-700">+</button>
+        <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
+                hx-confirm="Delete this task and all subtasks?"
+                title="Delete"
+                class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+            <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
+        </button>
     </div>
 </div>
 {% endmacro %}
@@ -183,7 +181,7 @@
             {% if _focus == 1 %}Showing only 33D cards
             {% elif _focus == 2 %}Showing only 11D cards
             {% elif _focus == 3 %}Showing only 1D cards
-            {% else %}Each branch keeps one color · numbered badge = subtasks inside · hover for date/assign/+{% endif %}
+            {% else %}Clean by default — hover a card for date · assign · done · add · delete{% endif %}
         </p>
         <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
