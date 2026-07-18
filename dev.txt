@@ -66,3 +66,4 @@
 [DONE] Phase PM-47 - Compact level Focus (All/33D/11D/1D); soft tint card colors; remove dual collapse
 [DONE] Phase PM-48 - Compact map real animation (ClickUp-style): staggered card fan-in, animated connector draw-in, springy hover lift, collapse-button pop; scoped to .cmap-* only, Map/Tree/Kanban untouched
 [DONE] Phase PM-49 - Compact map ClickUp look: one consistent color per branch (root→33D→11D→1D inherits), white cards, numbered subtask-count badge (doubles as collapse control), connector color matches destination branch
+[DONE] Phase PM-50 - Compact map: removed all fan-in/draw/spring animations (static, instant); redesigned card to fixed 2-row layout with date/assignee/done/add/delete ALWAYS visible (no hover-to-discover) for faster scanning + planning; bumped card size/gaps to fit

@@ -144,72 +144,12 @@
         .dark #task-tree .cmap-card[data-task-id] {
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28) !important;
         }
-        /* Compact map: hover reveal (belt + suspenders if CSS build lags) */
-        .cmap-card .cmap-card-actions {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        .cmap-card:hover,
-        .cmap-card:focus-within {
-            max-height: 180px;
-            z-index: 30;
-        }
-        .cmap-card:hover .cmap-card-actions,
-        .cmap-card:focus-within .cmap-card-actions {
-            max-height: 6rem;
-            opacity: 1;
-            pointer-events: auto;
-        }
-        /* Compact map only: ClickUp-style entrance + connector-draw animation.
-           Map/Tree/Kanban are untouched — these rules only match .cmap-* classes. */
+        /* Compact map: static card, no motion — just a plain hover border cue. */
         .cmap-card {
-            transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        box-shadow 0.16s ease, border-color 0.16s ease;
-            will-change: transform;
+            border-color: #e2e8f0;
         }
         .cmap-card:hover {
-            transform: translateY(-1.5px) scale(1.02);
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
-        }
-        .cmap-accent-bar {
-            transition: width 0.15s ease;
-        }
-        .cmap-card:hover .cmap-accent-bar {
-            width: 5px;
-        }
-        .cmap-collapse-pop {
-            animation: cmapCollapsePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-        }
-        @keyframes cmapCollapsePop {
-            0% { transform: scale(0.7); }
-            60% { transform: scale(1.12); }
-            100% { transform: scale(1); }
-        }
-        @media (prefers-reduced-motion: no-preference) {
-            .cmap-node-in {
-                animation: cmapNodeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-            }
-            .cmap-edge {
-                stroke-dasharray: 1600;
-                stroke-dashoffset: 1600;
-                animation: cmapEdgeDraw 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
-            }
-            #mm-zoom-stage.cmap-stage {
-                animation: cmapStageIn 0.25s ease-out both;
-            }
-        }
-        @keyframes cmapNodeIn {
-            from { opacity: 0; transform: translate3d(-8px, 5px, 0) scale(0.9); }
-            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-        }
-        @keyframes cmapEdgeDraw {
-            to { stroke-dashoffset: 0; }
-        }
-        @keyframes cmapStageIn {
-            from { opacity: 0.35; }
-            to { opacity: 1; }
+            border-color: #cbd5e1;
         }
         #mm-zoom-outer {
             width: calc(var(--mm-w, 800px) * var(--board-zoom, 1));
