@@ -16,7 +16,7 @@ def workspace_chrome(request: Any) -> dict[str, Any]:
     if not getattr(request, 'user', None) or not request.user.is_authenticated:
         return {}
     layout = request.session.get('task_layout', 'mindmap')
-    if layout not in ('tree', 'mindmap', 'mini', 'idea', 'kanban'):
+    if layout not in ('tree', 'mindmap', 'cmap', 'mini', 'idea', 'kanban'):
         layout = 'mindmap'
     mode = get_user_ui_mode(request.user)
     layout = normalize_layout(mode, layout)
