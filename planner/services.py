@@ -426,13 +426,14 @@ def _mindmap_subtree(
     if not ch:
         top = y_ptr[0]
         y_ptr[0] += node_h + row_gap
+        display_depth = int(node.get('_cmap_level', depth))
         positions[node['id']] = {
             'task': node,
             'left': x,
             'top': top,
             'width': node_w,
             'height': node_h,
-            'depth': depth,
+            'depth': display_depth,
             'accent': '#6366f1',
         }
         return {'top': top, 'bottom': top + node_h}
@@ -463,13 +464,14 @@ def _mindmap_subtree(
     max_bot = max(r['bottom'] for r in ranges)
     cy = (min_top + max_bot) / 2
     top = cy - node_h / 2
+    display_depth = int(node.get('_cmap_level', depth))
     positions[node['id']] = {
         'task': node,
         'left': x,
         'top': top,
         'width': node_w,
         'height': node_h,
-        'depth': depth,
+        'depth': display_depth,
         'accent': '#6366f1',
     }
 
@@ -671,6 +673,71 @@ def prune_mindmap_tree(roots: list[dict], collapsed_ids: set[int]) -> list[dict]
         return c
 
     return [clone(r) for r in roots]
+
+
+def cmap_focus_session_key(team: Team | None, project=None) -> str:
+    if project is not None:
+        return f'cmap_focus_proj_{project.slug}'
+    return f'cmap_focus_t_{team.slug}' if team else 'cmap_focus_p'
+
+
+def get_cmap_focus_depth(request, team: Team | None, *, project=None) -> int | None:
+    """Compact map level focus: 1=33D, 2=11D, 3=1D, None=full tree."""
+    key = cmap_focus_session_key(team, project)
+    raw = request.session.get(key)
+    if raw in (1, 2, 3):
+        return int(raw)
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return val if val in (1, 2, 3) else None
+
+
+def set_cmap_focus_depth(
+    request, team: Team | None, depth: int | None, *, project=None
+) -> None:
+    key = cmap_focus_session_key(team, project)
+    if depth in (1, 2, 3):
+        request.session[key] = int(depth)
+    else:
+        request.session.pop(key, None)
+    request.session.modified = True
+
+
+def extract_nodes_at_depth(roots: list[dict], depth: int) -> list[dict]:
+    """
+    Compact level-focus: return only nodes at `depth` as roots (no children).
+    Preserves `_cmap_level` so badges/colors stay correct after re-rooting.
+    """
+    found: list[dict] = []
+
+    def walk(n: dict, d: int) -> None:
+        if d == depth:
+            c = {k: v for k, v in n.items() if k != 'children'}
+            c['children'] = []
+            c['_cmap_level'] = depth
+            found.append(c)
+            return
+        for ch in n.get('children') or []:
+            walk(ch, d + 1)
+
+    for r in roots:
+        walk(r, 0)
+    return found
+
+
+def prepare_mindmap_roots(
+    roots: list[dict],
+    collapsed_ids: set[int],
+    *,
+    layout: str,
+    cmap_focus_depth: int | None = None,
+) -> list[dict]:
+    """Prune by collapse, or (cmap only) show a single depth for focus."""
+    if layout == 'cmap' and cmap_focus_depth in (1, 2, 3):
+        return extract_nodes_at_depth(roots, int(cmap_focus_depth))
+    return prune_mindmap_tree(roots, collapsed_ids)
 
 
 def compute_mindmap_layout(

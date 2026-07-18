@@ -24,13 +24,16 @@ from planner.services import (
     collect_task_has_children,
     compute_mindmap_layout,
     create_99d_template,
+    get_cmap_focus_depth,
     get_mindmap_collapsed_ids,
     import_tasks_from_upload,
     normalize_workspace_completion,
     notify_assignee,
+    prepare_mindmap_roots,
     prune_mindmap_tree,
     resolve_assignee,
     root_stats,
+    set_cmap_focus_depth,
     sync_descendant_completion,
     sync_parent_completion_from_children,
     task_depth,
@@ -143,6 +146,14 @@ class WorkspaceUrls:
             'board_mindmap_expand_all',
             'mindmap_expand_all_team',
             'mindmap_expand_all_personal',
+        )
+
+    @property
+    def mindmap_focus(self) -> str:
+        return self._reverse(
+            'board_mindmap_focus',
+            'mindmap_focus_team',
+            'mindmap_focus_personal',
         )
 
     def kanban_status(self, task_id: int) -> str:
@@ -433,7 +444,13 @@ class BoardView(LoginRequiredMixin, TemplateView):
                         self.request, team, project=project, tree=task_tree
                     )
         branch_children = collect_task_has_children(task_tree)
-        pruned_for_mm = prune_mindmap_tree(task_tree, mm_collapsed)
+        cmap_focus_depth = get_cmap_focus_depth(self.request, team, project=project)
+        pruned_for_mm = prepare_mindmap_roots(
+            task_tree,
+            mm_collapsed,
+            layout=layout,
+            cmap_focus_depth=cmap_focus_depth,
+        )
         mindmap = (
             compute_mindmap_layout(
                 pruned_for_mm,
@@ -488,6 +505,7 @@ class BoardView(LoginRequiredMixin, TemplateView):
                 'flowmap': flowmap,
                 'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
                 'mindmap_branch_children': branch_children,
+                'cmap_focus_depth': cmap_focus_depth,
                 'total_main': total_main,
                 'done_main': done_main,
                 'current_team': team,
@@ -532,7 +550,13 @@ def _tree_partial(
     if layout in ('mindmap', 'cmap', 'mini', 'idea'):
         mm_collapsed = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         branch_children = collect_task_has_children(tree)
-        pruned = prune_mindmap_tree(tree, mm_collapsed)
+        cmap_focus_depth = get_cmap_focus_depth(request, team, project=project)
+        pruned = prepare_mindmap_roots(
+            tree,
+            mm_collapsed,
+            layout=layout,
+            cmap_focus_depth=cmap_focus_depth,
+        )
         ctx = {
             'mindmap': compute_mindmap_layout(
                 pruned,
@@ -544,6 +568,7 @@ def _tree_partial(
             'task_layout': layout,
             'mindmap_collapsed_ids': sorted(int(x) for x in mm_collapsed),
             'mindmap_branch_children': branch_children,
+            'cmap_focus_depth': cmap_focus_depth,
             'current_team': team,
             'current_project': project,
             'team_assignee_usernames': team_assignee_usernames,
@@ -606,6 +631,7 @@ class MindmapCollapseToggleView(LoginRequiredMixin, View):
         branch_children = collect_task_has_children(tree)
         if not branch_children.get(tid):
             return HttpResponse('No subtasks', status=400)
+        set_cmap_focus_depth(request, team, None, project=project)
         cur = get_mindmap_collapsed_ids(request, team, project=project, tree=tree)
         if tid in cur:
             cur.discard(tid)
@@ -624,6 +650,7 @@ class MindmapCollapseAllView(LoginRequiredMixin, View):
         team, project = _resolve_board(request.user, team_slug, project_slug)
         _, tree = _board_task_tree(request.user, team, project)
         all_branch_ids = set(collect_branch_ids_with_children(tree))
+        set_cmap_focus_depth(request, team, None, project=project)
         set_mindmap_collapsed_ids(request, team, all_branch_ids, project=project)
         return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
 
@@ -634,7 +661,40 @@ class MindmapExpandAllView(LoginRequiredMixin, View):
     def post(self, request, team_slug=None, project_slug=None, slug=None):
         project_slug = project_slug or slug
         team, project = _resolve_board(request.user, team_slug, project_slug)
+        set_cmap_focus_depth(request, team, None, project=project)
         set_mindmap_collapsed_ids(request, team, set(), project=project)
+        return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
+
+
+class MindmapFocusDepthView(LoginRequiredMixin, View):
+    """Compact map: focus one level at a time (33D / 11D / 1D) or show all."""
+
+    def post(self, request, team_slug=None, project_slug=None, slug=None):
+        project_slug = project_slug or slug
+        team, project = _resolve_board(request.user, team_slug, project_slug)
+        raw = (request.POST.get('depth') or 'all').strip().lower()
+        mapping = {
+            'all': None,
+            'full': None,
+            '33d': 1,
+            '33': 1,
+            '1': 1,
+            '11d': 2,
+            '11': 2,
+            '2': 2,
+            '1d': 3,
+            '3': 3,
+        }
+        depth = mapping.get(raw)
+        if raw.isdigit() and depth is None:
+            try:
+                n = int(raw)
+            except ValueError:
+                n = -1
+            depth = n if n in (1, 2, 3) else None
+        set_cmap_focus_depth(request, team, depth, project=project)
+        if depth is None:
+            set_mindmap_collapsed_ids(request, team, set(), project=project)
         return _tree_partial(request, team_slug, project_slug, hx_triggers=False)
 
 

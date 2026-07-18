@@ -84,6 +84,16 @@ urlpatterns = [
         name='mindmap_expand_all_team',
     ),
     path(
+        'tasks/mindmap-focus/',
+        views.MindmapFocusDepthView.as_view(),
+        name='mindmap_focus_personal',
+    ),
+    path(
+        't/<slug:team_slug>/tasks/mindmap-focus/',
+        views.MindmapFocusDepthView.as_view(),
+        name='mindmap_focus_team',
+    ),
+    path(
         't/<slug:team_slug>/tasks/archive-mindmap/',
         views.TeamMindmapArchiveView.as_view(),
         name='archive_team_mindmap',

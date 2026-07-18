@@ -55,6 +55,11 @@ urlpatterns = [
         name='board_mindmap_expand_all',
     ),
     path(
+        '<slug:slug>/board/tasks/mindmap-focus/',
+        planner_views.MindmapFocusDepthView.as_view(),
+        name='board_mindmap_focus',
+    ),
+    path(
         '<slug:slug>/board/tasks/<int:task_id>/kanban-status/',
         planner_views.TaskKanbanStatusView.as_view(),
         name='board_kanban_status',

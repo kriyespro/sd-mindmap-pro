@@ -1,66 +1,51 @@
-{% macro cmap_collapse_btn(task, branch_count, collapsed_ids, side='right') %}
-{% set _mc = collapsed_ids if collapsed_ids is not none else [] %}
-<button type="button"
-        data-hx-no-task-focus
-        hx-post="{{ u.mindmap_collapse(task.id) }}"
-        hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
-        hx-sync="#task-tree:drop"
-        hx-indicator="this"
-        hx-disabled-elt="this"
-        class="cmap-collapse-btn flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[10px] font-bold text-slate-700 shadow-sm hover:bg-white hover:text-indigo-700 disabled:opacity-60"
-        title="{% if task.id in _mc %}Expand {{ branch_count }}{% else %}Collapse{% endif %} ({{ side }})">
-    {% if task.id in _mc %}+{{ branch_count }}{% else %}−{% endif %}
-</button>
-{% endmacro %}
-
-{% macro cmap_card(task, depth=0, mindmap_collapsed_ids=None, has_children_branch=None) %}
+{% macro cmap_card(task, depth=0, mindmap_collapsed_ids=None, has_children_branch=None, level_focus=false) %}
 {% if depth == 0 %}
   {% set bar = '#ea580c' %}
-  {% set card_bg = '#ffedd5' %}
-  {% set card_bdr = '#fb923c' %}
+  {% set card_bg = '#fffaf5' %}
+  {% set card_bdr = '#fdba74' %}
   {% set title_c = '#9a3412' %}
   {% set title_muted = '#c2410c' %}
-  {% set tag_bg = '#fff7ed' %}
+  {% set tag_bg = '#ffedd5' %}
   {% set tag_txt = '#9a3412' %}
   {% set tag_bdr = '#fdba74' %}
   {% set lbl = '99D' %}
 {% elif depth == 1 %}
-  {% set bar = '#0891b2' %}
-  {% set card_bg = '#a5f3fc' %}
-  {% set card_bdr = '#22d3ee' %}
-  {% set title_c = '#155e75' %}
-  {% set title_muted = '#0e7490' %}
-  {% set tag_bg = '#ecfeff' %}
-  {% set tag_txt = '#155e75' %}
-  {% set tag_bdr = '#67e8f9' %}
+  {% set bar = '#0284c7' %}
+  {% set card_bg = '#f0f9ff' %}
+  {% set card_bdr = '#7dd3fc' %}
+  {% set title_c = '#075985' %}
+  {% set title_muted = '#0369a1' %}
+  {% set tag_bg = '#e0f2fe' %}
+  {% set tag_txt = '#075985' %}
+  {% set tag_bdr = '#7dd3fc' %}
   {% set lbl = '33D' %}
 {% elif depth == 2 %}
-  {% set bar = '#db2777' %}
-  {% set card_bg = '#fbcfe8' %}
-  {% set card_bdr = '#f472b6' %}
-  {% set title_c = '#9d174d' %}
-  {% set title_muted = '#be185d' %}
-  {% set tag_bg = '#fdf2f8' %}
-  {% set tag_txt = '#9d174d' %}
-  {% set tag_bdr = '#f9a8d4' %}
+  {% set bar = '#a21caf' %}
+  {% set card_bg = '#fdf4ff' %}
+  {% set card_bdr = '#e9d5ff' %}
+  {% set title_c = '#86198f' %}
+  {% set title_muted = '#a21caf' %}
+  {% set tag_bg = '#fae8ff' %}
+  {% set tag_txt = '#86198f' %}
+  {% set tag_bdr = '#e9d5ff' %}
   {% set lbl = '11D' %}
 {% elif depth == 3 %}
-  {% set bar = '#0d9488' %}
-  {% set card_bg = '#99f6e4' %}
-  {% set card_bdr = '#2dd4bf' %}
+  {% set bar = '#0f766e' %}
+  {% set card_bg = '#f0fdfa' %}
+  {% set card_bdr = '#99f6e4' %}
   {% set title_c = '#115e59' %}
   {% set title_muted = '#0f766e' %}
-  {% set tag_bg = '#f0fdfa' %}
+  {% set tag_bg = '#ccfbf1' %}
   {% set tag_txt = '#115e59' %}
-  {% set tag_bdr = '#5eead4' %}
+  {% set tag_bdr = '#99f6e4' %}
   {% set lbl = '1D' %}
 {% else %}
-  {% set bar = '#65a30d' %}
-  {% set card_bg = '#d9f99d' %}
-  {% set card_bdr = '#a3e635' %}
+  {% set bar = '#4d7c0f' %}
+  {% set card_bg = '#f7fee7' %}
+  {% set card_bdr = '#bef264' %}
   {% set title_c = '#3f6212' %}
   {% set title_muted = '#4d7c0f' %}
-  {% set tag_bg = '#f7fee7' %}
+  {% set tag_bg = '#ecfccb' %}
   {% set tag_txt = '#3f6212' %}
   {% set tag_bdr = '#bef264' %}
   {% set lbl = 'ST' %}
@@ -73,8 +58,6 @@
 {% set _mc = mindmap_collapsed_ids if mindmap_collapsed_ids is not none else [] %}
 {% set _title = (task.title or '')|trim %}
 {% set _badge_title = _title in ['99D', '33D', '11D', '1D'] %}
-{# Dual collapse on both sides for mid branches (33D / 11D) #}
-{% set _dual_collapse = _branch and depth in [1, 2] %}
 
 <div id="task-card-{{ task.id }}"
      data-task-id="{{ task.id }}"
@@ -84,17 +67,13 @@
      x-data="{ editingTitle:false, editingDue:false, titleDraft:'', dueDraft:'' }">
     <div class="absolute inset-y-0 left-0 w-[3px] rounded-l-md" style="background:{{ bar }}"></div>
     <div class="pl-2.5 pr-1.5 py-1">
-        {# Row 1: [− left] · badge · title · [− right] #}
         <div class="flex min-w-0 items-center gap-1">
-            {% if _dual_collapse %}
-            {{ cmap_collapse_btn(task, _branch, _mc, 'left') }}
-            {% endif %}
             <span class="inline-flex shrink-0 select-none items-center rounded border px-1 py-0.5 text-[8px] font-extrabold leading-none tracking-wide"
                   style="background:{{ tag_bg }};color:{{ tag_txt }};border-color:{{ tag_bdr }}">{{ lbl }}</span>
             <div class="min-w-0 flex-1">
                 <button type="button" x-show="!editingTitle"
                         @click='editingTitle=true; titleDraft={{ task.title|tojson }}; $nextTick(()=>$refs.titleInput.focus())'
-                        class="block w-full truncate text-left text-[11px] font-bold leading-tight transition hover:underline"
+                        class="block w-full truncate text-left text-[11px] font-semibold leading-tight transition hover:underline"
                         style="{% if task.is_completed %}color:#64748b;text-decoration:line-through;{% elif _badge_title or not _title %}color:{{ title_muted }};font-style:italic;{% else %}color:{{ title_c }};{% endif %}">
                     {% if _badge_title or not _title %}Add title…{% else %}{{ task.title }}{% endif %}
                 </button>
@@ -108,20 +87,29 @@
                            @change="$el.form.requestSubmit()">
                 </form>
             </div>
-            {% if _branch %}
-            {{ cmap_collapse_btn(task, _branch, _mc, 'right') }}
+            {% if _branch and not level_focus %}
+            <button type="button"
+                    data-hx-no-task-focus
+                    hx-post="{{ u.mindmap_collapse(task.id) }}"
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop"
+                    hx-indicator="this"
+                    hx-disabled-elt="this"
+                    class="flex h-5 {% if task.id in _mc %}min-w-[1.4rem] px-1{% else %}w-5{% endif %} shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/90 text-[10px] font-bold text-slate-600 hover:text-indigo-700 disabled:opacity-60"
+                    title="{% if task.id in _mc %}Expand {{ _branch }}{% else %}Collapse{% endif %}">
+                {% if task.id in _mc %}+{{ _branch }}{% else %}−{% endif %}
+            </button>
             {% endif %}
         </div>
 
-        {# Row 2 (hover): date · narrow assign · check · + · delete #}
         <div class="cmap-card-actions mt-0.5 flex max-h-0 min-w-0 items-center gap-1 overflow-hidden opacity-0 transition-all duration-200 group-hover:max-h-24 group-hover:opacity-100">
             <button type="button" x-show="!editingDue"
                     @click='editingDue=true; dueDraft={{ (task.due_date.isoformat() if task.due_date else "")|tojson }}; $nextTick(()=>$refs.dueInput.focus())'
-                    class="inline-flex max-w-[4.25rem] shrink-0 truncate rounded bg-white/70 px-1 py-0 text-[9px] font-semibold
+                    class="inline-flex max-w-[4.25rem] shrink-0 truncate rounded bg-white/80 px-1 py-0 text-[9px] font-semibold
                            {% if task.due_state == 'overdue' %}text-rose-700
                            {% elif task.due_state == 'today' %}text-amber-800
                            {% elif task.due_state == 'upcoming' %}text-indigo-700
-                           {% else %}text-slate-500 hover:bg-white{% endif %}">
+                           {% else %}text-slate-500{% endif %}">
                 {{ task.due_date or 'Date' }}
             </button>
             <form x-show="editingDue" x-cloak
@@ -142,7 +130,7 @@
                 <input type="hidden" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
                 <select name="assignee_username"
                         title="{% if task.assignee %}{{ task.assignee }}{% else %}Assign{% endif %}"
-                        class="block w-full truncate rounded border border-black/10 bg-white/80 py-0 pl-1 pr-0 text-[9px] font-semibold text-slate-700 focus:outline-none"
+                        class="block w-full truncate rounded border border-black/10 bg-white/90 py-0 pl-1 pr-0 text-[9px] font-semibold text-slate-700 focus:outline-none"
                         onchange="this.form.requestSubmit()">
                     <option value="" {% if not task.assignee %}selected{% endif %}>Assign</option>
                     {% if team_assignee_usernames %}
@@ -164,19 +152,19 @@
                         hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
                         title="{% if task.is_completed %}Mark open{% else %}Mark done{% endif %}"
                         class="flex h-5 w-5 items-center justify-center rounded border text-[10px] transition
-                               {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-black/20 bg-white/70 text-transparent hover:border-indigo-400{% endif %}">
+                               {% if task.is_completed %}border-emerald-500 bg-emerald-500 text-white{% else %}border-black/15 bg-white/90 text-transparent hover:border-indigo-400{% endif %}">
                     <svg class="h-2.5 w-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                 </button>
                 {% endif %}
                 <button type="button"
                         @click="addModalOpen=true; parentIdForModal='{{ task.id }}'; taskStarter=''"
                         title="Add child"
-                        class="flex h-5 w-5 items-center justify-center rounded border border-indigo-300 bg-white/90 text-[12px] font-extrabold leading-none text-indigo-700 hover:bg-white">+</button>
+                        class="flex h-5 w-5 items-center justify-center rounded border border-indigo-200 bg-white text-[12px] font-extrabold leading-none text-indigo-700 hover:bg-indigo-50">+</button>
                 <button type="button" hx-delete="{{ u.delete(task.id) }}" hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
                         hx-sync="#task-tree:queue" hx-indicator="#board-hx-busy"
                         hx-confirm="Delete this task and all subtasks?"
                         title="Delete"
-                        class="flex h-5 w-5 items-center justify-center rounded bg-white/60 text-slate-500 hover:bg-rose-50 hover:text-rose-600">
+                        class="flex h-5 w-5 items-center justify-center rounded bg-white/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
                     <svg class="h-3 w-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16"/></svg>
                 </button>
             </div>
@@ -185,20 +173,46 @@
 </div>
 {% endmacro %}
 
-{# Compact Map — purpose-built chips; live Map untouched #}
+{% set _focus = cmap_focus_depth if cmap_focus_depth is defined else none %}
+{% set _level_focus = _focus in [1, 2, 3] %}
+
+{# Compact Map — level focus + soft tint cards #}
 <div id="mm-scroll-area" class="relative min-h-[calc(100vh-10rem)] w-full overflow-auto rounded-xl bg-slate-50/80 p-2">
 {% if mindmap.nodes %}
     <div class="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur">
-        <div class="mr-1 flex flex-wrap items-center gap-1 text-[9px] font-bold">
-            <span class="rounded border px-1 py-0.5" style="background:#ffedd5;color:#9a3412;border-color:#fdba74">99D</span>
-            <span class="text-slate-300">→</span>
-            <span class="rounded border px-1 py-0.5" style="background:#a5f3fc;color:#155e75;border-color:#22d3ee">33D</span>
-            <span class="text-slate-300">→</span>
-            <span class="rounded border px-1 py-0.5" style="background:#fbcfe8;color:#9d174d;border-color:#f472b6">11D</span>
-            <span class="text-slate-300">→</span>
-            <span class="rounded border px-1 py-0.5" style="background:#99f6e4;color:#115e59;border-color:#2dd4bf">1D</span>
+        <span class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Focus</span>
+        <div class="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5">
+            <button type="button"
+                    hx-post="{{ u.mindmap_focus }}"
+                    hx-vals='{"depth":"all"}'
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
+                    class="rounded px-2 py-1 text-[10px] font-bold {% if not _level_focus %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">All</button>
+            <button type="button"
+                    hx-post="{{ u.mindmap_focus }}"
+                    hx-vals='{"depth":"33d"}'
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
+                    class="rounded px-2 py-1 text-[10px] font-bold {% if _focus == 1 %}bg-sky-100 text-sky-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">33D</button>
+            <button type="button"
+                    hx-post="{{ u.mindmap_focus }}"
+                    hx-vals='{"depth":"11d"}'
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
+                    class="rounded px-2 py-1 text-[10px] font-bold {% if _focus == 2 %}bg-fuchsia-100 text-fuchsia-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">11D</button>
+            <button type="button"
+                    hx-post="{{ u.mindmap_focus }}"
+                    hx-vals='{"depth":"1d"}'
+                    hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
+                    hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
+                    class="rounded px-2 py-1 text-[10px] font-bold {% if _focus == 3 %}bg-teal-100 text-teal-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">1D</button>
         </div>
-        <p class="flex-1 text-[10px] font-medium text-slate-500">33D/11D: − on both sides · hover for date/assign/+</p>
+        <p class="flex-1 text-[10px] font-medium text-slate-500">
+            {% if _focus == 1 %}Showing only 33D cards
+            {% elif _focus == 2 %}Showing only 11D cards
+            {% elif _focus == 3 %}Showing only 1D cards
+            {% else %}Full tree · hover card for date · assign · +{% endif %}
+        </p>
         <div class="board-zoom-bar inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[10px] font-semibold">
             <button type="button" @click="zoomOut()" :disabled="boardZoom <= boardZoomMin"
                     class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom out">−</button>
@@ -208,6 +222,7 @@
             <button type="button" @click="zoomIn()" :disabled="boardZoom >= boardZoomMax"
                     class="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 hover:bg-white" title="Zoom in">+</button>
         </div>
+        {% if not _level_focus %}
         <button type="button"
                 hx-post="{{ u.mindmap_collapse_all }}"
                 hx-target="#task-tree" hx-swap="innerHTML swap:0ms settle:0ms"
@@ -220,6 +235,7 @@
                 hx-sync="#task-tree:drop" hx-indicator="#board-hx-busy"
                 class="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:border-slate-300"
                 title="Expand all">Expand</button>
+        {% endif %}
     </div>
     <div id="mm-zoom-outer" style="--mm-w: {{ mindmap.width }}px; --mm-h: {{ mindmap.height }}px;">
         <div id="mm-zoom-stage" class="relative">
@@ -240,15 +256,20 @@
             {% for n in mindmap.nodes %}
             {% set _hc = mindmap_branch_children.get(n.task.id, false) %}
             <div class="absolute" style="left:{{ n.left }}px;top:{{ n.top }}px;width:{{ n.width }}px;">
-                {{ cmap_card(n.task, n.depth, mindmap_collapsed_ids, _hc) }}
+                {{ cmap_card(n.task, n.depth, mindmap_collapsed_ids, _hc, _level_focus) }}
             </div>
             {% endfor %}
         </div>
     </div>
 {% else %}
     <div class="flex w-full flex-col items-center py-24 text-center">
-        <p class="text-sm font-semibold text-slate-600">No tasks yet</p>
-        <p class="mt-1 max-w-xs text-[11px] text-slate-400">Create a 99D starter, then use Compact map to work the tree fast.</p>
+        <p class="text-sm font-semibold text-slate-600">
+            {% if _level_focus %}No cards at this level{% else %}No tasks yet{% endif %}
+        </p>
+        <p class="mt-1 max-w-xs text-[11px] text-slate-400">
+            {% if _level_focus %}Switch Focus to All, or pick another level.
+            {% else %}Create a 99D starter, then use Compact map to work the tree fast.{% endif %}
+        </p>
     </div>
 {% endif %}
 </div>

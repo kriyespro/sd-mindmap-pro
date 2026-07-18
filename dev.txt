@@ -63,3 +63,4 @@
 [DONE] Phase PM-44 - Compact map: hover-only date/assign/check/delete; + on bottom; narrow assign; deep 2x connectors
 [DONE] Phase PM-45 - Fix Compact hover reveal: missing Tailwind utilities + scoped .cmap-card CSS fallback
 [DONE] Phase PM-46 - Compact: dual collapse on 33D/11D; multicolor card backgrounds by depth
+[DONE] Phase PM-47 - Compact level Focus (All/33D/11D/1D); soft tint card colors; remove dual collapse
